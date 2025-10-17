@@ -29,7 +29,8 @@ Posteriormente, se ejecutan pruebas de usabilidad, optimización avanzada y el d
 
 La planificación completa del proyecto, incluyendo fases y actividades, está documentada en la Wiki del repositorio.
 
-🔗 [Ver Wiki del Proyecto](https://github.com/Omer21200/Pymes/wiki/Cronograma)
+🔗 [Ver Cronograma](https://github.com/Omer21200/Pymes/wiki/Cronograma)
+🔗 [Ver mockups](https://www.figma.com/design/KJNzBY5xyj6K5y3Bo81MOB/Pymes?node-id=0-1&t=riGIgywL9YMUHYqL-1)
 
 ---
 
