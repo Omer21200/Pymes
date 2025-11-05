@@ -6,7 +6,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080926),
+      backgroundColor: const Color(0xFF000000), // Changed background to black
       body: SafeArea(
         child: Column(
           children: [
@@ -17,10 +17,14 @@ class SplashScreen extends StatelessWidget {
                   Expanded(
                     child: Center(
                       child: Image.asset(
-                        'assets/images/image.png',
+                        '/images/nexus.jpg',
                         fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
+                        width:
+                            MediaQuery.of(context).size.width *
+                            0.8, // Adjusted for responsiveness
+                        height:
+                            MediaQuery.of(context).size.height *
+                            0.5, // Adjusted for responsiveness
                       ),
                     ),
                   ),
@@ -34,10 +38,15 @@ class SplashScreen extends StatelessWidget {
                 height: 44,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/login');
+                    Navigator.pushReplacementNamed(
+                      context,
+                      '/access-selection',
+                    );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7E84F2),
+                    backgroundColor: const Color(
+                      0xFFD92344,
+                    ), // Updated button color to red
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
