@@ -40,29 +40,6 @@ class _InstitucionPageState extends State<InstitucionPage> {
     final initials = _initials(widget.userName);
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
-      appBar: AppBar(
-        title: Text(widget.institutionName),
-        backgroundColor: const Color(0xFFD92344),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              try {
-                await supabase.auth.signOut();
-              } catch (_) {}
-              if (context.mounted) {
-                // Navegar a la pantalla de splash y limpiar la pila
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SplashScreen()),
-                  (route) => false,
-                );
-              }
-            },
-          ),
-        ],
-      ),
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -106,7 +83,18 @@ class _InstitucionPageState extends State<InstitucionPage> {
                 userName: widget.userName,
                 institutionName: widget.institutionName,
                 role: widget.role,
-                onAction: () {},
+                onAction: () async {
+                  try {
+                    await supabase.auth.signOut();
+                  } catch (_) {}
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SplashScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 18),
               const MetricsRow(),
