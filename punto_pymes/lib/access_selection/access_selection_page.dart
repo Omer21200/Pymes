@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../login_page/login_page.dart';
 
 class AccessSelectionPage extends StatefulWidget {
   const AccessSelectionPage({super.key});
@@ -8,143 +9,178 @@ class AccessSelectionPage extends StatefulWidget {
 }
 
 class _AccessSelectionPageState extends State<AccessSelectionPage> {
-  String selectedRole = 'Usuario';
-  String selectedInstitution = '';
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Text(''),
+        backgroundColor: const Color(0xFFD92344),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: const Text(
-                'Selecciona tu tipo de acceso',
-                style: TextStyle(fontSize: 16), // Adjusted font size for mobile
+            // 🖼️ Sección de Banner/Logo
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Image.asset(
+                'assets/images/pymes.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 150,
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported, size: 50),
+                    ),
+                  );
+                },
               ),
             ),
-            DropdownButton<String>(
-              value: null,
-              items: const [
-                DropdownMenuItem(value: 'Usuario', child: Text('Usuario')),
-                DropdownMenuItem(
-                  value: 'Administrador',
-                  child: Text('Administrador'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-              underline: Container(),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFFD92344),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Empleado - Selecciona tu institución',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
+
+            // 📋 Contenedor principal con padding
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar institución...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // 🏢 Sección de selección de institución
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Selecciona tu institución',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Buscar institución...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            InstitutionCard(
+                              name: 'Banco de Loja',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginPage(
+                                      selectedInstitution: 'Banco de Loja',
+                                      selectedRole: 'Institución',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            InstitutionCard(
+                              name: 'Coopmego',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginPage(
+                                      selectedInstitution: 'Coopmego',
+                                      selectedRole: 'Institución',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            InstitutionCard(
+                              name: 'UTPL',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginPage(
+                                      selectedInstitution: 'UTPL',
+                                      selectedRole: 'Institución',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            InstitutionCard(
+                              name: 'UNL',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginPage(
+                                      selectedInstitution: 'UNL',
+                                      selectedRole: 'Institución',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 🔘 Botón de acceso para Administrador General (siempre visible al final)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginPage(
+                              selectedInstitution: '',
+                              selectedRole: 'Administrador General',
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD92344),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: const Text(
+                        'Acceso Administrador General',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: MediaQuery.of(context).size.width * 0.05,
-                    // Adjust spacing dynamically
-                    runSpacing: MediaQuery.of(context).size.height * 0.02,
-                    // Adjust run spacing dynamically
-                    children: [
-                      InstitutionCard(
-                        name: 'Banco de Loja',
-                        isSelected: selectedInstitution == 'Banco de Loja',
-                        onTap: () {
-                          setState(() {
-                            selectedInstitution = 'Banco de Loja';
-                          });
-                        },
-                      ),
-                      InstitutionCard(
-                        name: 'Coopmego',
-                        isSelected: selectedInstitution == 'Coopmego',
-                        onTap: () {
-                          setState(() {
-                            selectedInstitution = 'Coopmego';
-                          });
-                        },
-                      ),
-                      InstitutionCard(
-                        name: 'UTPL',
-                        isSelected: selectedInstitution == 'UTPL',
-                        onTap: () {
-                          setState(() {
-                            selectedInstitution = 'UTPL';
-                          });
-                        },
-                      ),
-                      InstitutionCard(
-                        name: 'UNL',
-                        isSelected: selectedInstitution == 'UNL',
-                        onTap: () {
-                          setState(() {
-                            selectedInstitution = 'UNL';
-                          });
-                        },
-                      ),
-                    ],
-                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              selectedRole == 'Administrador' ? 'Administrador' : 'Usuario',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (selectedRole == 'Usuario') {
-                    Navigator.pushNamed(context, '/login');
-                  } else if (selectedRole == 'Administrador') {
-                    Navigator.pushNamed(context, '/admin-dashboard');
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD92344),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Acceso $selectedRole',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ),
           ],
@@ -156,15 +192,9 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
 
 class InstitutionCard extends StatelessWidget {
   final String name;
-  final bool isSelected;
   final VoidCallback onTap;
 
-  const InstitutionCard({
-    required this.name,
-    required this.isSelected,
-    required this.onTap,
-    super.key,
-  });
+  const InstitutionCard({required this.name, required this.onTap, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +204,7 @@ class InstitutionCard extends StatelessWidget {
         width: 150,
         height: 150,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFD92344) : const Color(0xFFF3F3F3),
+          color: const Color(0xFFF3F3F3),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -187,19 +217,15 @@ class InstitutionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.apartment,
-              color: isSelected ? Colors.white : const Color(0xFFD92344),
-              size: 48,
-            ),
+            const Icon(Icons.apartment, color: Color(0xFFD92344), size: 48),
             const SizedBox(height: 8),
             Text(
               name,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black,
+                color: Colors.black,
               ),
             ),
           ],

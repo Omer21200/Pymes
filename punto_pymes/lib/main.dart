@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login_page/login_page.dart';
 import 'splash_screen/splash_screen.dart';
-import 'test_screen.dart';
+
 import 'access_selection/access_selection_page.dart';
+import 'home_page/home_page.dart';
+import 'admin_general_page/admin_general_page.dart';
+import 'institucion_page/institucion_page.dart';
 
 Future<void> main() async {
   await Supabase.initialize(
@@ -33,9 +36,19 @@ class MyApp extends StatelessWidget {
       // Pantalla inicial
       home: const SplashScreen(),
       routes: {
-        '/login': (context) => LoginPage(selectedInstitution: ''),
-        '/test': (context) => const TestScreen(),
+        '/login_page': (context) => const LoginPage(selectedInstitution: ''),
         '/access-selection': (context) => const AccessSelectionPage(),
+        '/home': (context) => const HomePage(),
+        '/admin-general': (context) => const AdminGeneralPage(),
+        '/institucion': (context) {
+          // Obtener el nombre de la institución de los argumentos
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, String>?;
+          return InstitucionPage(
+            institutionName: args?['institution'] ?? 'Institución',
+          );
+        },
       },
     );
   }

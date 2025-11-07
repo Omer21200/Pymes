@@ -1,9 +1,195 @@
 import 'package:flutter/material.dart';
+import '../main.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   final String selectedInstitution;
+  final String selectedRole;
 
-  const LoginPage({required this.selectedInstitution, super.key});
+  const LoginPage({
+    required this.selectedInstitution,
+    this.selectedRole = 'Empleado',
+    super.key,
+  });
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    // Validar campos
+    if (_usernameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, ingresa tu usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, ingresa tu contraseña'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Buscar en tabla personalizada primero (los usuarios están aquí)
+      String username = _usernameController.text.trim();
+      String password = _passwordController.text;
+      bool loginSuccess = false;
+      dynamic userData;
+
+      // Buscar en la tabla 'usuario' (singular)
+      try {
+        debugPrint('Buscando usuario: $username en tabla usuario');
+        debugPrint('Contraseña ingresada: ${password.length} caracteres');
+
+        // Primero buscar solo por email para ver si existe el usuario
+        var emailCheck = await supabase
+            .from('usuario')
+            .select()
+            .eq('email', username)
+            .maybeSingle();
+
+        debugPrint('Usuario encontrado por email: ${emailCheck != null}');
+
+        if (emailCheck != null) {
+          // Si encontramos el usuario, verificar la contraseña
+          // Intentar diferentes nombres de columnas comunes para password
+          String? storedPassword;
+
+          // Intentar con 'password'
+          storedPassword = emailCheck['password']?.toString();
+          if (storedPassword == null) {
+            // Intentar con 'contraseña'
+            storedPassword = emailCheck['contraseña']?.toString();
+          }
+          if (storedPassword == null) {
+            // Intentar con 'pass'
+            storedPassword = emailCheck['pass']?.toString();
+          }
+
+          debugPrint(
+            'Contraseña almacenada encontrada: ${storedPassword != null}',
+          );
+
+          if (storedPassword != null && storedPassword == password) {
+            userData = emailCheck;
+            loginSuccess = true;
+            debugPrint('✅ Usuario y contraseña correctos');
+          } else {
+            debugPrint('❌ Contraseña incorrecta');
+            throw Exception('Contraseña incorrecta');
+          }
+        } else {
+          debugPrint('❌ Usuario no encontrado');
+          throw Exception('Usuario no encontrado');
+        }
+      } catch (e) {
+        // Mostrar el error completo para debug
+        debugPrint('❌ Error al buscar en tabla usuario: $e');
+
+        // Si ya es una excepción de usuario/contraseña, re-lanzarla
+        if (e.toString().contains('Usuario no encontrado') ||
+            e.toString().contains('Contraseña incorrecta')) {
+          throw e;
+        }
+
+        // Re-lanzar el error para que se muestre al usuario
+        if (e.toString().contains('relation') ||
+            e.toString().contains('does not exist') ||
+            e.toString().contains('permission denied')) {
+          throw Exception(
+            'Error: La tabla usuario no existe o no tienes permisos. Verifica el nombre de la tabla y las políticas RLS en Supabase.',
+          );
+        } else if (e.toString().contains('column') ||
+            e.toString().contains('does not exist')) {
+          throw Exception(
+            'Error: Las columnas email o password no existen. Verifica los nombres de las columnas en la tabla usuario.',
+          );
+        }
+        throw Exception(
+          'Error al conectar con la base de datos: ${e.toString().split(':').last.trim()}',
+        );
+      }
+
+      // Si encontró el usuario en la tabla personalizada, hacer login
+      if (loginSuccess && userData != null) {
+        // Redirigir según el rol
+        if (mounted) {
+          // Determinar a qué vista redirigir según el rol
+          if (widget.selectedRole == 'Administrador General') {
+            // Redirigir a vista de Administrador General
+            Navigator.pushReplacementNamed(context, '/admin-general');
+          } else if (widget.selectedRole == 'Institución') {
+            // Redirigir a vista de Institución con el nombre de la institución
+            Navigator.pushReplacementNamed(
+              context,
+              '/institucion',
+              arguments: {'institution': widget.selectedInstitution},
+            );
+          } else {
+            // Por defecto, ir a home
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        }
+      } else {
+        // Si no encontró el usuario, mostrar error
+        throw Exception('Usuario o contraseña incorrectos');
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = 'Error al iniciar sesión';
+
+        if (e.toString().contains('Invalid login credentials') ||
+            e.toString().contains('Usuario o contraseña incorrectos')) {
+          errorMessage = 'Usuario o contraseña incorrectos';
+        } else if (e.toString().contains('Network')) {
+          errorMessage = 'Error de conexión. Verifica tu internet';
+        } else if (e.toString().contains('timeout')) {
+          errorMessage = 'Tiempo de espera agotado. Intenta de nuevo';
+        } else {
+          errorMessage = 'Error: ${e.toString().split(':').last.trim()}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,60 +218,81 @@ class LoginPage extends StatelessWidget {
                   color: Color(0xFFD92344),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Acceso Empleado',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              if (widget.selectedInstitution.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  widget.selectedInstitution,
+                  style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                selectedInstitution,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+              ],
               const SizedBox(height: 24),
               TextField(
+                controller: _usernameController,
                 decoration: InputDecoration(
-                  hintText: 'Ingresa tu usuario',
+                  hintText: 'Ingresa tu usuario o email',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  prefixIcon: const Icon(Icons.person),
                 ),
+                enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: 'Ingresa tu contraseña',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
-                obscureText: true,
+                enabled: !_isLoading,
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                height: 44,
+                height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Handle login
-                  },
+                  onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD92344),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Ingresar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Ingresar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 24),

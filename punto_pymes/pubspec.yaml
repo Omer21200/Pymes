@@ -25,7 +25,4 @@ flutter:
 
   # 🔹 Aquí se declaran los recursos (imágenes)
   assets:
-  - assets/images/image.png
-  - assets/images/per.png
-    # O puedes usar la línea de abajo si quieres cargar toda la carpeta:
-    # - assets/images/
+    - assets/images/
