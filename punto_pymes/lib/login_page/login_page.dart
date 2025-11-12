@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../main.dart';
 import '../institucion_page/institucion_page.dart';
 import '../superadmin/superadmin_page.dart';
@@ -29,6 +31,85 @@ class _LoginPageState extends State<LoginPage> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _promptCompanyCodeAndProceed() async {
+    // Si no se seleccionó institución (ej. Administrador General), ir directo a RegisterPage
+    if (widget.selectedInstitution.isEmpty) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(selectedInstitution: '')));
+      return;
+    }
+
+    String code = '';
+    bool isVerifying = false;
+    String? localError;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx2, setStateSB) {
+          return AlertDialog(
+            title: const Text('Por favor ingrese el código de Empresa'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Solicita el código de 8 caracteres a tu empresa para continuar con el registro.'),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (v) => code = v.trim(),
+                  maxLength: 16,
+                  decoration: const InputDecoration(hintText: 'Código de Empresa', counterText: ''),
+                ),
+                if (localError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(localError!, style: const TextStyle(color: Colors.red)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: isVerifying ? null : () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: isVerifying
+                    ? null
+                    : () async {
+                        if (code.isEmpty) {
+                          setStateSB(() => localError = 'Ingresa el código de la empresa');
+                          return;
+                        }
+                        setStateSB(() {
+                          isVerifying = true;
+                          localError = null;
+                        });
+                        try {
+                          // Buscar la empresa por nombre y comparar su código
+                          final res = await supabase.from('empresas').select('id,nombre,codigo_empresa').eq('nombre', widget.selectedInstitution).maybeSingle();
+                          if (res == null) {
+                            setStateSB(() => localError = 'No se encontró la institución en la base');
+                            setStateSB(() => isVerifying = false);
+                            return;
+                          }
+                          final dbCode = (res['codigo_empresa'] ?? '').toString().trim();
+                          if (dbCode.isEmpty || dbCode.toLowerCase() != code.toLowerCase()) {
+                            setStateSB(() => localError = 'Código inválido o no coincide');
+                            setStateSB(() => isVerifying = false);
+                            return;
+                          }
+                          // OK: cerrar diálogo y navegar a RegisterPage
+                          Navigator.pop(ctx);
+                          if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(selectedInstitution: widget.selectedInstitution)));
+                        } catch (e) {
+                          setStateSB(() => localError = 'Error validando código');
+                          setStateSB(() => isVerifying = false);
+                        }
+                      },
+                child: isVerifying ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Validar Código'),
+              )
+            ],
+          );
+        });
+      },
+    );
   }
 
   Future<void> _handleLogin() async {
@@ -92,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
       //    `usuarios`. Algunos despliegues guardan la contraseña en texto plano
       //    (o en una columna llamada 'contraseña_hash' pero sin hash). Aquí
       //    comprobamos varias columnas posibles y comparamos en texto plano.
-      if (!loginSuccess) {
+          if (!loginSuccess) {
         try {
           final usuario = await supabase.from('usuarios').select().eq('email', username).maybeSingle();
           if (usuario == null) throw Exception('Usuario no encontrado en tabla usuarios');
@@ -106,10 +187,12 @@ class _LoginPageState extends State<LoginPage> {
 
           if (storedPassword == null) throw Exception('No se encontró campo de contraseña en la tabla usuarios');
 
-          if (storedPassword == password) {
+          // Comparación segura: si la DB almacena hash (SHA256), comparamos hash(input) == stored
+          final inputHash = sha256.convert(utf8.encode(password)).toString();
+          if (storedPassword == password || storedPassword == inputHash) {
             loginSuccess = true;
             userData = usuario;
-            debugPrint('✅ Login por tabla usuarios (fallback plano) OK');
+            debugPrint('✅ Login por tabla usuarios (fallback) OK');
           } else {
             throw Exception('Contraseña incorrecta (falló fallback tabla usuarios)');
           }
@@ -298,12 +381,7 @@ class _LoginPageState extends State<LoginPage> {
               
               const SizedBox(height: 16),
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => RegisterPage(selectedInstitution: widget.selectedInstitution)),
-                  );
-                },
+                onTap: () => _promptCompanyCodeAndProceed(),
                 child: RichText(
                   text: TextSpan(
                     text: '¿No tienes una cuenta? ',

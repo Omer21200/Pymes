@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Permisos para acceder a fotos y cámara (image_picker) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>La aplicación necesita acceder a su galería para seleccionar el logo de la empresa.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>La aplicación necesita acceder a la cámara para tomar una foto del logo de la empresa si lo desea.</string>
 </dict>
 </plist>

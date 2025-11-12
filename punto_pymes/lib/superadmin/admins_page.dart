@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../widgets/profile_card.dart';
 import '../main.dart';
 
@@ -17,6 +19,7 @@ class _AdminsPageState extends State<AdminsPage> {
 
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _telefonoCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
   String? _selectedCompanyId;
   bool _isCreating = false;
@@ -49,6 +52,7 @@ class _AdminsPageState extends State<AdminsPage> {
               'id': (e['id'] ?? '').toString(),
               'nombre': (e['nombre_completo'] ?? e['nombre'] ?? '').toString(),
               'email': (e['email'] ?? e['correo'] ?? '').toString(),
+              'telefono': (e['telefono'] ?? '').toString(),
               'empresa_id': (e['empresa_id'] ?? '').toString(),
             }).toList();
       });
@@ -62,23 +66,45 @@ class _AdminsPageState extends State<AdminsPage> {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
     final empresaId = _selectedCompanyId;
+    // Validaciones básicas
+    final emailPattern = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
     if (nombre.isEmpty || email.isEmpty || password.isEmpty || empresaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completa todos los campos'), backgroundColor: Colors.red));
       return;
     }
 
+    if (!emailPattern.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El correo no tiene un formato válido'), backgroundColor: Colors.red));
+      debugPrint('Email inválido intentado: "$email" (len=${email.length})');
+      return;
+    }
+
     setState(() => _isCreating = true);
     try {
+      // Normalizar email: lowercase y eliminar caracteres invisibles/control
+      String normalizedEmail = email.toLowerCase();
+      normalizedEmail = normalizedEmail.replaceAll(RegExp(r'[\u0000-\u001F\u007F-\u009F\u200B-\u200F\uFEFF]'), '');
+      debugPrint('Email raw: "$email" (len=${email.length})');
+      debugPrint('Email normalized: "$normalizedEmail" (len=${normalizedEmail.length})');
+      debugPrint('Email runes: ${normalizedEmail.runes.toList()}');
+      debugPrint('Email codeUnits: ${normalizedEmail.codeUnits}');
+
       // 1) Crear usuario en Supabase Auth
-      final signUpResp = await supabase.auth.signUp(email: email, password: password);
+      debugPrint('Attempting signUp with normalized email: "$normalizedEmail"');
+      final signUpResp = await supabase.auth.signUp(email: normalizedEmail, password: password);
       final userId = signUpResp.user?.id;
 
       // 2) Insertar metadata en tabla usuarios
+      // Hashear la contraseña para almacenarla en contraseña_hash
+      final hashed = sha256.convert(utf8.encode(password)).toString();
+
       final userInsert = {
         if (userId != null) 'id': userId,
         'empresa_id': empresaId,
         'nombre_completo': nombre,
-        'email': email,
+        'email': normalizedEmail,
+        'contraseña_hash': hashed,
+        'telefono': _telefonoCtrl.text.trim().isNotEmpty ? _telefonoCtrl.text.trim() : null,
         'rol': 'admin',
         'estado': true,
       };
@@ -120,6 +146,7 @@ class _AdminsPageState extends State<AdminsPage> {
   void dispose() {
     _nombreCtrl.dispose();
     _emailCtrl.dispose();
+    _telefonoCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -148,6 +175,8 @@ class _AdminsPageState extends State<AdminsPage> {
                   const SizedBox(height: 8),
                   TextField(controller: _emailCtrl, decoration: InputDecoration(hintText: 'admin@empresa.com', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)))),
                   const SizedBox(height: 8),
+                  TextField(controller: _telefonoCtrl, decoration: InputDecoration(hintText: 'Celular', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)))),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _selectedCompanyId,
                     items: _companies.map((c) => DropdownMenuItem<String>(value: c['id'].toString(), child: Text(c['name'].toString()))).toList(),
@@ -156,13 +185,24 @@ class _AdminsPageState extends State<AdminsPage> {
                     hint: const Text('Selecciona una empresa'),
                   ),
                   const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(child: TextField(controller: _passwordCtrl, decoration: InputDecoration(hintText: 'Contraseña', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))))),
-                    const SizedBox(width: 8),
-                    ElevatedButton(onPressed: () => _passwordCtrl.text = 'admin' + DateTime.now().millisecondsSinceEpoch.toString().substring(8), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344)), child: const Text('Generar'))
-                  ]),
+                  // Contraseña: el usuario la ingresa manualmente
+                  TextField(
+                    controller: _passwordCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(hintText: 'Contraseña', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                  ),
                   const SizedBox(height: 12),
-                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _isCreating ? null : _createAdmin, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344)), child: _isCreating ? const CircularProgressIndicator(color: Colors.white) : const Text('Crear Administrador'))),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isCreating ? null : _createAdmin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD92344),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: _isCreating ? const CircularProgressIndicator(color: Colors.white) : const Text('Crear Administrador'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -179,7 +219,18 @@ class _AdminsPageState extends State<AdminsPage> {
               child: ListTile(
                 leading: CircleAvatar(child: Text((a['nombre'] ?? 'U').toString().substring(0, 1).toUpperCase())),
                 title: Text(a['nombre'] ?? ''),
-                subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(a['email'] ?? ''), const SizedBox(height: 6), Text(companyName, style: const TextStyle(color: Colors.grey))]),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(a['email'] ?? ''),
+                    if ((a['telefono'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Tel: ${a['telefono']}', style: const TextStyle(color: Colors.grey)),
+                    ],
+                    const SizedBox(height: 6),
+                    Text(companyName, style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
                 trailing: IconButton(onPressed: () => _deleteAdmin(a['id']), icon: const Icon(Icons.delete_forever, color: Colors.red)),
               ),
             );

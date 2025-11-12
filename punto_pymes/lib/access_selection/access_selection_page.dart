@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../login_page/login_page.dart';
+import '../main.dart';
 
 class AccessSelectionPage extends StatefulWidget {
   const AccessSelectionPage({super.key});
@@ -9,8 +10,16 @@ class AccessSelectionPage extends StatefulWidget {
 }
 
 class _AccessSelectionPageState extends State<AccessSelectionPage> {
+  bool _isLoading = false;
+  String? _error;
+  List<Map<String, dynamic>> _institutions = [];
   @override
   Widget build(BuildContext context) {
+    // aseguramos que las empresas se carguen la primera vez
+    if (!_isLoading && _institutions.isEmpty && _error == null) {
+      // iniciar carga asíncrona sin bloquear el build
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadInstitutions());
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
@@ -78,69 +87,41 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Wrap(
-                          alignment: WrapAlignment.start,
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            InstitutionCard(
-                              name: 'Banco de Loja',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginPage(
-                                      selectedInstitution: 'Banco de Loja',
-                                      selectedRole: 'Institución',
+                        // Mostrar carga / error / lista de instituciones obtenidas desde la BD
+                        if (_isLoading)
+                          const SizedBox(width: double.infinity, child: Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator())))
+                        else if (_error != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                            child: Text('Error cargando instituciones: $_error', style: const TextStyle(color: Colors.red)),
+                          )
+                        else if (_institutions.isEmpty)
+                          const Text('No hay instituciones registradas', style: TextStyle(color: Colors.grey))
+                        else
+                          Wrap(
+                            alignment: WrapAlignment.start,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: _institutions.map((inst) {
+                              final String name = (inst['nombre'] ?? inst['name'] ?? '—').toString();
+                              return InstitutionCard(
+                                name: name,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => LoginPage(
+                                        selectedInstitution: name,
+                                        selectedRole: 'Institución',
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                            InstitutionCard(
-                              name: 'Coopmego',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginPage(
-                                      selectedInstitution: 'Coopmego',
-                                      selectedRole: 'Institución',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            InstitutionCard(
-                              name: 'UTPL',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginPage(
-                                      selectedInstitution: 'UTPL',
-                                      selectedRole: 'Institución',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            InstitutionCard(
-                              name: 'UNL',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginPage(
-                                      selectedInstitution: 'UNL',
-                                      selectedRole: 'Institución',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                                  );
+                                },
+                              );
+                            }).toList(),
+                          ),
                       ],
                     ),
                   ),
@@ -187,6 +168,27 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadInstitutions() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final res = await supabase.from('empresas').select('id,nombre').order('nombre');
+      final List list = res as List? ?? [];
+      setState(() {
+        _institutions = list.map<Map<String, dynamic>>((e) => {'id': e['id'], 'nombre': e['nombre'] ?? e['name'] ?? ''}).toList();
+      });
+    } catch (e) {
+      debugPrint('Error cargando instituciones: $e');
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }
 

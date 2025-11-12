@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../main.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -73,15 +75,19 @@ class _RegisterPageState extends State<RegisterPage> {
         debugPrint('Supabase signUp error: $e');
       }
 
-      // 2) Insertar metadata en tabla 'usuarios'
+  // 2) Insertar metadata en tabla 'usuarios'
       // Ajustar campos para que coincidan con el schema real (ver base.sql):
       // columnas: id, empresa_id, nombre_completo, email, contraseña_hash, rol, telefono, avatar_url, estado
+      // Hashear la contraseña con SHA256 y guardarla en la columna contraseña_hash
+      final hashed = sha256.convert(utf8.encode(password)).toString();
+
       final userInsert = {
         if (authUser != null && authUser['id'] != null) 'id': authUser['id'],
         if (empresaId != null) 'empresa_id': empresaId,
         'nombre_completo': '$nombre ${apellido.isNotEmpty ? apellido : ''}'.trim(),
         'email': email,
-        // No insertar contraseña en texto; Supabase Auth debe ser la fuente de la contraseña.
+        // Guardar hash de la contraseña para compatibilidad con login por tabla si es necesario
+        'contraseña_hash': hashed,
         'rol': 'empleado',
         if (_telefonoController.text.trim().isNotEmpty) 'telefono': _telefonoController.text.trim(),
         'estado': true,

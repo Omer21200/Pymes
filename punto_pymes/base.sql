@@ -25,10 +25,14 @@ CREATE TABLE public.empresas (
   email text,
   logo_url text,
   hora_entrada time without time zone,
+  hora_salida time without time zone,
+  hora_almuerzo time without time zone,
+  hota_entrada_almuerzo time without time zone,
   tolerancia_minutos integer DEFAULT 0,
   estado text DEFAULT 'activo'::text CHECK (estado = ANY (ARRAY['activo'::text, 'inactivo'::text, 'pendiente'::text])),
   creado_en timestamp with time zone DEFAULT now(),
   actualizado_en timestamp with time zone DEFAULT now(),
+  codigo_empresa numeric,
   CONSTRAINT empresas_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.media (
@@ -108,3 +112,35 @@ CREATE TABLE public.usuarios (
   CONSTRAINT usuarios_pkey PRIMARY KEY (id),
   CONSTRAINT usuarios_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );
+
+
+CREATE OR REPLACE FUNCTION generar_codigo_empresa()
+RETURNS trigger AS $$
+DECLARE
+  base_nombre text;
+  codigo_final text;
+BEGIN
+  -- Limpia el nombre: minúsculas y sin caracteres especiales
+  base_nombre := regexp_replace(lower(NEW.nombre), '[^a-z0-9]', '', 'g');
+
+  LOOP
+    -- Genera un número aleatorio de 4 dígitos
+    codigo_final := base_nombre || '-' || lpad((floor(random() * 10000))::text, 4, '0');
+
+    -- Verifica que no exista ya ese código
+    EXIT WHEN NOT EXISTS (
+      SELECT 1 FROM public.empresas WHERE codigo_empresa = codigo_final
+    );
+  END LOOP;
+
+  -- Asigna el código generado
+  NEW.codigo_empresa := codigo_final;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_generar_codigo_empresa
+BEFORE INSERT ON public.empresas
+FOR EACH ROW
+WHEN (NEW.codigo_empresa IS NULL)
+EXECUTE FUNCTION generar_codigo_empresa();

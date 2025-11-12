@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/profile_card.dart';
-import '../widgets/bottom_nav_pill.dart';
 import '../widgets/superadmin_nav_pill.dart';
 import 'empresas_page.dart';
 import 'admins_page.dart';
@@ -17,27 +16,16 @@ class SuperAdminPage extends StatefulWidget {
 
 class _SuperAdminPageState extends State<SuperAdminPage> {
   int _selectedIndex = 0;
-
-  // Mock data
-  final List<Map<String, dynamic>> _metrics = [
-    {'title': 'Empresas', 'value': '4'},
-    {'title': 'Admins', 'value': '8'},
-    {'title': 'Empleados', 'value': '324'},
-    {'title': 'Activos Hoy', 'value': '298'},
-  ];
+  List<Map<String, dynamic>> _metrics = [];
 
   List<Map<String, dynamic>> _companies = [];
 
-  final List<Map<String, String>> _activities = [
-    {'title': 'Nueva empresa registrada: Banco Pichincha', 'subtitle': 'Hace 2 horas'},
-    {'title': 'Nuevo admin creado para UTPL: Carlos Mendoza', 'subtitle': 'Hace 3 horas'},
-    {'title': 'Alta actividad de registro en Coopmego', 'subtitle': 'Hace 5 horas'},
-    {'title': '50 nuevos empleados registrados hoy', 'subtitle': 'Hace 6 horas'},
-  ];
+  List<Map<String, String>> _activities = [];
 
   @override
   void initState() {
     super.initState();
+    _loadResumenData();
     _loadCompanies();
   }
 
@@ -58,12 +46,75 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
               'direccion': e['direccion'] ?? '',
               'telefono': e['telefono'] ?? '',
               'email': e['email'] ?? '',
+              // placeholders for counts (will be set by _loadResumenData)
+              'employees': 0,
+              'admins': 0,
               'hora_entrada': e['hora_entrada'] ?? '',
               'tolerancia_minutos': e['tolerancia_minutos'] ?? 0,
             }).toList();
       });
     } catch (e) {
       debugPrint('Error cargando empresas: $e');
+    }
+  }
+
+  Future<void> _loadResumenData() async {
+    try {
+      // 1) counts: empresas, admins, empleados
+      final empresasRes = await supabase.from('empresas').select() as List<dynamic>? ?? [];
+      final usuariosRes = await supabase.from('usuarios').select('id,empresa_id,rol') as List<dynamic>? ?? [];
+
+      final int empresasCount = empresasRes.length;
+      int adminsCount = 0;
+      int empleadosCount = 0;
+
+      final Map<String, Map<String, int>> perCompany = {};
+      for (final u in usuariosRes) {
+        final rol = (u['rol'] ?? '').toString();
+        final empresaId = (u['empresa_id'] ?? '').toString();
+        if (rol == 'admin') adminsCount++;
+        if (rol == 'empleado') empleadosCount++;
+        if (empresaId.isNotEmpty) {
+          perCompany.putIfAbsent(empresaId, () => {'admin': 0, 'empleado': 0});
+          if (rol == 'admin') perCompany[empresaId]!['admin'] = perCompany[empresaId]!['admin']! + 1;
+          if (rol == 'empleado') perCompany[empresaId]!['empleado'] = perCompany[empresaId]!['empleado']! + 1;
+        }
+      }
+
+      // 2) recent activities from notificaciones (fallback to empty)
+      final acts = await supabase.from('notificaciones').select().order('creado_en', ascending: false).limit(6) as List<dynamic>? ?? [];
+      final List<Map<String, String>> activities = [];
+      for (final a in acts) {
+        final title = (a['titulo'] ?? '').toString();
+        final created = a['creado_en']?.toString() ?? '';
+        activities.add({'title': title.isNotEmpty ? title : (a['contenido']?.toString() ?? ''), 'subtitle': created});
+      }
+
+      setState(() {
+        _metrics = [
+          {'title': 'Empresas', 'value': empresasCount.toString()},
+          {'title': 'Admins', 'value': adminsCount.toString()},
+          {'title': 'Empleados', 'value': empleadosCount.toString()},
+        ];
+
+        _activities = activities;
+
+        // merge perCompany counts into _companies if already loaded
+        if (_companies.isNotEmpty) {
+          _companies = _companies.map((c) {
+            final id = (c['id'] ?? '').toString();
+            final data = perCompany[id];
+            return {
+              ...c,
+              'employees': data != null ? (data['empleado'] ?? 0) : (c['employees'] ?? 0),
+              'admins': data != null ? (data['admin'] ?? 0) : (c['admins'] ?? 0),
+              'progress': (data != null && ((data['empleado'] ?? 0) > 0)) ? ((data['admin'] ?? 0) / ((data['empleado'] ?? 1))) : 0.0,
+            };
+          }).toList();
+        }
+      });
+    } catch (e) {
+      debugPrint('Error cargando resumen: $e');
     }
   }
 
@@ -80,8 +131,15 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
             userName: widget.userName,
             institutionName: 'NEXUS',
             role: 'Super Administrador',
-            onAction: () {
-              // ejemplo: cerrar sesión o cambiar contexto
+            onAction: () async {
+              await supabase.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/access-selection',
+                      (route) => false,
+                    );
+                  }
             },
           ),
           const SizedBox(height: 12),
@@ -142,16 +200,44 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
                                 Expanded(
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: (c['progress'] as double),
-                                      minHeight: 8,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-                                      backgroundColor: Colors.grey.shade200,
-                                    ),
+                                    child: Builder(builder: (context) {
+                                      // Defensive parsing: progress may be null, int, double or string
+                                      final raw = c['progress'];
+                                      double progress;
+                                      if (raw == null) {
+                                        progress = 0.0;
+                                      } else if (raw is double) {
+                                        progress = raw;
+                                      } else if (raw is int) {
+                                        progress = raw.toDouble();
+                                      } else {
+                                        progress = double.tryParse(raw.toString()) ?? 0.0;
+                                      }
+
+                                      return LinearProgressIndicator(
+                                        value: progress.clamp(0.0, 1.0),
+                                        minHeight: 8,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
+                                        backgroundColor: Colors.grey.shade200,
+                                      );
+                                    }),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text('${((c['progress'] as double) * 100).round()}%', style: const TextStyle(color: Colors.grey)),
+                                Builder(builder: (context) {
+                                  final raw = c['progress'];
+                                  double progress;
+                                  if (raw == null) {
+                                    progress = 0.0;
+                                  } else if (raw is double) {
+                                    progress = raw;
+                                  } else if (raw is int) {
+                                    progress = raw.toDouble();
+                                  } else {
+                                    progress = double.tryParse(raw.toString()) ?? 0.0;
+                                  }
+                                  return Text('${( (progress.clamp(0.0,1.0) * 100).round() )}%', style: const TextStyle(color: Colors.grey));
+                                }),
                               ],
                             ),
                           ],
@@ -193,7 +279,14 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
   }
 
   Widget _buildEmpresas() {
-    return EmpresasPage(userName: widget.userName);
+    return EmpresasPage(
+      userName: widget.userName,
+      onCompanyChanged: () async {
+        // cuando una empresa cambia en EmpresasPage, recargamos resumen y empresas del SuperAdmin
+        await _loadResumenData();
+        await _loadCompanies();
+      },
+    );
   }
 
   Widget _buildAdmins() {
@@ -216,26 +309,33 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.grey.shade50,
-      body: Stack(
-        children: [
-          _buildBodyForIndex(),
-          // Positioned bottom navigation pill
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
+      body: _buildBodyForIndex(),
+      bottomNavigationBar: Material(
+        elevation: 8,
+        color: Colors.white,
+        child: SafeArea(
+          bottom: true,
+          child: Container(
+            // más altura para que el pill no se vea aplastado
+            height: 96,
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
             child: Center(
-              child: SuperAdminNavPill(
-                selectedIndex: _selectedIndex,
-                onSelect: (i) => setState(() => _selectedIndex = i),
-                onFloating: () {
-                  // acción del botón flotante: abrir creación rápida
-                },
+              // limitamos el ancho del pill para que tenga espacio lateral y quede visualmente centrado
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.9,
+                child: SuperAdminNavPill(
+                  selectedIndex: _selectedIndex,
+                  onSelect: (i) => setState(() => _selectedIndex = i),
+                  onFloating: () {
+                    // acción del botón flotante: abrir creación rápida
+                  },
+                ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

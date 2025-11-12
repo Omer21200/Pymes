@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../registro/capture_attendance_page.dart';
 import '../main.dart';
 import 'notificaciones.dart';
 import 'reportes.dart';
@@ -52,10 +53,14 @@ class _InstitucionPageState extends State<InstitucionPage> {
       bottomNavigationBar: BottomNavPill(
         selectedIndex: _selectedIndex,
         onSelect: (i) => setState(() => _selectedIndex = i),
-        onFloating: () => setState(() => _selectedIndex = 3),
+        onFloating: () {
+          // Navegar directamente a la pantalla de captura; image_picker solicitará permiso si es necesario
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureAttendancePage()));
+        },
       ),
     );
   }
+  
 
 
   Widget _buildBodyForIndex(int index, String initials) {
