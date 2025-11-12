@@ -170,16 +170,40 @@ class _EmpresasPageState extends State<EmpresasPage> {
                       Expanded(
                         child: TextField(
                           controller: _horaEntradaCtrl,
+                          readOnly: true,
+                          onTap: () async {
+                            // abrir selector de hora
+                            TimeOfDay initial = TimeOfDay.now();
+                            if (_horaEntradaCtrl.text.isNotEmpty) {
+                              final parts = _horaEntradaCtrl.text.split(':');
+                              if (parts.length == 2) {
+                                final h = int.tryParse(parts[0]) ?? initial.hour;
+                                final m = int.tryParse(parts[1]) ?? initial.minute;
+                                initial = TimeOfDay(hour: h, minute: m);
+                              }
+                            }
+                            final picked = await showTimePicker(context: context, initialTime: initial);
+                            if (picked != null) {
+                              final hh = picked.hour.toString().padLeft(2, '0');
+                              final mm = picked.minute.toString().padLeft(2, '0');
+                              _horaEntradaCtrl.text = '$hh:$mm';
+                            }
+                          },
                           decoration: InputDecoration(hintText: 'Hora de Entrada (HH:MM)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
                         ),
                       ),
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 110,
-                        child: TextField(
-                          controller: _toleranciaCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(hintText: 'Tolerancia', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                        child: DropdownButtonFormField<String>(
+                          value: _toleranciaCtrl.text,
+                          items: ['0','5','10','15','20','30','45','60']
+                              .map((m) => DropdownMenuItem<String>(value: m, child: Text('$m')))
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _toleranciaCtrl.text = v);
+                          },
+                          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
                         ),
                       ),
                     ],
