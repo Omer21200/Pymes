@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import 'notificaciones.dart';
+import 'reportes.dart';
 import '../splash_screen/splash_screen.dart';
 import '../widgets/profile_card.dart';
 import '../widgets/metrics_row.dart';
@@ -62,10 +63,7 @@ class _InstitucionPageState extends State<InstitucionPage> {
       case 1:
         return const NotificacionesContent();
       case 2:
-        return const Center(
-          key: ValueKey('reportes'),
-          child: Text('Reportes', style: TextStyle(fontSize: 20)),
-        );
+        return const ReportesContent();
       case 3:
         return const Center(
           key: ValueKey('registrar'),
