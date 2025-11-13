@@ -231,6 +231,20 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
         'dispositivo': dispositivo,
       };
 
+      // Debug: imprimir información de sesión y payload antes del insert
+      final currentUid = supabase.auth.currentUser?.id;
+      debugPrint('Attempting to insert registro. widget.userId: $userId, supabase.auth.currentUser?.id: $currentUid');
+      debugPrint('Payload: $payload');
+
+      // Si no hay sesión de usuario, la política RLS (id = auth.uid()) rechazará la inserción.
+      if (currentUid == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se encontró sesión de usuario. Vuelve a iniciar sesión e intenta de nuevo.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
       final inserted = await supabase.from('registros_asistencia').insert([payload]).select().maybeSingle();
       if (inserted != null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro guardado')));
