@@ -217,8 +217,11 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
+      // Nota: la columna que referencia al usuario en la tabla 'registros_asistencia'
+      // en la base de datos es `id` (clave foránea a usuarios.id). Usar 'usuario_id'
+      // provocaba que `new.id` quedara NULL y las políticas RLS fallaran.
       final payload = {
-        if (userId != null) 'usuario_id': userId,
+        if (userId != null) 'id': userId,
         if (empresaId != null) 'empresa_id': empresaId,
         'tipo': 'entrada',
         'latitud': lat,

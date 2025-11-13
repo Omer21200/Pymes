@@ -5,6 +5,7 @@ import '../main.dart';
 import '../institucion_page/institucion_page.dart';
 import '../superadmin/superadmin_page.dart';
 import 'register_page.dart';
+import '../admin_company/admin_company_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String selectedInstitution;
@@ -217,12 +218,60 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(builder: (_) => SuperAdminPage(userName: nombre)),
           );
         } else if (role == 'admin' || role.toLowerCase().contains('admin')) {
-          // intenta ruta administrativa si existe, sino navegar a home
-          try {
-            Navigator.pushReplacementNamed(context, '/admin-general');
-          } catch (_) {
-            Navigator.pushReplacementNamed(context, '/home');
+          // Verificar que el admin corresponde a la empresa seleccionada (si aplica)
+          if (widget.selectedInstitution.isNotEmpty) {
+            String? empresaIdFromUser;
+            try {
+              // intentar leer empresa_id directamente del objeto userData
+              empresaIdFromUser = (userData['empresa_id'] ?? userData['empresa'] ?? userData['id_empresa'])?.toString();
+              if (empresaIdFromUser == null) {
+                // intentar consultar la tabla usuarios por email para obtener empresa_id
+                final u = await supabase.from('usuarios').select('empresa_id').eq('email', username).maybeSingle();
+                if (u != null && u['empresa_id'] != null) empresaIdFromUser = u['empresa_id'].toString();
+              }
+            } catch (e) {
+              debugPrint('Error obteniendo empresa del usuario: $e');
+            }
+
+            // Obtener empresa_id por el nombre seleccionado
+            String? empresaIdByName;
+            try {
+              final ent = await supabase.from('empresas').select('id').eq('nombre', widget.selectedInstitution).maybeSingle();
+              if (ent != null && ent['id'] != null) empresaIdByName = ent['id'].toString();
+            } catch (e) {
+              debugPrint('Error buscando empresa por nombre: $e');
+            }
+
+            // Si no hay match, mostrar mensaje y cancelar navegación
+            if (empresaIdFromUser == null || empresaIdByName == null || empresaIdFromUser != empresaIdByName) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No autorizado para esa empresa'), backgroundColor: Colors.red));
+                return;
+              }
+            }
           }
+
+            if (role == 'admin') {
+              // Administrador de empresa (panel propio, diferente del Admin General)
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) =>
+                  // pasar user id y nombre de empresa cuando estén disponibles
+                  // si userData incluye 'id' y 'empresa_id' los usamos
+                  AdminCompanyPage(
+                    userId: (userData['id'] ?? supabase.auth.currentUser?.id ?? '').toString(),
+                    companyName: (userData['empresa_nombre'] ?? userData['empresa'] ?? widget.selectedInstitution ?? '').toString(),
+                  ),
+                ),
+              );
+            } else {
+              // fallback para otros tipos de admin, mantener ruta existente
+              try {
+                Navigator.pushReplacementNamed(context, '/admin-general');
+              } catch (_) {
+                Navigator.pushReplacementNamed(context, '/home');
+              }
+            }
         } else {
           // Navegar a InstitucionPage con el nombre de institución seleccionado
           Navigator.pushReplacement(

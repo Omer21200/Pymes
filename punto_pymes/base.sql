@@ -32,7 +32,7 @@ CREATE TABLE public.empresas (
   estado text DEFAULT 'activo'::text CHECK (estado = ANY (ARRAY['activo'::text, 'inactivo'::text, 'pendiente'::text])),
   creado_en timestamp with time zone DEFAULT now(),
   actualizado_en timestamp with time zone DEFAULT now(),
-  codigo_empresa numeric,
+  codigo_empresa text NOT NULL UNIQUE,
   CONSTRAINT empresas_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.media (
@@ -62,8 +62,8 @@ CREATE TABLE public.notificaciones (
   CONSTRAINT notificaciones_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id)
 );
 CREATE TABLE public.registros_asistencia (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  usuario_id uuid,
+  id_registro uuid NOT NULL DEFAULT gen_random_uuid(),
+  id uuid,
   empresa_id uuid,
   tipo text NOT NULL CHECK (tipo = ANY (ARRAY['entrada'::text, 'salida'::text])),
   registrado_en timestamp with time zone NOT NULL DEFAULT now(),
@@ -75,8 +75,8 @@ CREATE TABLE public.registros_asistencia (
   dispositivo jsonb,
   notas text,
   creado_en timestamp with time zone DEFAULT now(),
-  CONSTRAINT registros_asistencia_pkey PRIMARY KEY (id),
-  CONSTRAINT registros_asistencia_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id),
+  CONSTRAINT registros_asistencia_pkey PRIMARY KEY (id_registro),
+  CONSTRAINT registros_asistencia_id_fkey FOREIGN KEY (id) REFERENCES public.usuarios(id),
   CONSTRAINT registros_asistencia_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );
 CREATE TABLE public.solicitudes_registro (
@@ -112,35 +112,3 @@ CREATE TABLE public.usuarios (
   CONSTRAINT usuarios_pkey PRIMARY KEY (id),
   CONSTRAINT usuarios_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );
-
-
-CREATE OR REPLACE FUNCTION generar_codigo_empresa()
-RETURNS trigger AS $$
-DECLARE
-  base_nombre text;
-  codigo_final text;
-BEGIN
-  -- Limpia el nombre: minúsculas y sin caracteres especiales
-  base_nombre := regexp_replace(lower(NEW.nombre), '[^a-z0-9]', '', 'g');
-
-  LOOP
-    -- Genera un número aleatorio de 4 dígitos
-    codigo_final := base_nombre || '-' || lpad((floor(random() * 10000))::text, 4, '0');
-
-    -- Verifica que no exista ya ese código
-    EXIT WHEN NOT EXISTS (
-      SELECT 1 FROM public.empresas WHERE codigo_empresa = codigo_final
-    );
-  END LOOP;
-
-  -- Asigna el código generado
-  NEW.codigo_empresa := codigo_final;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_generar_codigo_empresa
-BEFORE INSERT ON public.empresas
-FOR EACH ROW
-WHEN (NEW.codigo_empresa IS NULL)
-EXECUTE FUNCTION generar_codigo_empresa();
