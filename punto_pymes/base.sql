@@ -13,7 +13,7 @@ CREATE TABLE public.anuncios (
   metadatos jsonb,
   creado_en timestamp with time zone DEFAULT now(),
   CONSTRAINT anuncios_pkey PRIMARY KEY (id),
-  CONSTRAINT anuncios_creado_por_fkey FOREIGN KEY (creado_por) REFERENCES public.usuarios(id),
+  CONSTRAINT anuncios_creado_por_fkey FOREIGN KEY (creado_por) REFERENCES public.usuarios(usuarios_id),
   CONSTRAINT anuncios_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );
 CREATE TABLE public.empresas (
@@ -47,7 +47,7 @@ CREATE TABLE public.media (
   actualizado_en timestamp with time zone DEFAULT now(),
   CONSTRAINT media_pkey PRIMARY KEY (id),
   CONSTRAINT media_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id),
-  CONSTRAINT media_subido_por_fkey FOREIGN KEY (subido_por) REFERENCES public.usuarios(id)
+  CONSTRAINT media_subido_por_fkey FOREIGN KEY (subido_por) REFERENCES public.usuarios(usuarios_id)
 );
 CREATE TABLE public.notificaciones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -59,11 +59,11 @@ CREATE TABLE public.notificaciones (
   leido boolean DEFAULT false,
   creado_en timestamp with time zone DEFAULT now(),
   CONSTRAINT notificaciones_pkey PRIMARY KEY (id),
-  CONSTRAINT notificaciones_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id)
+  CONSTRAINT notificaciones_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(usuarios_id)
 );
 CREATE TABLE public.registros_asistencia (
   id_registro uuid NOT NULL DEFAULT gen_random_uuid(),
-  id uuid,
+  usuarios_id uuid,
   empresa_id uuid,
   tipo text NOT NULL CHECK (tipo = ANY (ARRAY['entrada'::text, 'salida'::text])),
   registrado_en timestamp with time zone NOT NULL DEFAULT now(),
@@ -76,7 +76,7 @@ CREATE TABLE public.registros_asistencia (
   notas text,
   creado_en timestamp with time zone DEFAULT now(),
   CONSTRAINT registros_asistencia_pkey PRIMARY KEY (id_registro),
-  CONSTRAINT registros_asistencia_id_fkey FOREIGN KEY (id) REFERENCES public.usuarios(id),
+  CONSTRAINT registros_asistencia_usuarios_id_fkey FOREIGN KEY (usuarios_id) REFERENCES public.usuarios(usuarios_id),
   CONSTRAINT registros_asistencia_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );
 CREATE TABLE public.solicitudes_registro (
@@ -94,10 +94,10 @@ CREATE TABLE public.solicitudes_registro (
   notas_revision text,
   CONSTRAINT solicitudes_registro_pkey PRIMARY KEY (id),
   CONSTRAINT solicitudes_registro_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id),
-  CONSTRAINT solicitudes_registro_revisado_por_fkey FOREIGN KEY (revisado_por) REFERENCES public.usuarios(id)
+  CONSTRAINT solicitudes_registro_revisado_por_fkey FOREIGN KEY (revisado_por) REFERENCES public.usuarios(usuarios_id)
 );
 CREATE TABLE public.usuarios (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  usuarios_id uuid NOT NULL DEFAULT gen_random_uuid(),
   empresa_id uuid,
   nombre_completo text NOT NULL,
   email text NOT NULL UNIQUE,
@@ -109,6 +109,6 @@ CREATE TABLE public.usuarios (
   creado_en timestamp with time zone DEFAULT now(),
   ultimo_login timestamp with time zone,
   actualizado_en timestamp with time zone DEFAULT now(),
-  CONSTRAINT usuarios_pkey PRIMARY KEY (id),
+  CONSTRAINT usuarios_pkey PRIMARY KEY (usuarios_id),
   CONSTRAINT usuarios_empresa_id_fkey FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
 );

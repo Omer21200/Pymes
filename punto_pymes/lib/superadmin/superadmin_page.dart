@@ -62,7 +62,7 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
     try {
       // 1) counts: empresas, admins, empleados
       final empresasRes = await supabase.from('empresas').select() as List<dynamic>? ?? [];
-      final usuariosRes = await supabase.from('usuarios').select('id,empresa_id,rol') as List<dynamic>? ?? [];
+      final usuariosRes = await supabase.from('usuarios').select('usuarios_id,empresa_id,rol') as List<dynamic>? ?? [];
 
       final int empresasCount = empresasRes.length;
       int adminsCount = 0;

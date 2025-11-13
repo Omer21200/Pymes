@@ -34,9 +34,9 @@ class _InicioAdminState extends State<InicioAdmin> {
         if (ent != null && ent['id'] != null) empresaId = ent['id'].toString();
       }
 
-      // Empleados activos
+        // Empleados activos
       if (empresaId != null) {
-        final empleados = await Supabase.instance.client.from('usuarios').select('id').eq('empresa_id', empresaId).eq('rol', 'empleado') as List<dynamic>? ?? [];
+        final empleados = await Supabase.instance.client.from('usuarios').select('usuarios_id').eq('empresa_id', empresaId).eq('rol', 'empleado') as List<dynamic>? ?? [];
         empleadosActivos = empleados.length;
 
         // Registros hoy
@@ -54,10 +54,10 @@ class _InicioAdminState extends State<InicioAdmin> {
         notificacionesEnviadas = nots.length;
 
         // Últimos registros (limit 5)
-        final recent = await Supabase.instance.client.from('registros_asistencia').select('id,usuario_id,capturado_en,foto_url').eq('empresa_id', empresaId).order('capturado_en', ascending: false).limit(5) as List<dynamic>? ?? [];
+        final recent = await Supabase.instance.client.from('registros_asistencia').select('id_registro,usuarios_id,capturado_en,foto_url').eq('empresa_id', empresaId).order('capturado_en', ascending: false).limit(5) as List<dynamic>? ?? [];
         ultimosRegistros = recent.map((r) => {
-          'id': r['id'],
-          'usuario_id': r['usuario_id'],
+          'id_registro': r['id_registro'],
+          'usuarios_id': r['usuarios_id'],
           'capturado_en': r['capturado_en'],
           'foto_url': r['foto_url'],
         }).toList();
@@ -135,7 +135,7 @@ class _InicioAdminState extends State<InicioAdmin> {
                     const SizedBox(height: 8),
                     ...ultimosRegistros.map((r) {
                       final ts = r['capturado_en']?.toString() ?? '';
-                      return RegistroItem(usuarioId: r['usuario_id']?.toString() ?? 'Usuario', timestamp: ts, fotoUrl: r['foto_url']?.toString());
+                      return RegistroItem(usuarioId: r['usuarios_id']?.toString() ?? 'Usuario', timestamp: ts, fotoUrl: r['foto_url']?.toString());
                     }).toList(),
                   ]),
                 ),

@@ -49,7 +49,7 @@ class _AdminsPageState extends State<AdminsPage> {
       final List resList = res as List;
       setState(() {
         _admins = resList.map<Map<String, dynamic>>((e) => {
-              'id': (e['id'] ?? '').toString(),
+          'id': (e['usuarios_id'] ?? '').toString(),
               'nombre': (e['nombre_completo'] ?? e['nombre'] ?? '').toString(),
               'email': (e['email'] ?? e['correo'] ?? '').toString(),
               'telefono': (e['telefono'] ?? '').toString(),
@@ -99,7 +99,7 @@ class _AdminsPageState extends State<AdminsPage> {
       final hashed = sha256.convert(utf8.encode(password)).toString();
 
       final userInsert = {
-        if (userId != null) 'id': userId,
+        if (userId != null) 'usuarios_id': userId,
         'empresa_id': empresaId,
         'nombre_completo': nombre,
         'email': normalizedEmail,
@@ -132,7 +132,7 @@ class _AdminsPageState extends State<AdminsPage> {
 
     try {
       // Eliminar metadata
-      await supabase.from('usuarios').delete().eq('id', id);
+      await supabase.from('usuarios').delete().eq('usuarios_id', id);
       // NOTA: eliminar también en Auth requiere la service_role; en cliente solo borramos metadata
       await _loadAdmins();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Admin eliminado')));

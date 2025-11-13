@@ -197,7 +197,8 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       // Si hay un usuario autenticado en Supabase, intentar obtener su empresa desde la tabla 'usuarios'
       if (userId != null) {
         try {
-          final usuario = await supabase.from('usuarios').select('empresa_id').eq('id', userId).maybeSingle();
+          // Nota: en la base de datos el PK de la tabla `usuarios` se llama `usuarios_id`.
+          final usuario = await supabase.from('usuarios').select('empresa_id').eq('usuarios_id', userId).maybeSingle();
           if (usuario != null && usuario['empresa_id'] != null) {
             empresaId = usuario['empresa_id'].toString();
           }
@@ -218,10 +219,10 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       };
 
       // Nota: la columna que referencia al usuario en la tabla 'registros_asistencia'
-      // en la base de datos es `id` (clave foránea a usuarios.id). Usar 'usuario_id'
-      // provocaba que `new.id` quedara NULL y las políticas RLS fallaran.
+      // en la base de datos se llama `usuarios_id` (clave foránea a usuarios.usuarios_id).
+      // Enviar el campo correcto permite cumplir la política RLS `usuarios_id = auth.uid()`.
       final payload = {
-        if (userId != null) 'id': userId,
+        if (userId != null) 'usuarios_id': userId,
         if (empresaId != null) 'empresa_id': empresaId,
         'tipo': 'entrada',
         'latitud': lat,
