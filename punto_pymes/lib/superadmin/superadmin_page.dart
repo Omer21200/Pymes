@@ -159,6 +159,8 @@ class _SuperAdminPageState extends State<SuperAdminPage> {
             userName: widget.userName,
             institutionName: 'NEXUS',
             role: 'Super Administrador',
+            confirmTitle: 'Confirmar',
+            confirmMessage: '¿Deseas cerrar sesión?',
             onAction: () async {
               await supabase.auth.signOut();
               if (context.mounted) {

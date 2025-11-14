@@ -232,6 +232,22 @@ class _AdminsPageState extends State<AdminsPage> {
             userName: widget.userName,
             institutionName: 'NEXUS',
             role: 'Super Administrador',
+            confirmTitle: 'Confirmar',
+            confirmMessage: '¿Deseas cerrar sesión?',
+            onAction: () async {
+              try {
+                await supabase.auth.signOut();
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/access-selection',
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error signing out: $e');
+              }
+            },
           ),
           const SizedBox(height: 12),
           const Padding(

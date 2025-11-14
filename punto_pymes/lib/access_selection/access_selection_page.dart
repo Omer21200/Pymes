@@ -14,10 +14,13 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
   bool _isLoading = false;
   String? _error;
   List<Map<String, dynamic>> _institutions = [];
+  // indica si ya intentamos cargar instituciones al menos una vez
+  bool _hasLoaded = false;
   @override
   Widget build(BuildContext context) {
     // aseguramos que las empresas se carguen la primera vez
-    if (!_isLoading && _institutions.isEmpty && _error == null) {
+    // evitamos reintentar continuamente cuando la lista queda vacía
+    if (!_isLoading && !_hasLoaded && _error == null) {
       // iniciar carga asíncrona sin bloquear el build
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadInstitutions());
     }
@@ -90,23 +93,42 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
                         const SizedBox(height: 16),
                         // Mostrar carga / error / lista de instituciones obtenidas desde la BD
                         if (_isLoading)
-                          const SizedBox(width: double.infinity, child: Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator())))
+                          const SizedBox(
+                            width: double.infinity,
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                          )
                         else if (_error != null)
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
-                            child: Text('Error cargando instituciones: $_error', style: const TextStyle(color: Colors.red)),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Error cargando instituciones: $_error',
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           )
                         else if (_institutions.isEmpty)
-                          const Text('No hay instituciones registradas', style: TextStyle(color: Colors.grey))
+                          const Text(
+                            'No hay instituciones registradas',
+                            style: TextStyle(color: Colors.grey),
+                          )
                         else
                           Wrap(
                             alignment: WrapAlignment.start,
                             spacing: 12,
                             runSpacing: 12,
                             children: _institutions.map((inst) {
-                              final String name = (inst['nombre'] ?? inst['name'] ?? '—').toString();
+                              final String name =
+                                  (inst['nombre'] ?? inst['name'] ?? '—')
+                                      .toString();
                               return InstitutionCard(
                                 name: name,
                                 onTap: () {
@@ -177,10 +199,17 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
       _error = null;
     });
     try {
-      final res = await supabase.from('empresas').select('id,nombre').order('nombre');
+      final res = await supabase
+          .from('empresas')
+          .select('id,nombre')
+          .order('nombre');
       final List list = res as List? ?? [];
       setState(() {
-        _institutions = list.map<Map<String, dynamic>>((e) => {'id': e['id'], 'nombre': e['nombre'] ?? e['name'] ?? ''}).toList();
+        _institutions = list
+            .map<Map<String, dynamic>>(
+              (e) => {'id': e['id'], 'nombre': e['nombre'] ?? e['name'] ?? ''},
+            )
+            .toList();
       });
     } catch (e) {
       debugPrint('Error cargando instituciones: $e');
@@ -188,7 +217,11 @@ class _AccessSelectionPageState extends State<AccessSelectionPage> {
         _error = e.toString();
       });
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted)
+        setState(() {
+          _isLoading = false;
+          _hasLoaded = true;
+        });
     }
   }
 }

@@ -596,6 +596,22 @@ class _EmpresasPageState extends State<EmpresasPage> {
             userName: widget.userName,
             institutionName: 'NEXUS',
             role: 'Super Administrador',
+            confirmTitle: 'Confirmar',
+            confirmMessage: '¿Deseas cerrar sesión?',
+            onAction: () async {
+              try {
+                await supabase.auth.signOut();
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/access-selection',
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error signing out: $e');
+              }
+            },
           ),
           const SizedBox(height: 12),
 
@@ -1058,6 +1074,30 @@ class _EmpresasPageState extends State<EmpresasPage> {
                                     return Image.network(
                                       logo,
                                       fit: BoxFit.cover,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        debugPrint(
+                                          'Error loading company logo: $error',
+                                        );
+                                        return const Icon(
+                                          Icons.broken_image,
+                                          color: Colors.grey,
+                                        );
+                                      },
                                     );
                                   }
                                   return const Icon(
