@@ -36,22 +36,26 @@ class EmpresaDetailsPage extends StatelessWidget {
               horaEntrada: company['hora_entrada'] ?? '-',
               horaSalida: company['hora_salida'] ?? '-',
               horaAlmuerzo: company['hora_almuerzo'] ?? '-',
-              horaEntradaAlmuerzo: company['hota_entrada_almuerzo'] ?? company['hora_entrada_almuerzo'] ?? '-',
-              toleranciaMinutos: (company['tolerancia_minutos'] ?? 0).toString(),
+              horaEntradaAlmuerzo: company['hora_entrada_almuerzo'] ?? '-',
+              toleranciaMinutos: (company['tolerancia_minutos'] ?? 0)
+                  .toString(),
             ),
             const SizedBox(height: 12),
             StatsSection(
-              empleadosRegistrados: company['empleados_registrados']?.toString() ?? '—',
+              empleadosRegistrados:
+                  company['empleados_registrados']?.toString() ?? '—',
               administradores: company['administradores']?.toString() ?? '—',
             ),
             const SizedBox(height: 16),
             Center(
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD92344),
+                ),
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cerrar'),
               ),
-            )
+            ),
           ],
         ),
       ),

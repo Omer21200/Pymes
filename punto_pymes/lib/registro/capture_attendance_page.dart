@@ -24,7 +24,11 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
     setState(() => _isPicking = true);
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1280);
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1280,
+      );
       if (photo != null) {
         setState(() => _picked = photo);
         // after capture, request location and show confirmation
@@ -32,7 +36,13 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       }
     } catch (e) {
       debugPrint('Error capturing image: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al capturar foto'), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al capturar foto'),
+            backgroundColor: Colors.red,
+          ),
+        );
     } finally {
       if (mounted) setState(() => _isPicking = false);
     }
@@ -48,10 +58,21 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Ubicación desactivada'),
-            content: const Text('Por favor active la ubicación del dispositivo para capturar coordenadas.'),
+            content: const Text(
+              'Por favor active la ubicación del dispositivo para capturar coordenadas.',
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
-              TextButton(onPressed: () async { Navigator.of(ctx).pop(true); await Geolocator.openLocationSettings(); }, child: const Text('Abrir ajustes')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(ctx).pop(true);
+                  await Geolocator.openLocationSettings();
+                },
+                child: const Text('Abrir ajustes'),
+              ),
             ],
           ),
         );
@@ -70,10 +91,21 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Permiso denegado permanentemente'),
-            content: const Text('Debe habilitar el permiso de ubicación desde la configuración de la aplicación.'),
+            content: const Text(
+              'Debe habilitar el permiso de ubicación desde la configuración de la aplicación.',
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cerrar')),
-              TextButton(onPressed: () async { Navigator.of(ctx).pop(); await Geolocator.openAppSettings(); }, child: const Text('Abrir ajustes')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cerrar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  await Geolocator.openAppSettings();
+                },
+                child: const Text('Abrir ajustes'),
+              ),
             ],
           ),
         );
@@ -86,7 +118,9 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       }
 
       // Get the current position (includes altitude when available)
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       return pos;
     } catch (e) {
       debugPrint('Error getting location: $e');
@@ -108,11 +142,22 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('No se obtuvo ubicación'),
-          content: const Text('No se pudo obtener la ubicación. ¿Quieres reintentar o abrir los ajustes para habilitar la ubicación?'),
+          content: const Text(
+            'No se pudo obtener la ubicación. ¿Quieres reintentar o abrir los ajustes para habilitar la ubicación?',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop('cancel'), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop('settings'), child: const Text('Abrir ajustes')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop('retry'), child: const Text('Reintentar')),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('cancel'),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('settings'),
+              child: const Text('Abrir ajustes'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('retry'),
+              child: const Text('Reintentar'),
+            ),
           ],
         ),
       );
@@ -141,35 +186,111 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
       builder: (ctx) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: StatefulBuilder(builder: (ctx2, setStateSB) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('Confirmar Registro', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                Container(
-                  height: 220,
-                  width: double.infinity,
-                  decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
-                  child: ClipRRect(borderRadius: BorderRadius.circular(8), child: kIsWeb ? FutureBuilder<Uint8List>(future: _picked!.readAsBytes(), builder: (context, snap) => snap.hasData ? Image.memory(snap.data!, fit: BoxFit.cover) : const SizedBox.shrink()) : Image.file(File(_picked!.path), fit: BoxFit.cover)),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: StatefulBuilder(
+            builder: (ctx2, setStateSB) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Confirmar Registro',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 220,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb
+                            ? FutureBuilder<Uint8List>(
+                                future: _picked!.readAsBytes(),
+                                builder: (context, snap) => snap.hasData
+                                    ? Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : const SizedBox.shrink(),
+                              )
+                            : Image.file(
+                                File(_picked!.path),
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Lat: ${lat?.toStringAsFixed(6) ?? '-'}, Lng: ${lon?.toStringAsFixed(6) ?? '-'}',
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (alt != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.alt_route, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text('Alt: ${alt.toStringAsFixed(2)} m'),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              setState(() => _picked = null);
+                            },
+                            child: const Text('Tomar otra'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD92344),
+                            ),
+                            onPressed: () async {
+                              // confirmar: upload + insert registro
+                              Navigator.pop(ctx);
+                              await _saveRegistro(lat, lon, alt);
+                            },
+                            child: const Text('Confirmar'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Row(children: [const Icon(Icons.location_on, color: Colors.red), const SizedBox(width: 8), Expanded(child: Text('Lat: ${lat?.toStringAsFixed(6) ?? '-'}, Lng: ${lon?.toStringAsFixed(6) ?? '-'}'))]),
-                if (alt != null) Padding(padding: const EdgeInsets.only(top: 6), child: Row(children: [const Icon(Icons.alt_route, color: Colors.grey), const SizedBox(width: 8), Text('Alt: ${alt.toStringAsFixed(2)} m')])),
-                const SizedBox(height: 12),
-                Row(children: [Expanded(child: OutlinedButton(onPressed: () { Navigator.pop(ctx); setState(() => _picked = null); }, child: const Text('Tomar otra'))), const SizedBox(width: 12), Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344)), onPressed: () async {
-                  // confirmar: upload + insert registro
-                  Navigator.pop(ctx);
-                  await _saveRegistro(lat, lon, alt);
-                }, child: const Text('Confirmar')))]),
-                const SizedBox(height: 12),
-              ]),
-            );
-          }),
+              );
+            },
+          ),
         );
       },
     );
@@ -177,15 +298,20 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
 
   Future<void> _saveRegistro(double? lat, double? lon, double? alt) async {
     if (_picked == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Guardando registro...')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Guardando registro...')));
     String? photoUrl;
     try {
-      final fileName = 'asistencias/${DateTime.now().millisecondsSinceEpoch}_${_picked!.name}';
+      final fileName =
+          'asistencias/${DateTime.now().millisecondsSinceEpoch}_${_picked!.name}';
       if (kIsWeb) {
         // web upload not supported reliably here; skip upload and set null
         debugPrint('Web upload skipped for attendance photo');
       } else {
-        await supabase.storage.from('asistencias').upload(fileName, File(_picked!.path));
+        await supabase.storage
+            .from('asistencias')
+            .upload(fileName, File(_picked!.path));
         final pub = supabase.storage.from('asistencias').getPublicUrl(fileName);
         photoUrl = pub.toString();
       }
@@ -197,8 +323,12 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       // Si hay un usuario autenticado en Supabase, intentar obtener su empresa desde la tabla 'usuarios'
       if (userId != null) {
         try {
-          // Nota: en la base de datos el PK de la tabla `usuarios` se llama `usuarios_id`.
-          final usuario = await supabase.from('usuarios').select('empresa_id').eq('usuarios_id', userId).maybeSingle();
+          // Nota: en la base de datos el PK de la tabla `usuarios` se llama `id`.
+          final usuario = await supabase
+              .from('usuarios')
+              .select('empresa_id')
+              .eq('id', userId)
+              .maybeSingle();
           if (usuario != null && usuario['empresa_id'] != null) {
             empresaId = usuario['empresa_id'].toString();
           }
@@ -208,8 +338,14 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       }
 
       // Si no se obtuvo empresa desde 'usuarios', intentar por nombre de institución (fallback)
-      if (empresaId == null && widget.institutionName != null && widget.institutionName!.isNotEmpty) {
-        final e = await supabase.from('empresas').select('id').eq('nombre', widget.institutionName!).maybeSingle();
+      if (empresaId == null &&
+          widget.institutionName != null &&
+          widget.institutionName!.isNotEmpty) {
+        final e = await supabase
+            .from('empresas')
+            .select('id')
+            .eq('nombre', widget.institutionName!)
+            .maybeSingle();
         if (e != null && e['id'] != null) empresaId = e['id'].toString();
       }
 
@@ -219,10 +355,10 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       };
 
       // Nota: la columna que referencia al usuario en la tabla 'registros_asistencia'
-      // en la base de datos se llama `usuarios_id` (clave foránea a usuarios.usuarios_id).
-      // Enviar el campo correcto permite cumplir la política RLS `usuarios_id = auth.uid()`.
+      // en la base de datos se llama `usuario_id` (clave foránea a usuarios.id).
+      // Enviar el campo correcto permite cumplir la política RLS `usuario_id = auth.uid()`.
       final payload = {
-        if (userId != null) 'usuarios_id': userId,
+        if (userId != null) 'usuario_id': userId,
         if (empresaId != null) 'empresa_id': empresaId,
         'tipo': 'entrada',
         'latitud': lat,
@@ -234,28 +370,45 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
 
       // Debug: imprimir información de sesión y payload antes del insert
       final currentUid = supabase.auth.currentUser?.id;
-      debugPrint('Attempting to insert registro. widget.userId: $userId, supabase.auth.currentUser?.id: $currentUid');
+      debugPrint(
+        'Attempting to insert registro. widget.userId: $userId, supabase.auth.currentUser?.id: $currentUid',
+      );
       debugPrint('Payload: $payload');
 
       // Si no hay sesión de usuario, la política RLS (id = auth.uid()) rechazará la inserción.
       if (currentUid == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No se encontró sesión de usuario. Vuelve a iniciar sesión e intenta de nuevo.'),
-          backgroundColor: Colors.red,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se encontró sesión de usuario. Vuelve a iniciar sesión e intenta de nuevo.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
-      final inserted = await supabase.from('registros_asistencia').insert([payload]).select().maybeSingle();
+      final inserted = await supabase
+          .from('registros_asistencia')
+          .insert([payload])
+          .select()
+          .maybeSingle();
       if (inserted != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro guardado')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Registro guardado')));
         setState(() => _picked = null);
       } else {
         throw Exception('No se obtuvo respuesta del insert');
       }
     } catch (e) {
       debugPrint('Error saving registro: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error guardando registro: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error guardando registro: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -265,7 +418,12 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
       appBar: AppBar(
         title: const Text('Capturar Asistencia'),
         backgroundColor: Colors.black87,
-        actions: [IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))],
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close),
+          ),
+        ],
       ),
       backgroundColor: const Color(0xFF0F1720),
       body: SafeArea(
@@ -274,29 +432,53 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
             Expanded(
               child: Center(
                 child: _picked == null
-                    ? Column(mainAxisSize: MainAxisSize.min, children: [
-                        Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
-                          child: const Center(child: Icon(Icons.camera_alt, color: Colors.white70, size: 48)),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text('Vista previa de la cámara', style: TextStyle(color: Colors.white70)),
-                      ])
-                    : Builder(builder: (context) {
-                        if (kIsWeb) {
-                          return FutureBuilder<Uint8List>(
-                            future: _picked!.readAsBytes(),
-                            builder: (context, snap) {
-                              if (!snap.hasData) return const SizedBox.shrink();
-                              return Image.memory(snap.data!, fit: BoxFit.contain);
-                            },
-                          );
-                        } else {
-                          return Image.file(File(_picked!.path), fit: BoxFit.contain);
-                        }
-                      }),
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.camera_alt,
+                                color: Colors.white70,
+                                size: 48,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Vista previa de la cámara',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      )
+                    : Builder(
+                        builder: (context) {
+                          if (kIsWeb) {
+                            return FutureBuilder<Uint8List>(
+                              future: _picked!.readAsBytes(),
+                              builder: (context, snap) {
+                                if (!snap.hasData)
+                                  return const SizedBox.shrink();
+                                return Image.memory(
+                                  snap.data!,
+                                  fit: BoxFit.contain,
+                                );
+                              },
+                            );
+                          } else {
+                            return Image.file(
+                              File(_picked!.path),
+                              fit: BoxFit.contain,
+                            );
+                          }
+                        },
+                      ),
               ),
             ),
             Container(
@@ -305,10 +487,22 @@ class _CaptureAttendancePageState extends State<CaptureAttendancePage> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344), padding: const EdgeInsets.symmetric(vertical: 14)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD92344),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   onPressed: _isPicking ? null : _capture,
                   icon: const Icon(Icons.camera_alt),
-                  label: _isPicking ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Capturar Foto'),
+                  label: _isPicking
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Capturar Foto'),
                 ),
               ),
             ),

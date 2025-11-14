@@ -37,7 +37,12 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _promptCompanyCodeAndProceed() async {
     // Si no se seleccionó institución (ej. Administrador General), ir directo a RegisterPage
     if (widget.selectedInstitution.isEmpty) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(selectedInstitution: '')));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RegisterPage(selectedInstitution: ''),
+        ),
+      );
       return;
     }
 
@@ -49,66 +54,115 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
-        return StatefulBuilder(builder: (ctx2, setStateSB) {
-          return AlertDialog(
-            title: const Text('Por favor ingrese el código de Empresa'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Solicita el código de 8 caracteres a tu empresa para continuar con el registro.'),
-                const SizedBox(height: 12),
-                TextField(
-                  onChanged: (v) => code = v.trim(),
-                  maxLength: 16,
-                  decoration: const InputDecoration(hintText: 'Código de Empresa', counterText: ''),
-                ),
-                if (localError != null) ...[
-                  const SizedBox(height: 8),
-                  Text(localError!, style: const TextStyle(color: Colors.red)),
+        return StatefulBuilder(
+          builder: (ctx2, setStateSB) {
+            return AlertDialog(
+              title: const Text('Por favor ingrese el código de Empresa'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Solicita el código de 8 caracteres a tu empresa para continuar con el registro.',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    onChanged: (v) => code = v.trim(),
+                    maxLength: 16,
+                    decoration: const InputDecoration(
+                      hintText: 'Código de Empresa',
+                      counterText: '',
+                    ),
+                  ),
+                  if (localError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      localError!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
                 ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: isVerifying
+                      ? null
+                      : () async {
+                          if (code.isEmpty) {
+                            setStateSB(
+                              () => localError =
+                                  'Ingresa el código de la empresa',
+                            );
+                            return;
+                          }
+                          setStateSB(() {
+                            isVerifying = true;
+                            localError = null;
+                          });
+                          try {
+                            // Buscar la empresa por nombre y comparar su código
+                            final res = await supabase
+                                .from('empresas')
+                                .select('id,nombre,codigo_empresa')
+                                .eq('nombre', widget.selectedInstitution)
+                                .maybeSingle();
+                            if (res == null) {
+                              setStateSB(
+                                () => localError =
+                                    'No se encontró la institución en la base',
+                              );
+                              setStateSB(() => isVerifying = false);
+                              return;
+                            }
+                            final dbCode = (res['codigo_empresa'] ?? '')
+                                .toString()
+                                .trim();
+                            if (dbCode.isEmpty ||
+                                dbCode.toLowerCase() != code.toLowerCase()) {
+                              setStateSB(
+                                () => localError =
+                                    'Código inválido o no coincide',
+                              );
+                              setStateSB(() => isVerifying = false);
+                              return;
+                            }
+                            // OK: cerrar diálogo y navegar a RegisterPage
+                            Navigator.pop(ctx);
+                            if (mounted)
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RegisterPage(
+                                    selectedInstitution:
+                                        widget.selectedInstitution,
+                                  ),
+                                ),
+                              );
+                          } catch (e) {
+                            setStateSB(
+                              () => localError = 'Error validando código',
+                            );
+                            setStateSB(() => isVerifying = false);
+                          }
+                        },
+                  child: isVerifying
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Validar Código'),
+                ),
               ],
-            ),
-            actions: [
-              TextButton(onPressed: isVerifying ? null : () => Navigator.pop(ctx), child: const Text('Cancelar')),
-              ElevatedButton(
-                onPressed: isVerifying
-                    ? null
-                    : () async {
-                        if (code.isEmpty) {
-                          setStateSB(() => localError = 'Ingresa el código de la empresa');
-                          return;
-                        }
-                        setStateSB(() {
-                          isVerifying = true;
-                          localError = null;
-                        });
-                        try {
-                          // Buscar la empresa por nombre y comparar su código
-                          final res = await supabase.from('empresas').select('id,nombre,codigo_empresa').eq('nombre', widget.selectedInstitution).maybeSingle();
-                          if (res == null) {
-                            setStateSB(() => localError = 'No se encontró la institución en la base');
-                            setStateSB(() => isVerifying = false);
-                            return;
-                          }
-                          final dbCode = (res['codigo_empresa'] ?? '').toString().trim();
-                          if (dbCode.isEmpty || dbCode.toLowerCase() != code.toLowerCase()) {
-                            setStateSB(() => localError = 'Código inválido o no coincide');
-                            setStateSB(() => isVerifying = false);
-                            return;
-                          }
-                          // OK: cerrar diálogo y navegar a RegisterPage
-                          Navigator.pop(ctx);
-                          if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(selectedInstitution: widget.selectedInstitution)));
-                        } catch (e) {
-                          setStateSB(() => localError = 'Error validando código');
-                          setStateSB(() => isVerifying = false);
-                        }
-                      },
-                child: isVerifying ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Validar Código'),
-              )
-            ],
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -156,7 +210,11 @@ class _LoginPageState extends State<LoginPage> {
           debugPrint('✅ Autenticación Supabase exitosa');
           // Buscar datos adicionales en tabla 'usuarios'
           try {
-            final usuario = await supabase.from('usuarios').select().eq('email', username).maybeSingle();
+            final usuario = await supabase
+                .from('usuarios')
+                .select()
+                .eq('email', username)
+                .maybeSingle();
             userData = usuario;
           } catch (_) {
             userData = null;
@@ -172,21 +230,31 @@ class _LoginPageState extends State<LoginPage> {
 
       // 2) Fallback: si Supabase Auth falla, intentamos validar contra la tabla
       //    `usuarios`. Algunos despliegues guardan la contraseña en texto plano
-      //    (o en una columna llamada 'contraseña_hash' pero sin hash). Aquí
+      //    (o en una columna llamada 'contrasena_hash' pero sin hash). Aquí
       //    comprobamos varias columnas posibles y comparamos en texto plano.
-          if (!loginSuccess) {
+      if (!loginSuccess) {
         try {
-          final usuario = await supabase.from('usuarios').select().eq('email', username).maybeSingle();
-          if (usuario == null) throw Exception('Usuario no encontrado en tabla usuarios');
+          final usuario = await supabase
+              .from('usuarios')
+              .select()
+              .eq('email', username)
+              .maybeSingle();
+          if (usuario == null)
+            throw Exception('Usuario no encontrado en tabla usuarios');
 
           String? storedPassword;
           // Probar varias columnas que podrían existir
-          storedPassword ??= usuario['contraseña_hash']?.toString();
+          storedPassword ??= usuario['contrasena_hash']?.toString();
           storedPassword ??= usuario['password']?.toString();
           storedPassword ??= usuario['pass']?.toString();
           storedPassword ??= usuario['contraseña']?.toString();
+          // also try ASCII-only variant
+          storedPassword ??= usuario['contrasena']?.toString();
 
-          if (storedPassword == null) throw Exception('No se encontró campo de contraseña en la tabla usuarios');
+          if (storedPassword == null)
+            throw Exception(
+              'No se encontró campo de contraseña en la tabla usuarios',
+            );
 
           // Comparación segura: si la DB almacena hash (SHA256), comparamos hash(input) == stored
           final inputHash = sha256.convert(utf8.encode(password)).toString();
@@ -195,7 +263,9 @@ class _LoginPageState extends State<LoginPage> {
             userData = usuario;
             debugPrint('✅ Login por tabla usuarios (fallback) OK');
           } else {
-            throw Exception('Contraseña incorrecta (falló fallback tabla usuarios)');
+            throw Exception(
+              'Contraseña incorrecta (falló fallback tabla usuarios)',
+            );
           }
         } catch (e) {
           debugPrint('❌ Fallback tabla usuarios falló: $e');
@@ -206,9 +276,18 @@ class _LoginPageState extends State<LoginPage> {
       // Si encontramos usuario y autenticación OK, navegar según rol
       if (loginSuccess && userData != null) {
         if (!mounted) return;
-  final role = (userData['rol'] ?? userData['role'] ?? widget.selectedRole).toString();
-  final nombre = (userData['nombre'] ?? userData['name'] ?? username).toString();
-  final institutionNameFromUser = (userData['empresa'] ?? userData['nombre_empresa'] ?? userData['id_empresa'] ?? widget.selectedInstitution ?? 'Institución').toString();
+        final role =
+            (userData['rol'] ?? userData['role'] ?? widget.selectedRole)
+                .toString();
+        final nombre = (userData['nombre'] ?? userData['name'] ?? username)
+            .toString();
+        final institutionNameFromUser =
+            (userData['empresa'] ??
+                    userData['nombre_empresa'] ??
+                    userData['id_empresa'] ??
+                    widget.selectedInstitution ??
+                    'Institución')
+                .toString();
 
         // Por ahora redirigimos a la pantalla de Institución para roles de empleado
         if (role == 'superadmin') {
@@ -223,11 +302,20 @@ class _LoginPageState extends State<LoginPage> {
             String? empresaIdFromUser;
             try {
               // intentar leer empresa_id directamente del objeto userData
-              empresaIdFromUser = (userData['empresa_id'] ?? userData['empresa'] ?? userData['id_empresa'])?.toString();
+              empresaIdFromUser =
+                  (userData['empresa_id'] ??
+                          userData['empresa'] ??
+                          userData['id_empresa'])
+                      ?.toString();
               if (empresaIdFromUser == null) {
                 // intentar consultar la tabla usuarios por email para obtener empresa_id
-                final u = await supabase.from('usuarios').select('empresa_id').eq('email', username).maybeSingle();
-                if (u != null && u['empresa_id'] != null) empresaIdFromUser = u['empresa_id'].toString();
+                final u = await supabase
+                    .from('usuarios')
+                    .select('empresa_id')
+                    .eq('email', username)
+                    .maybeSingle();
+                if (u != null && u['empresa_id'] != null)
+                  empresaIdFromUser = u['empresa_id'].toString();
               }
             } catch (e) {
               debugPrint('Error obteniendo empresa del usuario: $e');
@@ -236,49 +324,73 @@ class _LoginPageState extends State<LoginPage> {
             // Obtener empresa_id por el nombre seleccionado
             String? empresaIdByName;
             try {
-              final ent = await supabase.from('empresas').select('id').eq('nombre', widget.selectedInstitution).maybeSingle();
-              if (ent != null && ent['id'] != null) empresaIdByName = ent['id'].toString();
+              final ent = await supabase
+                  .from('empresas')
+                  .select('id')
+                  .eq('nombre', widget.selectedInstitution)
+                  .maybeSingle();
+              if (ent != null && ent['id'] != null)
+                empresaIdByName = ent['id'].toString();
             } catch (e) {
               debugPrint('Error buscando empresa por nombre: $e');
             }
 
             // Si no hay match, mostrar mensaje y cancelar navegación
-            if (empresaIdFromUser == null || empresaIdByName == null || empresaIdFromUser != empresaIdByName) {
+            if (empresaIdFromUser == null ||
+                empresaIdByName == null ||
+                empresaIdFromUser != empresaIdByName) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No autorizado para esa empresa'), backgroundColor: Colors.red));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No autorizado para esa empresa'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
                 return;
               }
             }
           }
 
-            if (role == 'admin') {
-              // Administrador de empresa (panel propio, diferente del Admin General)
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) =>
-                  // pasar user id y nombre de empresa cuando estén disponibles
-                  // si userData incluye 'id' y 'empresa_id' los usamos
-                  AdminCompanyPage(
-                    userId: (userData['id'] ?? supabase.auth.currentUser?.id ?? '').toString(),
-                    companyName: (userData['empresa_nombre'] ?? userData['empresa'] ?? widget.selectedInstitution ?? '').toString(),
-                  ),
-                ),
-              );
-            } else {
-              // fallback para otros tipos de admin, mantener ruta existente
-              try {
-                Navigator.pushReplacementNamed(context, '/admin-general');
-              } catch (_) {
-                Navigator.pushReplacementNamed(context, '/home');
-              }
+          if (role == 'admin') {
+            // Administrador de empresa (panel propio, diferente del Admin General)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    // pasar user id y nombre de empresa cuando estén disponibles
+                    // si userData incluye 'id' y 'empresa_id' los usamos
+                    AdminCompanyPage(
+                      userId:
+                          (userData['id'] ??
+                                  supabase.auth.currentUser?.id ??
+                                  '')
+                              .toString(),
+                      companyName:
+                          (userData['empresa_nombre'] ??
+                                  userData['empresa'] ??
+                                  widget.selectedInstitution ??
+                                  '')
+                              .toString(),
+                    ),
+              ),
+            );
+          } else {
+            // fallback para otros tipos de admin, mantener ruta existente
+            try {
+              Navigator.pushReplacementNamed(context, '/admin-general');
+            } catch (_) {
+              Navigator.pushReplacementNamed(context, '/home');
             }
+          }
         } else {
           // Navegar a InstitucionPage con el nombre de institución seleccionado
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (_) => InstitucionPage(
-                institutionName: widget.selectedInstitution.isNotEmpty ? widget.selectedInstitution : institutionNameFromUser,
+                institutionName: widget.selectedInstitution.isNotEmpty
+                    ? widget.selectedInstitution
+                    : institutionNameFromUser,
                 userName: nombre,
                 role: role,
               ),
@@ -425,9 +537,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               const SizedBox(height: 16),
-              
+
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () => _promptCompanyCodeAndProceed(),
