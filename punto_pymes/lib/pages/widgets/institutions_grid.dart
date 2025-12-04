@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+// search_institutions.dart removed from this screen on user request
 
 /// Muestra las empresas registradas desde Supabase en forma de grilla.
 class InstitutionsGrid extends StatefulWidget {
@@ -24,17 +25,11 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 8),
-        Container(
-          constraints: const BoxConstraints(minHeight: 200),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
-            ],
-          ),
+        const SizedBox(height: 12),
+
+        // Grid of institutions
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: FutureBuilder<List<Map<String, dynamic>>>(
             future: _futureEmpresas,
             builder: (context, snapshot) {
@@ -92,34 +87,74 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                       }
                     },
                     borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFECEF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: foto != null
-                                ? Image.network(
-                                    foto,
-                                    height: 64,
-                                    width: 64,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.apartment, size: 48, color: Color(0xFFD92344)),
-                                  )
-                                : const Icon(Icons.apartment, size: 48, color: Color(0xFFD92344)),
+                          foto != null
+                              ? Image.network(
+                                  foto,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.apartment,
+                                        size: 48,
+                                        color: Color(0xFFD92344),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.apartment,
+                                      size: 48,
+                                      color: Color(0xFFD92344),
+                                    ),
+                                  ),
+                                ),
+
+                          // Gradient overlay to make text readable
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.45),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            nombre,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+
+                          // Name over the image
+                          Positioned(
+                            left: 12,
+                            right: 12,
+                            bottom: 12,
+                            child: Text(
+                              nombre,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 4.0,
+                                    color: Colors.black45,
+                                    offset: Offset(1.0, 1.0),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),

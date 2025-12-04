@@ -17,14 +17,8 @@ class SplashScreen extends StatelessWidget {
                   Expanded(
                     child: Center(
                       child: Image.asset(
-                        'assets/images/nexus.jpg',
+                        'assets/images/splash.png',
                         fit: BoxFit.contain,
-                        width:
-                            MediaQuery.of(context).size.width *
-                            0.8, // Adjusted for responsiveness
-                        height:
-                            MediaQuery.of(context).size.height *
-                            0.5, // Adjusted for responsiveness
                       ),
                     ),
                   ),

@@ -11,17 +11,25 @@ class AccessHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       height: 140,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey.shade200,
         image: const DecorationImage(
-          image: AssetImage('assets/images/pymes.png'),
-          fit: BoxFit.cover,
+          image: AssetImage('assets/images/logo.png'),
+          fit: BoxFit.cover, // hace que la imagen rellene todo el contorno
         ),
       ),
-      // Si quieres un overlay (oscurecer la imagen), puedes envolver
-      // el contenido en un Stack y añadir un Container con color y opacidad.
-      child: Container(),
+      // Overlay ligero para mejorar contraste del contenido encima
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.black.withOpacity(0.06), Colors.transparent],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+      ),
     );
   }
 }
