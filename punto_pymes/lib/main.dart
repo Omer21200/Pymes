@@ -1,0 +1,43 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'service/theme_provider.dart';
+import 'theme.dart';
+import 'pages/splash_screen.dart';
+import 'pages/access_selection_page.dart';
+import 'pages/login_page/login_page.dart';
+import 'pages/login_page/register_page.dart';
+import 'pages/empleado/empleado_page.dart';
+import 'service/supabase_service.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseService.instance.init();
+  runApp(ChangeNotifierProvider(
+    create: (context) => ThemeProvider(),
+    child: const MyApp(),
+  ));
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return MaterialApp(
+      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      theme: lightmode,
+      darkTheme: darkmode,
+      themeMode: themeProvider.themeMode,
+      home: const SplashScreen(),
+      routes: {
+        '/access-selection': (_) => const AccessSelectionPage(),
+        '/login': (_) => const LoginPage(),
+        '/register': (_) => const RegisterPage(),
+        '/empleado': (_) => const EmpleadoPage(),
+      },
+    );
+  }
+}
