@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../admin_empresa/admin_empresa_page.dart';
 import '../superadmin/iniciosuperadmin.dart';
 import '../empleado/empleado_page.dart';
 import '../../service/supabase_service.dart';
@@ -17,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   
   bool _isLoading = false;
-  bool _isPasswordVisible = false; // Nuevo: Para ver/ocultar contraseña
+  bool _isPasswordVisible = false;
   String? _errorMessage;
 
   @override
@@ -27,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // --- LOGICA DE LOGIN (Mantenida intacta) ---
+  /// Lógica de inicio de sesión mejorada con validación de rol y empresa.
   Future<void> _handleLogin() async {
     setState(() {
       _isLoading = true;
@@ -51,53 +52,74 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      debugPrint('signIn response: $response');
-
       if (response.session == null) {
-        throw Exception('No se pudo iniciar sesión');
+        throw Exception('No se pudo iniciar sesión. Verifica tus credenciales.');
       }
 
+      // Obtenemos el perfil para verificar el rol
       await SupabaseService.instance.refreshSession();
-
       final profile = await SupabaseService.instance.getMyProfile();
       
-      if (profile == null) throw Exception('No se encontró el perfil del usuario');
+      if (profile == null) throw Exception('No se encontró el perfil del usuario.');
 
       final rol = profile['rol'] as String?;
+      final userEmpresaId = profile['empresa_id'] as String?;
+
+      // --- VALIDACIÓN DE ACCESO ---
+      final bool isSuperAdminLogin = widget.empresa == null;
+
+      if (isSuperAdminLogin) {
+        if (rol != 'SUPER_ADMIN') {
+          await SupabaseService.instance.signOut();
+          throw Exception('Esta cuenta no es de Super Administrador.');
+        }
+      } else { // Es un login de empresa
+        if (rol == 'SUPER_ADMIN') {
+          await SupabaseService.instance.signOut();
+          throw Exception('El Super Admin solo puede ingresar por la pantalla principal.');
+        }
+        if (userEmpresaId != widget.empresa!['id']) {
+          await SupabaseService.instance.signOut();
+          throw Exception('Esta cuenta no pertenece a la empresa seleccionada.');
+        }
+      }
+      // --- FIN DE VALIDACIÓN ---
 
       if (!mounted) return;
 
-      if (rol == 'SUPER_ADMIN') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const InicioSuperadmin()));
-      } else if (rol == 'ADMIN_EMPRESA') {
-        final empleadoDataAdmin = await SupabaseService.instance.getEmpleadoActual();
-        final empleadoRawAdmin = empleadoDataAdmin?['empleado_raw'] as Map<String, dynamic>?;
-        final cedulaAdmin = empleadoRawAdmin?['cedula'] as String?;
-        if (cedulaAdmin == null || cedulaAdmin.isEmpty) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileCompletionPage()));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bienvenido Admin Empresa')));
-          // Aquí deberías navegar al dashboard de Admin si existe
-        }
-      } else if (rol == 'EMPLEADO') {
-        final empleadoData = await SupabaseService.instance.getEmpleadoActual();
-        final empleadoRaw = empleadoData?['empleado_raw'] as Map<String, dynamic>?;
-        final cedula = empleadoRaw?['cedula'] as String?;
-        if (cedula == null || cedula.isEmpty) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileCompletionPage()));
-        } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
-        }
-      } else {
-        throw Exception('Rol no reconocido');
+      // Redirección según el rol verificado
+      switch (rol) {
+        case 'SUPER_ADMIN':
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const InicioSuperadmin()));
+          break;
+        case 'ADMIN_EMPRESA':
+        case 'EMPLEADO':
+          final empleadoData = await SupabaseService.instance.getEmpleadoActual();
+          if (!mounted) return;
+          
+          final cedula = (empleadoData?['empleado_raw'] as Map<String, dynamic>?)?['cedula'] as String?;
+          
+          if (cedula == null || cedula.isEmpty) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileCompletionPage()));
+          } else {
+            if (rol == 'ADMIN_EMPRESA') {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminEmpresaPage()));
+            } else {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+            }
+          }
+          break;
+        default:
+          throw Exception('Rol no reconocido');
       }
-    } catch (e) {
-      debugPrint('Login error: $e');
 
+    } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
       setState(() {
-        if (msg.contains('Database error querying schema')) {
+        if (msg.contains('invalid_grant')) {
+           _errorMessage = 'Credenciales incorrectas.';
+        } else if (msg.contains('Database error querying schema')) {
           _errorMessage = 'Error de servidor. Intenta más tarde.';
         } else {
           _errorMessage = msg.replaceAll("Exception: ", "");
@@ -107,7 +129,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // --- WIDGET HELPER PARA INPUTS ---
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String label,
@@ -122,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withAlpha(26), // Corrección de withOpacity
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -155,12 +176,39 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Datos de la empresa (si existen)
-    final empresaNombre = widget.empresa != null ? widget.empresa!['nombre'] : 'NEXUS';
-    final empresaFoto = widget.empresa != null ? widget.empresa!['empresa_foto_url'] as String? : null;
-    
-    // Color principal
+    final bool isSuperAdminLogin = widget.empresa == null;
     const primaryColor = Color(0xFFD92344);
+
+    // --- Definimos el contenido basado en el contexto ---
+    final String title;
+    final String subtitle;
+    final Widget logoWidget;
+
+      if (isSuperAdminLogin) {
+      title = 'Acceso Super Admin';
+      subtitle = 'Ingresa tus credenciales maestras';
+      logoWidget = Image.asset(
+        'assets/images/pymes.png', // Logo principal de la app
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
+      );
+    } else {
+      final empresaNombre = widget.empresa!['nombre'];
+      final empresaFoto = widget.empresa!['empresa_foto_url'] as String?;
+      title = 'Bienvenido a $empresaNombre';
+      subtitle = 'Ingresa tus credenciales para continuar';
+
+      if (empresaFoto != null && empresaFoto.isNotEmpty) {
+        logoWidget = Image.network(
+          empresaFoto,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, size: 50, color: primaryColor),
+        );
+      } else {
+        logoWidget = const Icon(Icons.business, size: 50, color: primaryColor);
+      }
+    }
+    // --- Fin de la definición de contenido ---
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -170,7 +218,6 @@ class _LoginPageState extends State<LoginPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () {
-            // Verifica si puede hacer pop, si no redirige a selection
              if (Navigator.canPop(context)) {
                Navigator.pop(context);
              } else {
@@ -186,7 +233,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 1. LOGO O IMAGEN
+                // 1. LOGO (Dinámico)
                 Container(
                   height: 100,
                   width: 100,
@@ -195,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withAlpha(26), // Corrección de withOpacity
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -204,25 +251,15 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.all(8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: empresaFoto != null
-                        ? Image.network(
-                            empresaFoto, 
-                            fit: BoxFit.cover,
-                            errorBuilder: (_,__,___) => const Icon(Icons.business, size: 50, color: primaryColor),
-                          )
-                        : Image.asset(
-                            'assets/images/pymes.png', // Tu logo por defecto
-                            fit: BoxFit.contain,
-                            errorBuilder: (_,__,___) => const Icon(Icons.lock_person, size: 50, color: primaryColor),
-                          ),
+                    child: logoWidget,
                   ),
                 ),
                 
                 const SizedBox(height: 24),
                 
-                // 2. TEXTOS DE BIENVENIDA
+                // 2. TEXTOS DE BIENVENIDA (Dinámicos)
                 Text(
-                  'Bienvenido a $empresaNombre',
+                  title,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 24,
@@ -232,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ingresa tus credenciales para continuar',
+                  subtitle,
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
 
@@ -279,12 +316,11 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 10),
 
-                // Olvidé mi contraseña (Visual, sin funcionalidad por ahora)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // Acción para recuperar contraseña
+                      // TODO: Acción para recuperar contraseña
                     },
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
@@ -305,7 +341,7 @@ class _LoginPageState extends State<LoginPage> {
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 4,
-                      shadowColor: primaryColor.withOpacity(0.4),
+                      shadowColor: primaryColor.withAlpha(102), // Corrección de withOpacity
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),

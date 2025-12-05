@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'service/theme_provider.dart';
 import 'theme.dart';
@@ -11,6 +12,7 @@ import 'service/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es_ES', null);
   await SupabaseService.instance.init();
   runApp(ChangeNotifierProvider(
     create: (context) => ThemeProvider(),

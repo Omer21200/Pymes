@@ -96,7 +96,7 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                               ? Image.network(
                                   foto,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (context, error, stackTrace) => Container(
                                     color: Colors.grey[200],
                                     child: const Center(
                                       child: Icon(
@@ -126,7 +126,7 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Colors.transparent,
-                                  Colors.black.withOpacity(0.45),
+                                  Colors.black.withValues(alpha: 0.45),
                                 ],
                               ),
                             ),

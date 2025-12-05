@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../service/supabase_service.dart';
+import 'creacion_departamentos.dart';
+import 'departamento_detalle.dart';
 import 'widgets/superadmin_header.dart';
 
 class EmpresaDetallePage extends StatefulWidget {
@@ -17,8 +19,10 @@ class EmpresaDetallePage extends StatefulWidget {
 
 class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   Map<String, dynamic>? _empresa;
+  List<Map<String, dynamic>> _departamentos = [];
   bool _loading = true;
   bool _saving = false;
+  bool _loadingDepartamentos = true;
 
   final _nombre = TextEditingController();
   final _ruc = TextEditingController();
@@ -40,6 +44,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       _loading = false;
     }
     _fetch();
+    _fetchDepartamentos();
   }
 
   @override
@@ -68,6 +73,29 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _fetchDepartamentos() async {
+    if (!mounted) return;
+    setState(() => _loadingDepartamentos = true);
+    try {
+      final data = await SupabaseService.instance.getDepartamentosPorEmpresa(widget.empresaId);
+      if (mounted) {
+        setState(() {
+          _departamentos = data;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar departamentos: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingDepartamentos = false);
+      }
     }
   }
 
@@ -100,14 +128,12 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     String? logoUrl;
 
     try {
-      // Subir nuevo logo si hay
       if (_newLogoLocalPath != null) {
         final ts = DateTime.now().millisecondsSinceEpoch;
         final safe = _nombre.text.trim().replaceAll(' ', '_');
         final fileName = 'empresa_${ts}_$safe.jpg';
         finalPath = 'empresas/$fileName';
 
-        // Subir directamente a la ruta final
         logoUrl = await SupabaseService.instance.uploadFile(
           filePath: _newLogoLocalPath!,
           bucketName: 'fotos',
@@ -116,11 +142,8 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
         moved = true;
       }
 
-      // Preparar updates solo con cambios
-      double? lat;
-      double? lng;
-      if (_lat.text.trim().isNotEmpty) lat = double.tryParse(_lat.text.trim());
-      if (_lng.text.trim().isNotEmpty) lng = double.tryParse(_lng.text.trim());
+      double? lat = double.tryParse(_lat.text.trim());
+      double? lng = double.tryParse(_lng.text.trim());
 
       await SupabaseService.instance.updateEmpresa(
         empresaId: widget.empresaId,
@@ -142,12 +165,11 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       await _fetch();
       setState(() => _newLogoLocalPath = null);
     } catch (e) {
-      // Cleanup si falla el update
-      try {
-        if (moved && finalPath != null) {
+      if (moved && finalPath != null) {
+        try {
           await SupabaseService.instance.deleteFile(bucketName: 'fotos', filePath: finalPath);
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
@@ -187,7 +209,6 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Logo
                           GestureDetector(
                             onTap: _saving ? null : _pickLogo,
                             child: Container(
@@ -198,21 +219,14 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                               ),
                               child: Center(
                                 child: _newLogoLocalPath != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.file(File(_newLogoLocalPath!), height: 150, width: double.infinity, fit: BoxFit.cover),
-                                      )
-                                    : (_currentLogoUrl != null
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.network(_currentLogoUrl!, height: 150, width: double.infinity, fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported)))
+                                    ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_newLogoLocalPath!), height: 150, width: double.infinity, fit: BoxFit.cover))
+                                        : (_currentLogoUrl != null
+                                        ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(_currentLogoUrl!, height: 150, width: double.infinity, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported)))
                                         : const Icon(Icons.add_a_photo_outlined, size: 36)),
                               ),
                             ),
                           ),
                           const SizedBox(height: 12),
-
                           if (_empresa?['codigo_acceso_empleado'] != null)
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -225,7 +239,6 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                 ],
                               ),
                             ),
-
                           const SizedBox(height: 12),
                           _buildField('Nombre', _nombre),
                           _buildField('RUC', _ruc),
@@ -234,6 +247,76 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                           _buildField('Email', _correo, keyboardType: TextInputType.emailAddress),
                           _buildField('Latitud', _lat, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true)),
                           _buildField('Longitud', _lng, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true)),
+                          const SizedBox(height: 24),
+                          Card(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 4,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const CircleAvatar(backgroundColor: Color(0xFFE0F2F1), child: Icon(Icons.business_center_outlined, color: Color(0xFF00796B))),
+                                      const SizedBox(width: 12),
+                                      const Expanded(child: Text('Departamentos', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16))),
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+                                            builder: (_) => CreacionDepartamentos(empresaId: widget.empresaId),
+                                          ));
+                                          if (result == true) {
+                                            _fetchDepartamentos();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.add, size: 18),
+                                        label: const Text('Añadir'),
+                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                      )
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _loadingDepartamentos
+                                      ? const Center(child: Padding(padding: EdgeInsets.all(24.0), child: CircularProgressIndicator()))
+                                      : _departamentos.isEmpty
+                                          ? Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                                                child: Column(
+                                                  children: [
+                                                    Icon(Icons.hourglass_empty, color: Colors.grey.shade400, size: 32),
+                                                    const SizedBox(height: 8),
+                                                    const Text('No hay departamentos creados.', style: TextStyle(color: Colors.black54)),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          : ListView.builder(
+                                              shrinkWrap: true,
+                                              physics: const NeverScrollableScrollPhysics(),
+                                              itemCount: _departamentos.length,
+                                              itemBuilder: (context, index) {
+                                                final depto = _departamentos[index];
+                                                return ListTile(
+                                                  title: Text(depto['nombre'] ?? 'Sin nombre'),
+                                                  subtitle: depto['descripcion'] != null ? Text(depto['descripcion']) : null,
+                                                  trailing: const Icon(Icons.chevron_right),
+                                                  onTap: () {
+                                                    Navigator.of(context).push(MaterialPageRoute(
+                                                      builder: (_) => DepartamentoDetallePage(
+                                                        departamentoId: depto['id'],
+                                                        departamentoNombre: depto['nombre'] ?? 'Sin nombre',
+                                                      ),
+                                                    ));
+                                                  },
+                                                );
+                                              },
+                                            )
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
               )

@@ -64,6 +64,37 @@ class SupabaseService {
     return response == null ? null : Map<String, dynamic>.from(response);
   }
 
+  // ==================== HELPER PRIVADO: OBTENER EMPRESA ID SEGURO ====================
+  /// Busca el empresa_id directamente en la tabla 'profiles' (o 'empleados').
+  /// Esto evita errores si el JWT (appMetadata) está desactualizado.
+  Future<String> _getEmpresaIdSeguro() async {
+    final user = client.auth.currentUser;
+    if (user == null) throw Exception('Usuario no autenticado.');
+
+    // 1. Intentamos leer de 'profiles' que es la fuente de verdad rápida
+    final profile = await client
+        .from('profiles')
+        .select('empresa_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (profile != null && profile['empresa_id'] != null) {
+      return profile['empresa_id'] as String;
+    }
+
+    // 2. Fallback: Intentamos leer de 'empleados' por si acaso
+    final empleado = await client
+        .from('empleados')
+        .select('empresa_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (empleado != null && empleado['empresa_id'] != null) {
+      return empleado['empresa_id'] as String;
+    }
+
+    throw Exception('No se encontró una empresa asociada a este usuario.');
+  }
   /// Inserta una empresa (requiere RLS y permisos correctos).
   Future<Map<String, dynamic>> insertEmpresa({
     required String nombre,
@@ -203,6 +234,215 @@ class SupabaseService {
   /// Elimina una empresa.
   Future<void> deleteEmpresa(String empresaId) async {
     await client.from('empresas').delete().eq('id', empresaId);
+  }
+
+  // ==================== DEPARTAMENTOS CRUD ====================
+  Future<void> createDepartamento({
+    required String nombre,
+    required String empresaId,
+    String? descripcion,
+  }) async {
+    try {
+      await client.from('departamentos').insert({
+        'nombre': nombre,
+        'empresa_id': empresaId,
+        'descripcion': descripcion,
+      });
+    } catch (e) {
+      // Manejar el error, por ejemplo, si el nombre ya existe para esa empresa
+      // o si hay un problema de permisos.
+      print('Error al crear el departamento: $e');
+      throw Exception('No se pudo crear el departamento');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getDepartamentosPorEmpresa(String empresaId) async {
+    final response = await client
+        .from('departamentos')
+        .select()
+        .eq('empresa_id', empresaId)
+        .order('nombre', ascending: true);
+    return (response as List).map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// Obtiene los departamentos asociados a una noticia (ids y nombres).
+  Future<List<Map<String, dynamic>>> getDepartamentosPorNoticia(String noticiaId) async {
+    final response = await client
+        .from('noticias_departamentos')
+        .select('departamento_id, departamentos(nombre)')
+        .eq('noticia_id', noticiaId);
+
+    // La consulta puede devolver objetos con departamento_id y un campo 'departamentos'
+    // que contiene los datos del departamento. Normalizamos a una lista simple.
+    return (response as List).map((e) {
+      final map = e as Map<String, dynamic>;
+      final dep = <String, dynamic>{};
+      dep['id'] = map['departamento_id']?.toString() ?? map['departamento_id'];
+      if (map['departamentos'] != null && map['departamentos'] is Map) {
+        dep['nombre'] = (map['departamentos'] as Map)['nombre'];
+      }
+      return dep;
+    }).toList();
+  }
+
+  // ==================== HORARIOS CRUD ====================
+
+  /// Obtiene el horario de un departamento.
+  Future<Map<String, dynamic>?> getHorarioPorDepartamento(String departamentoId) async {
+    final response = await client
+        .from('horarios_departamento')
+        .select()
+        .eq('departamento_id', departamentoId)
+        .maybeSingle();
+    return response;
+  }
+
+  /// Crea o actualiza el horario de un departamento.
+  Future<Map<String, dynamic>> upsertHorarioDepartamento({
+    required String departamentoId,
+    required bool lunes,
+    required bool martes,
+    required bool miercoles,
+    required bool jueves,
+    required bool viernes,
+    required bool sabado,
+    required bool domingo,
+    required String horaEntrada, // Formato HH:mm:ss
+    required String horaSalida, // Formato HH:mm:ss
+    required int tolerancia,
+  }) async {
+    final response = await client.from('horarios_departamento').upsert({
+      'departamento_id': departamentoId,
+      'lunes': lunes,
+      'martes': martes,
+      'miercoles': miercoles,
+      'jueves': jueves,
+      'viernes': viernes,
+      'sabado': sabado,
+      'domingo': domingo,
+      'hora_entrada': horaEntrada,
+      'hora_salida': horaSalida,
+      'tolerancia_entrada_minutos': tolerancia,
+      'updated_at': 'now()', // Actualiza el timestamp
+    }, onConflict: 'departamento_id').select().single();
+    return response;
+  }
+
+  // ==================== NOTICIAS CRUD ====================
+
+  /// RPC: Obtiene las noticias del usuario autenticado con su estado de lectura.
+  /// Filtra según el tipo de audiencia (global o departamento).
+  Future<List<Map<String, dynamic>>> getNoticiasUsuario({int limite = 20}) async {
+    try {
+      final response = await client.rpc('get_noticias_usuario', params: {
+        'p_limite': limite,
+      });
+      
+      if (response == null) return [];
+      
+      return (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      throw Exception('Error obteniendo noticias: $e');
+    }
+  }
+
+  /// RPC: Marca una noticia como leída por el usuario autenticado.
+  Future<bool> marcarNoticiaLeida(String noticiaId) async {
+    try {
+      final response = await client.rpc('marcar_noticia_leida', params: {
+        'p_noticia_id': noticiaId,
+      });
+      return response as bool? ?? false;
+    } catch (e) {
+      print('Error marcando noticia como leída: $e');
+      return false;
+    }
+  }
+
+  /// Obtiene todas las noticias para el administrador de la empresa.
+  Future<List<Map<String, dynamic>>> getNoticiasAdmin() async {
+    // Obtenemos ID seguro
+    final empresaId = await _getEmpresaIdSeguro();
+
+    final response = await client
+        .from('noticias')
+        .select('id, titulo, contenido, fecha_publicacion, es_importante, tipo_audiencia')
+        .eq('empresa_id', empresaId) // Filtro explícito
+        .order('fecha_publicacion', ascending: false);
+    return (response as List).map((e) => e as Map<String, dynamic>).toList();
+  }
+  /// Crea o actualiza una noticia (CORREGIDO: Usa ID seguro)
+  Future<void> upsertNoticia({
+    String? noticiaId,
+    required String titulo,
+    required String contenido,
+    required bool esImportante,
+    required String tipoAudiencia,
+    Set<String> departamentos = const {},
+    String? imagenPath,
+  }) async {
+    // 1. Obtener ID de empresa de la BD, no del token
+    final empresaId = await _getEmpresaIdSeguro();
+
+    String? imageUrl;
+    if (imagenPath != null) {
+      final fileName = 'noticia_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      imageUrl = await uploadFile(
+        filePath: imagenPath,
+        bucketName: 'fotos',
+        destinationPath: 'noticias/$fileName',
+      );
+    }
+
+    final noticiaData = {
+      'empresa_id': empresaId,
+      'creador_id': currentUser!.id,
+      'titulo': titulo,
+      'contenido': contenido,
+      'es_importante': esImportante,
+      'tipo_audiencia': tipoAudiencia,
+      if (imageUrl != null) 'imagen_url': imageUrl,
+    };
+
+    Map<String, dynamic> upsertedNoticia;
+    if (noticiaId != null) {
+      upsertedNoticia = await client.from('noticias').update(noticiaData).eq('id', noticiaId).select().single();
+    } else {
+      upsertedNoticia = await client.from('noticias').insert(noticiaData).select().single();
+    }
+
+    final newNoticiaId = upsertedNoticia['id'];
+
+    // Gestión de departamentos (Igual que antes)
+    await client.from('noticias_departamentos').delete().eq('noticia_id', newNoticiaId);
+
+    if (tipoAudiencia == 'departamento' && departamentos.isNotEmpty) {
+      final deptosData = departamentos.map((deptoId) => {
+        'noticia_id': newNoticiaId,
+        'departamento_id': deptoId,
+      }).toList();
+      await client.from('noticias_departamentos').insert(deptosData);
+    }
+  }
+
+  /// Elimina una noticia y su imagen asociada del Storage.
+  Future<void> deleteNoticia(String noticiaId) async {
+    final noticia = await client.from('noticias').select('imagen_url').eq('id', noticiaId).maybeSingle();
+    
+    await client.from('noticias').delete().eq('id', noticiaId);
+
+    final imageUrl = noticia?['imagen_url'] as String?;
+    if (imageUrl != null) {
+      try {
+        // Extraer el path del archivo desde la URL completa
+        final path = imageUrl.substring(imageUrl.lastIndexOf('/noticias%2F') + 12).replaceAll('%20', ' ');
+        await deleteFile(bucketName: 'fotos', filePath: 'noticias/$path');
+      } catch (e) {
+        print('No se pudo eliminar la imagen del storage: $e');
+      }
+    }
   }
 
   // ==================== REGISTRO EMPLEADO ====================
@@ -398,4 +638,37 @@ class SupabaseService {
   // registrar_empleado_confirmado DEPRECATED: se mantiene comentado por referencia.
   // Preferir flujo: 1) `registerEmployeeRequest` (RPC) ANTES de 2) `signUpEmail`.
   // El trigger `handle_user_confirmed` creará el profile/empleado al confirmar.
+  
+  // ==================== ADMIN DASHBOARD ====================
+
+  /// Obtiene el resumen de datos para el dashboard del administrador.
+  Future<Map<String, dynamic>> getAdminDashboardSummary() async {
+    final response = await client.rpc('get_admin_dashboard_summary');
+    return response as Map<String, dynamic>;
+  }
+
+  /// Obtiene los últimos registros de asistencia del día para la empresa del admin.
+  Future<List<Map<String, dynamic>>> getUltimosRegistros() async {
+    try {
+      final empresaId = await _getEmpresaIdSeguro(); // Usamos el método seguro
+
+      final response = await client.rpc('get_asistencias_con_estado', params: {
+        'p_empresa_id': empresaId,
+        'p_fecha_desde': DateTime.now().toIso8601String().split('T').first,
+        'p_fecha_hasta': DateTime.now().toIso8601String().split('T').first
+      });
+
+      // Si RPC retorna null o vacío, manejamos
+      if (response == null) return [];
+
+      // Ordenamos en Dart si el RPC no lo hizo
+      final lista = (response as List).map((e) => e as Map<String, dynamic>).toList();
+      // Opcional: ordenar por hora entrada desc
+      return lista.take(5).toList();
+
+    } catch (e) {
+      print('Error en getUltimosRegistros: $e');
+      return [];
+    }
+  }
 }

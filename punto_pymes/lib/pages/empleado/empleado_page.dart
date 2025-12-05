@@ -45,7 +45,12 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             lon = null;
           } else if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
             try {
-              final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high).timeout(const Duration(seconds: 8));
+              final pos = await Geolocator.getCurrentPosition(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.high,
+                  distanceFilter: 0,
+                ),
+              ).timeout(const Duration(seconds: 8));
               lat = pos.latitude;
               lon = pos.longitude;
             } catch (posErr) {

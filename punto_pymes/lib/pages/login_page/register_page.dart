@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
-// Asumo que esta es la ruta a tu página de empleado/dashboard
-import '../empleado/empleado_page.dart'; 
 
 class RegisterPage extends StatefulWidget {
   final Map<String, dynamic>? empresa;
@@ -13,42 +11,38 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   // Controladores
-  final _nameController = TextEditingController();
-  final _apellidosController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _codeController = TextEditingController();
   
   // Estado
-  final bool _isAdmin = true; 
   bool _isLoading = false;
-  bool _isPasswordVisible = false; // Nuevo: Para controlar el "ojo" de la contraseña
+  bool _isPasswordVisible = false;
   String? _error;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _apellidosController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
     super.dispose();
   }
 
-  // --- LÓGICA DE REGISTRO (Misma lógica, sin cambios funcionales) ---
+  // --- LÓGICA DE REGISTRO MEJORADA ---
   Future<void> _register() async {
+    // Verificación de mounted al inicio del método asíncrono.
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    final nombres = _nameController.text.trim();
-    final apellidos = _apellidosController.text.trim();
     final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
     final code = _codeController.text.trim();
 
-    if (nombres.isEmpty || apellidos.isEmpty || email.isEmpty || password.isEmpty || code.isEmpty) {
+    if (email.isEmpty || password.isEmpty || code.isEmpty) {
       setState(() {
         _error = 'Por favor, completa todos los campos.';
         _isLoading = false;
@@ -57,34 +51,47 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
+      // 1. Validar el código de pre-registro
       final rpcOk = await SupabaseService.instance.registerAdminRequest(email: email, accessCode: code);
-
       if (!rpcOk) {
-        throw Exception('Código de Administrador inválido o no existe pre‑registro.');
+        throw Exception('Código de Administrador inválido o correo no pre‑registrado.');
       }
       
-      final res = await SupabaseService.instance.signUpEmail(email: email, password: password);
-      
-      if (res.session == null && res.user == null) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro iniciado. Revisa tu correo.')));
-      } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registro completado con éxito')));
-      }
+      // Si el widget sigue montado, procedemos con el registro
+      if (!mounted) return;
 
-      if (mounted) Navigator.of(context).pop(true);
+      // 2. Registrar el usuario en Auth
+      await SupabaseService.instance.signUpEmail(email: email, password: password);
+      
+      // Si el widget sigue montado, mostramos el resultado
+      if (!mounted) return;
+
+      // El trigger en Supabase se encargará de crear el perfil.
+      // Mostramos un mensaje genérico de confirmación.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registro iniciado. Revisa tu correo para confirmar la cuenta.'))
+      );
+
+      // Regresamos a la página anterior (login)
+      Navigator.of(context).pop(true);
 
     } catch (e) {
+      // Si el widget está montado, actualizamos el estado del error
+      if (!mounted) return;
       setState(() {
         _error = e.toString().contains('Exception:') ? e.toString().split('Exception: ')[1] : e.toString();
       });
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      // Si el widget está montado, nos aseguramos de detener el indicador de carga
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   // --- WIDGETS DE DISEÑO ---
 
-  // Método helper para crear Inputs consistentes y bonitos
+  // Método helper para crear Inputs consistentes
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String label,
@@ -99,7 +106,7 @@ class _RegisterPageState extends State<RegisterPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withAlpha(26), // Reemplazo de withOpacity
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -120,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
             : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none, // Quitamos el borde por defecto para usar el del Container
+            borderSide: BorderSide.none,
           ),
           filled: true,
           fillColor: Colors.white,
@@ -132,11 +139,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos el color primario del tema o uno por defecto
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Fondo gris muy claro, moderno
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -154,7 +160,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 10),
               // 1. TÍTULO Y SUBTÍTULO
               const Text(
-                'Crear Cuenta',
+                'Crear Cuenta de Admin', // Título más específico
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -163,23 +169,14 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Ingresa tus datos y código de administrador para registrarte en el sistema.',
+                'Ingresa tu correo, contraseña y el código de acceso que te proporcionaron.', // Texto simplificado
                 style: TextStyle(fontSize: 16, color: Colors.grey[600], height: 1.5),
               ),
               
               const SizedBox(height: 32),
 
               // 2. FORMULARIO CON ICONOS
-              _buildCustomTextField(
-                controller: _nameController,
-                label: 'Nombres',
-                icon: Icons.person_outline,
-              ),
-              _buildCustomTextField(
-                controller: _apellidosController,
-                label: 'Apellidos',
-                icon: Icons.person_outline,
-              ),
+              // Los campos de nombre y apellido se eliminaron porque son pre-registrados por el Super Admin
               _buildCustomTextField(
                 controller: _emailController,
                 label: 'Correo Electrónico',
@@ -198,7 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
               // Input especial para el código
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue[50], // Un color diferente para resaltar que es importante
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.shade100),
                 ),
@@ -230,11 +227,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       const Icon(Icons.error_outline, color: Colors.red),
                       const SizedBox(width: 10),
                       Expanded(
-  child: Text(
-    _error!, 
-    style: TextStyle(color: Colors.red[900]), // Usamos red[900] y quitamos 'const'
-  ),
-),
+                        child: Text(
+                          _error!, 
+                          style: TextStyle(color: Colors.red[900]),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -242,11 +239,11 @@ class _RegisterPageState extends State<RegisterPage> {
               // 4. BOTÓN DE ACCIÓN
               SizedBox(
                 width: double.infinity,
-                height: 55, // Más alto para fácil toque
+                height: 55,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor, // Usa tu color definido en theme.dart
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
                     elevation: 2,
                     shape: RoundedRectangleBorder(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../service/profile_service.dart';
+import '../service/supabase_service.dart';
+import 'admin_empresa/admin_empresa_page.dart';
 import 'empleado/empleado_page.dart';
 
 class ProfileCompletionPage extends StatefulWidget {
@@ -37,18 +38,40 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     }
 
     try {
-      final ok = await ProfileService.instance.saveProfile(
+      await SupabaseService.instance.updateEmpleadoProfile(
         cedula: cedula,
         telefono: telefono.isEmpty ? null : telefono,
         direccion: direccion.isEmpty ? null : direccion,
       );
 
-      if (!ok) throw Exception('No se pudo actualizar el perfil');
-
+      // Es crucial verificar si el widget sigue "montado" después de una operación asíncrona.
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+      
+      // Obtenemos el perfil actualizado para saber a dónde redirigir
+      final profile = await SupabaseService.instance.getMyProfile();
+      final rol = profile?['rol'] as String?;
+      
+      // Volvemos a verificar antes de usar el BuildContext para la navegación.
+      if (!mounted) return;
+
+      switch (rol) {
+        case 'ADMIN_EMPRESA':
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminEmpresaPage()));
+          break;
+        case 'EMPLEADO':
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+          break;
+        default:
+          // Fallback por si acaso, aunque no debería ocurrir
+          await SupabaseService.instance.signOut();
+          if (!mounted) return; // Verificamos una última vez.
+          Navigator.pushReplacementNamed(context, '/access-selection');
+      }
+
     } catch (e) {
-      setState(() { _error = e.toString(); });
+      if (mounted) {
+        setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
+      }
     } finally {
       if (mounted) setState(() { _isLoading = false; });
     }

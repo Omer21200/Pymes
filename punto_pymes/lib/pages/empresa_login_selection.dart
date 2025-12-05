@@ -41,7 +41,7 @@ class EmpresaLoginSelection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -54,7 +54,7 @@ class EmpresaLoginSelection extends StatelessWidget {
                           ? Image.network(
                               foto,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (context, error, stackTrace) => const Icon(
                                 Icons.apartment,
                                 size: 80,
                                 color: brandColor,
@@ -116,7 +116,7 @@ class EmpresaLoginSelection extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    shadowColor: brandColor.withOpacity(0.4),
+                    shadowColor: brandColor.withValues(alpha: 0.4),
                   ),
                 ),
 

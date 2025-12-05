@@ -23,7 +23,7 @@ class CompanyTile extends StatelessWidget {
                   width: 50,
                   height: 50,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (context, error, stackTrace) => Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
