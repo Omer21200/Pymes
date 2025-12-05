@@ -1,15 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../../../service/supabase_service.dart';
 import '../notificacion.dart';
+import '../reportes.dart';
 
-class EmpleadoSections extends StatelessWidget {
+class EmpleadoSections extends StatefulWidget {
   final int tabIndex;
 
   const EmpleadoSections({super.key, required this.tabIndex});
 
   @override
+  State<EmpleadoSections> createState() => _EmpleadoSectionsState();
+}
+
+class _EmpleadoSectionsState extends State<EmpleadoSections> {
+  late Future<List<Map<String, dynamic>>> _noticiasFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _noticiasFuture = SupabaseService.instance.getNoticiasUsuario();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    switch (tabIndex) {
+    switch (widget.tabIndex) {
       case 0:
         return _buildInicio(context);
       case 1:
@@ -31,14 +46,6 @@ class EmpleadoSections extends StatelessWidget {
     final quickAccess = [
       {'label': 'Registrar', 'subtitle': 'Marcar asistencia', 'icon': Icons.access_time},
       {'label': 'Reportes', 'subtitle': 'Ver historial', 'icon': Icons.description},
-    ];
-
-    final news = [
-      {
-        'title': 'Actualización de horarios',
-        'body': 'Se modifican los horarios de entrada a partir del próximo lunes.',
-        'date': '2025-11-01'
-      }
     ];
 
     return SingleChildScrollView(
@@ -125,7 +132,46 @@ class EmpleadoSections extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Noticias y anuncios', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          ...news.map((item) => _buildNewsRow(item)),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _noticiasFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Error al cargar noticias: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              }
+
+              final noticias = snapshot.data ?? [];
+
+              if (noticias.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'No hay noticias disponibles',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                );
+              }
+
+              return Column(
+                children: noticias
+                    .take(3)
+                    .map((noticia) => _buildNewsRow(noticia))
+                    .toList(),
+              );
+            },
+          ),
           const SizedBox(height: 140),
         ],
       ),
@@ -165,12 +211,26 @@ class EmpleadoSections extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsRow(Map<String, String> data) {
+  Widget _buildNewsRow(Map<String, dynamic> data) {
+    final titulo = data['titulo'] ?? '';
+    final contenido = data['contenido'] ?? '';
+    final fechaPublicacion = data['fecha_publicacion'] ?? '';
+    final esImportante = data['es_importante'] ?? false;
+
+    String formatearFecha(String fecha) {
+      try {
+        final date = DateTime.parse(fecha);
+        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      } catch (e) {
+        return fecha;
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: esImportante ? Colors.red.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
       ),
@@ -179,15 +239,36 @@ class EmpleadoSections extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.notifications, color: Color(0xFFD92344)),
+              Icon(
+                esImportante ? Icons.priority_high : Icons.notifications,
+                color: esImportante ? Colors.red : const Color(0xFFD92344),
+              ),
               const SizedBox(width: 10),
-              Text(data['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(data['body'] ?? '', style: const TextStyle(color: Colors.black54)),
+          Text(
+            contenido,
+            style: const TextStyle(color: Colors.black54),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 8),
-          Text(data['date'] ?? '', style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+          Text(
+            formatearFecha(fechaPublicacion),
+            style: TextStyle(
+              color: esImportante ? Colors.red : Colors.redAccent,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -198,46 +279,6 @@ class EmpleadoSections extends StatelessWidget {
   }
 
   Widget _buildReports(BuildContext context) {
-    final reports = [
-      {'name': 'Informe mensual', 'status': 'Listo para descargar'},
-      {'name': 'Historial de asistencia', 'status': 'Actualizado hoy'},
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: reports
-            .map(
-              (report) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.insert_drive_file, color: Colors.black54),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(report['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Text(report['status'] ?? '', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black26),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
+    return const ReportesPage();
   }
 }

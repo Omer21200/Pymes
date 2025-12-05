@@ -4,7 +4,6 @@ import '../config/supabase_config.dart';
 
 /// Servicio centralizado para operaciones con Supabase.
 class SupabaseService {
-  
   SupabaseService._();
   static final SupabaseService instance = SupabaseService._();
 
@@ -19,11 +18,20 @@ class SupabaseService {
   SupabaseClient get client => Supabase.instance.client;
 
   // ==================== AUTH ====================
-  Future<AuthResponse> signInEmail({required String email, required String password}) async {
-    return await client.auth.signInWithPassword(email: email, password: password);
+  Future<AuthResponse> signInEmail({
+    required String email,
+    required String password,
+  }) async {
+    return await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
   }
 
-  Future<AuthResponse> signUpEmail({required String email, required String password}) async {
+  Future<AuthResponse> signUpEmail({
+    required String email,
+    required String password,
+  }) async {
     return await client.auth.signUp(email: email, password: password);
   }
 
@@ -45,22 +53,22 @@ class SupabaseService {
   /// Obtiene lista de empresas (select *).
   Future<List<Map<String, dynamic>>> getEmpresas() async {
     final response = await client
-      .from('empresas')
-      .select()
-      .order('created_at', ascending: false);
+        .from('empresas')
+        .select()
+        .order('created_at', ascending: false);
     final list = (response as List)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
     return list;
   }
 
   /// Obtiene una empresa por id
   Future<Map<String, dynamic>?> getEmpresaById(String id) async {
     final response = await client
-      .from('empresas')
-      .select()
-      .eq('id', id)
-      .maybeSingle();
+        .from('empresas')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
     return response == null ? null : Map<String, dynamic>.from(response);
   }
 
@@ -95,22 +103,28 @@ class SupabaseService {
 
     throw Exception('No se encontró una empresa asociada a este usuario.');
   }
+
   /// Inserta una empresa (requiere RLS y permisos correctos).
   Future<Map<String, dynamic>> insertEmpresa({
     required String nombre,
     String? ruc,
   }) async {
-    final response = await client.from('empresas').insert({
-      'nombre': nombre,
-      'ruc': ruc,
-    }).select().single();
+    final response = await client
+        .from('empresas')
+        .insert({'nombre': nombre, 'ruc': ruc})
+        .select()
+        .single();
     return response;
   }
 
   /// Ejemplo de obtener perfil propio (depende de política RLS).
   Future<Map<String, dynamic>?> getMyProfile() async {
     if (currentUser == null) return null;
-    final response = await client.from('profiles').select().eq('id', currentUser!.id).maybeSingle();
+    final response = await client
+        .from('profiles')
+        .select()
+        .eq('id', currentUser!.id)
+        .maybeSingle();
     return response;
   }
 
@@ -123,21 +137,29 @@ class SupabaseService {
     required String destinationPath,
   }) async {
     try {
-      await client.storage.from(bucketName).upload(
-        destinationPath,
-        File(filePath),
-        fileOptions: const FileOptions(upsert: true),
-      );
+      await client.storage
+          .from(bucketName)
+          .upload(
+            destinationPath,
+            File(filePath),
+            fileOptions: const FileOptions(upsert: true),
+          );
     } catch (e) {
-      throw Exception('Storage upload failed (bucket: $bucketName, path: $destinationPath): $e');
+      throw Exception(
+        'Storage upload failed (bucket: $bucketName, path: $destinationPath): $e',
+      );
     }
 
     // Obtener URL pública
     try {
-      final publicUrl = client.storage.from(bucketName).getPublicUrl(destinationPath);
+      final publicUrl = client.storage
+          .from(bucketName)
+          .getPublicUrl(destinationPath);
       return publicUrl;
     } catch (e) {
-      throw Exception('Failed to get public URL for $bucketName/$destinationPath: $e');
+      throw Exception(
+        'Failed to get public URL for $bucketName/$destinationPath: $e',
+      );
     }
   }
 
@@ -149,7 +171,9 @@ class SupabaseService {
     try {
       await client.storage.from(bucketName).remove([filePath]);
     } catch (e) {
-      throw Exception('Storage delete failed (bucket: $bucketName, path: $filePath): $e');
+      throw Exception(
+        'Storage delete failed (bucket: $bucketName, path: $filePath): $e',
+      );
     }
   }
 
@@ -162,13 +186,17 @@ class SupabaseService {
     try {
       await client.storage.from(bucketName).move(fromPath, toPath);
     } catch (e) {
-      throw Exception('Storage move failed (bucket: $bucketName, from: $fromPath, to: $toPath): $e');
+      throw Exception(
+        'Storage move failed (bucket: $bucketName, from: $fromPath, to: $toPath): $e',
+      );
     }
 
     try {
       return client.storage.from(bucketName).getPublicUrl(toPath);
     } catch (e) {
-      throw Exception('Failed to get public URL for moved file $bucketName/$toPath: $e');
+      throw Exception(
+        'Failed to get public URL for moved file $bucketName/$toPath: $e',
+      );
     }
   }
 
@@ -185,18 +213,22 @@ class SupabaseService {
     double? longitud,
     required String codigoAcceso,
   }) async {
-    final response = await client.from('empresas').insert({
-      'nombre': nombre,
-      if (ruc != null) 'ruc': ruc,
-      if (direccion != null) 'direccion': direccion,
-      if (telefono != null) 'telefono': telefono,
-      if (correo != null) 'correo': correo,
-      if (empresaFotoUrl != null) 'empresa_foto_url': empresaFotoUrl,
-      if (latitud != null) 'latitud': latitud,
-      if (longitud != null) 'longitud': longitud,
-      // La columna en la base es `codigo_acceso_empleado`.
-      'codigo_acceso_empleado': codigoAcceso,
-    }).select().single();
+    final response = await client
+        .from('empresas')
+        .insert({
+          'nombre': nombre,
+          if (ruc != null) 'ruc': ruc,
+          if (direccion != null) 'direccion': direccion,
+          if (telefono != null) 'telefono': telefono,
+          if (correo != null) 'correo': correo,
+          if (empresaFotoUrl != null) 'empresa_foto_url': empresaFotoUrl,
+          if (latitud != null) 'latitud': latitud,
+          if (longitud != null) 'longitud': longitud,
+          // La columna en la base es `codigo_acceso_empleado`.
+          'codigo_acceso_empleado': codigoAcceso,
+        })
+        .select()
+        .single();
     return response;
   }
 
@@ -256,7 +288,9 @@ class SupabaseService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getDepartamentosPorEmpresa(String empresaId) async {
+  Future<List<Map<String, dynamic>>> getDepartamentosPorEmpresa(
+    String empresaId,
+  ) async {
     final response = await client
         .from('departamentos')
         .select()
@@ -265,8 +299,54 @@ class SupabaseService {
     return (response as List).map((e) => e as Map<String, dynamic>).toList();
   }
 
+  /// Elimina un departamento por su id.
+  Future<void> deleteDepartamento(String departamentoId) async {
+    try {
+      await client.from('departamentos').delete().eq('id', departamentoId);
+    } catch (e) {
+      throw Exception('No se pudo eliminar el departamento: $e');
+    }
+  }
+
+  /// Obtiene un departamento por su id.
+  Future<Map<String, dynamic>?> getDepartamentoById(
+    String departamentoId,
+  ) async {
+    final response = await client
+        .from('departamentos')
+        .select()
+        .eq('id', departamentoId)
+        .maybeSingle();
+    return response as Map<String, dynamic>?;
+  }
+
+  /// Actualiza los campos de un departamento.
+  Future<Map<String, dynamic>?> updateDepartamento({
+    required String departamentoId,
+    String? nombre,
+    String? descripcion,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (nombre != null) updates['nombre'] = nombre;
+    if (descripcion != null) updates['descripcion'] = descripcion;
+
+    if (updates.isEmpty) return null;
+
+    final response = await client
+        .from('departamentos')
+        .update(updates)
+        .eq('id', departamentoId)
+        .select()
+        .maybeSingle();
+
+    if (response == null) return null;
+    return Map<String, dynamic>.from(response as Map);
+  }
+
   /// Obtiene los departamentos asociados a una noticia (ids y nombres).
-  Future<List<Map<String, dynamic>>> getDepartamentosPorNoticia(String noticiaId) async {
+  Future<List<Map<String, dynamic>>> getDepartamentosPorNoticia(
+    String noticiaId,
+  ) async {
     final response = await client
         .from('noticias_departamentos')
         .select('departamento_id, departamentos(nombre)')
@@ -288,7 +368,9 @@ class SupabaseService {
   // ==================== HORARIOS CRUD ====================
 
   /// Obtiene el horario de un departamento.
-  Future<Map<String, dynamic>?> getHorarioPorDepartamento(String departamentoId) async {
+  Future<Map<String, dynamic>?> getHorarioPorDepartamento(
+    String departamentoId,
+  ) async {
     final response = await client
         .from('horarios_departamento')
         .select()
@@ -311,20 +393,24 @@ class SupabaseService {
     required String horaSalida, // Formato HH:mm:ss
     required int tolerancia,
   }) async {
-    final response = await client.from('horarios_departamento').upsert({
-      'departamento_id': departamentoId,
-      'lunes': lunes,
-      'martes': martes,
-      'miercoles': miercoles,
-      'jueves': jueves,
-      'viernes': viernes,
-      'sabado': sabado,
-      'domingo': domingo,
-      'hora_entrada': horaEntrada,
-      'hora_salida': horaSalida,
-      'tolerancia_entrada_minutos': tolerancia,
-      'updated_at': 'now()', // Actualiza el timestamp
-    }, onConflict: 'departamento_id').select().single();
+    final response = await client
+        .from('horarios_departamento')
+        .upsert({
+          'departamento_id': departamentoId,
+          'lunes': lunes,
+          'martes': martes,
+          'miercoles': miercoles,
+          'jueves': jueves,
+          'viernes': viernes,
+          'sabado': sabado,
+          'domingo': domingo,
+          'hora_entrada': horaEntrada,
+          'hora_salida': horaSalida,
+          'tolerancia_entrada_minutos': tolerancia,
+          'updated_at': 'now()', // Actualiza el timestamp
+        }, onConflict: 'departamento_id')
+        .select()
+        .single();
     return response;
   }
 
@@ -332,14 +418,17 @@ class SupabaseService {
 
   /// RPC: Obtiene las noticias del usuario autenticado con su estado de lectura.
   /// Filtra según el tipo de audiencia (global o departamento).
-  Future<List<Map<String, dynamic>>> getNoticiasUsuario({int limite = 20}) async {
+  Future<List<Map<String, dynamic>>> getNoticiasUsuario({
+    int limite = 20,
+  }) async {
     try {
-      final response = await client.rpc('get_noticias_usuario', params: {
-        'p_limite': limite,
-      });
-      
+      final response = await client.rpc(
+        'get_noticias_usuario',
+        params: {'p_limite': limite},
+      );
+
       if (response == null) return [];
-      
+
       return (response as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
@@ -351,9 +440,10 @@ class SupabaseService {
   /// RPC: Marca una noticia como leída por el usuario autenticado.
   Future<bool> marcarNoticiaLeida(String noticiaId) async {
     try {
-      final response = await client.rpc('marcar_noticia_leida', params: {
-        'p_noticia_id': noticiaId,
-      });
+      final response = await client.rpc(
+        'marcar_noticia_leida',
+        params: {'p_noticia_id': noticiaId},
+      );
       return response as bool? ?? false;
     } catch (e) {
       print('Error marcando noticia como leída: $e');
@@ -368,11 +458,14 @@ class SupabaseService {
 
     final response = await client
         .from('noticias')
-        .select('id, titulo, contenido, fecha_publicacion, es_importante, tipo_audiencia')
+        .select(
+          'id, titulo, contenido, fecha_publicacion, es_importante, tipo_audiencia',
+        )
         .eq('empresa_id', empresaId) // Filtro explícito
         .order('fecha_publicacion', ascending: false);
     return (response as List).map((e) => e as Map<String, dynamic>).toList();
   }
+
   /// Crea o actualiza una noticia (CORREGIDO: Usa ID seguro)
   Future<void> upsertNoticia({
     String? noticiaId,
@@ -408,36 +501,58 @@ class SupabaseService {
 
     Map<String, dynamic> upsertedNoticia;
     if (noticiaId != null) {
-      upsertedNoticia = await client.from('noticias').update(noticiaData).eq('id', noticiaId).select().single();
+      upsertedNoticia = await client
+          .from('noticias')
+          .update(noticiaData)
+          .eq('id', noticiaId)
+          .select()
+          .single();
     } else {
-      upsertedNoticia = await client.from('noticias').insert(noticiaData).select().single();
+      upsertedNoticia = await client
+          .from('noticias')
+          .insert(noticiaData)
+          .select()
+          .single();
     }
 
     final newNoticiaId = upsertedNoticia['id'];
 
     // Gestión de departamentos (Igual que antes)
-    await client.from('noticias_departamentos').delete().eq('noticia_id', newNoticiaId);
+    await client
+        .from('noticias_departamentos')
+        .delete()
+        .eq('noticia_id', newNoticiaId);
 
     if (tipoAudiencia == 'departamento' && departamentos.isNotEmpty) {
-      final deptosData = departamentos.map((deptoId) => {
-        'noticia_id': newNoticiaId,
-        'departamento_id': deptoId,
-      }).toList();
+      final deptosData = departamentos
+          .map(
+            (deptoId) => {
+              'noticia_id': newNoticiaId,
+              'departamento_id': deptoId,
+            },
+          )
+          .toList();
       await client.from('noticias_departamentos').insert(deptosData);
     }
   }
 
   /// Elimina una noticia y su imagen asociada del Storage.
   Future<void> deleteNoticia(String noticiaId) async {
-    final noticia = await client.from('noticias').select('imagen_url').eq('id', noticiaId).maybeSingle();
-    
+    final noticia = await client
+        .from('noticias')
+        .select('imagen_url')
+        .eq('id', noticiaId)
+        .maybeSingle();
+
     await client.from('noticias').delete().eq('id', noticiaId);
 
     final imageUrl = noticia?['imagen_url'] as String?;
     if (imageUrl != null) {
       try {
         // Extraer el path del archivo desde la URL completa
-        final path = imageUrl.substring(imageUrl.lastIndexOf('/noticias%2F') + 12).replaceAll('%20', ' ');
+        final path = imageUrl
+            .substring(imageUrl.lastIndexOf('/noticias%2F') + 12)
+            .replaceAll('%20', ' ');
         await deleteFile(bucketName: 'fotos', filePath: 'noticias/$path');
       } catch (e) {
         print('No se pudo eliminar la imagen del storage: $e');
@@ -455,12 +570,15 @@ class SupabaseService {
     String? nombres,
     String? apellidos,
   }) async {
-    final res = await client.rpc('register_employee_rpc', params: {
-      'p_email': email,
-      'p_code': code,
-      'p_nombres': nombres,
-      'p_apellidos': apellidos,
-    });
+    final res = await client.rpc(
+      'register_employee_rpc',
+      params: {
+        'p_email': email,
+        'p_code': code,
+        'p_nombres': nombres,
+        'p_apellidos': apellidos,
+      },
+    );
     return res as bool? ?? false;
   }
 
@@ -470,10 +588,10 @@ class SupabaseService {
     required String email,
     required String accessCode,
   }) async {
-    final res = await client.rpc('register_admin_request_rpc', params: {
-      'p_email': email,
-      'p_access_code': accessCode,
-    });
+    final res = await client.rpc(
+      'register_admin_request_rpc',
+      params: {'p_email': email, 'p_access_code': accessCode},
+    );
     return res as bool? ?? false;
   }
 
@@ -486,14 +604,17 @@ class SupabaseService {
     required String adminNombres,
     required String adminApellidos,
   }) async {
-    final res = await client.rpc('create_company_and_admin_request', params: {
-      'p_nombre_empresa': nombreEmpresa,
-      'p_codigo_acceso_empleado': codigoAccesoEmpleado,
-      'p_email_admin': adminEmail,
-      'p_codigo_admin': codigoAdmin,
-      'p_nombres_admin': adminNombres,
-      'p_apellidos_admin': adminApellidos,
-    });
+    final res = await client.rpc(
+      'create_company_and_admin_request',
+      params: {
+        'p_nombre_empresa': nombreEmpresa,
+        'p_codigo_acceso_empleado': codigoAccesoEmpleado,
+        'p_email_admin': adminEmail,
+        'p_codigo_admin': codigoAdmin,
+        'p_nombres_admin': adminNombres,
+        'p_apellidos_admin': adminApellidos,
+      },
+    );
     return res?.toString();
   }
 
@@ -506,13 +627,16 @@ class SupabaseService {
     required String nombres,
     required String apellidos,
   }) async {
-    final res = await client.rpc('create_admin_request_for_company', params: {
-      'p_email': email,
-      'p_empresa_id': empresaId,
-      'p_access_code': accessCode,
-      'p_nombres': nombres,
-      'p_apellidos': apellidos,
-    });
+    final res = await client.rpc(
+      'create_admin_request_for_company',
+      params: {
+        'p_email': email,
+        'p_empresa_id': empresaId,
+        'p_access_code': accessCode,
+        'p_nombres': nombres,
+        'p_apellidos': apellidos,
+      },
+    );
     return res as bool? ?? false;
   }
 
@@ -535,12 +659,17 @@ class SupabaseService {
         .eq('user_id', user.id)
         .maybeSingle();
     if (profile == null && empleado == null) return null;
-    final nombres = (profile?['nombres'] ?? empleado?['nombres'] ?? '').toString();
-    final apellidos = (profile?['apellidos'] ?? empleado?['apellidos'] ?? '').toString();
+    final nombres = (profile?['nombres'] ?? empleado?['nombres'] ?? '')
+        .toString();
+    final apellidos = (profile?['apellidos'] ?? empleado?['apellidos'] ?? '')
+        .toString();
     return {
       'nombres': nombres,
       'apellidos': apellidos,
-      'nombre_completo': [nombres, apellidos].where((e) => e.isNotEmpty).join(' ').trim(),
+      'nombre_completo': [
+        nombres,
+        apellidos,
+      ].where((e) => e.isNotEmpty).join(' ').trim(),
       'empresa_id': profile?['empresa_id'] ?? empleado?['empresa_id'],
       'rol': profile?['rol'],
       'correo': empleado?['correo'] ?? user.email,
@@ -558,7 +687,11 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
 
-    final empleado = await client.from('empleados').select().eq('user_id', user.id).maybeSingle();
+    final empleado = await client
+        .from('empleados')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
     if (empleado == null) throw Exception('Empleado no encontrado');
 
     final updates = <String, dynamic>{};
@@ -569,7 +702,11 @@ class SupabaseService {
     if (updates.isEmpty) return Map<String, dynamic>.from(empleado as Map);
 
     try {
-      final dynamic res = await client.from('empleados').update(updates).eq('id', empleado['id']).select();
+      final dynamic res = await client
+          .from('empleados')
+          .update(updates)
+          .eq('id', empleado['id'])
+          .select();
       // Postgrest suele devolver una lista de filas.
       if (res is List) {
         if (res.isEmpty) return null;
@@ -586,34 +723,55 @@ class SupabaseService {
   /// - Si no existe asistencia hoy: crea con `hora_entrada = now()`.
   /// - Si existe asistencia hoy con `hora_entrada` y sin `hora_salida`: actualiza `hora_salida = now()` (marca salida).
   /// - Si ya tiene entrada y salida, lanza excepción informando que ya registró ambos.
-  Future<Map<String, dynamic>> registrarAsistencia({double? latitud, double? longitud, String? fotoUrl}) async {
+  Future<Map<String, dynamic>> registrarAsistencia({
+    double? latitud,
+    double? longitud,
+    String? fotoUrl,
+  }) async {
     final user = currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
 
     // Obtener fila de empleado
-    final empleado = await client.from('empleados').select().eq('user_id', user.id).maybeSingle();
-    if (empleado == null) throw Exception('Empleado no encontrado. Ejecuta el flujo de registro y confirmación primero.');
+    final empleado = await client
+        .from('empleados')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
+    if (empleado == null)
+      throw Exception(
+        'Empleado no encontrado. Ejecuta el flujo de registro y confirmación primero.',
+      );
     final empleadoId = empleado['id'] as String;
 
     // Fecha de hoy (YYYY-MM-DD)
     final today = DateTime.now().toIso8601String().split('T').first;
 
     // Buscar asistencia de hoy
-    final existing = await client.from('asistencias').select().eq('empleado_id', empleadoId).eq('fecha', today).maybeSingle();
+    final existing = await client
+        .from('asistencias')
+        .select()
+        .eq('empleado_id', empleadoId)
+        .eq('fecha', today)
+        .maybeSingle();
 
     final now = DateTime.now();
-    final horaNow = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+    final horaNow =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
     if (existing == null) {
       // Crear entrada
-      final inserted = await client.from('asistencias').insert({
-        'empleado_id': empleadoId,
-        'fecha': today,
-        'hora_entrada': horaNow,
-        if (latitud != null) 'latitud': latitud,
-        if (longitud != null) 'longitud': longitud,
-        if (fotoUrl != null) 'foto_url': fotoUrl,
-      }).select().maybeSingle();
+      final inserted = await client
+          .from('asistencias')
+          .insert({
+            'empleado_id': empleadoId,
+            'fecha': today,
+            'hora_entrada': horaNow,
+            if (latitud != null) 'latitud': latitud,
+            if (longitud != null) 'longitud': longitud,
+            if (fotoUrl != null) 'foto_url': fotoUrl,
+          })
+          .select()
+          .maybeSingle();
       return Map<String, dynamic>.from(inserted as Map);
     }
 
@@ -622,12 +780,17 @@ class SupabaseService {
     final horaSalida = existing['hora_salida'];
     if (horaEntrada != null && horaSalida == null) {
       // Registrar salida
-      final updated = await client.from('asistencias').update({
-        'hora_salida': horaNow,
-        if (latitud != null) 'latitud': latitud,
-        if (longitud != null) 'longitud': longitud,
-        if (fotoUrl != null) 'foto_url': fotoUrl,
-      }).eq('id', existing['id']).select().maybeSingle();
+      final updated = await client
+          .from('asistencias')
+          .update({
+            'hora_salida': horaNow,
+            if (latitud != null) 'latitud': latitud,
+            if (longitud != null) 'longitud': longitud,
+            if (fotoUrl != null) 'foto_url': fotoUrl,
+          })
+          .eq('id', existing['id'])
+          .select()
+          .maybeSingle();
       return Map<String, dynamic>.from(updated as Map);
     }
 
@@ -638,7 +801,7 @@ class SupabaseService {
   // registrar_empleado_confirmado DEPRECATED: se mantiene comentado por referencia.
   // Preferir flujo: 1) `registerEmployeeRequest` (RPC) ANTES de 2) `signUpEmail`.
   // El trigger `handle_user_confirmed` creará el profile/empleado al confirmar.
-  
+
   // ==================== ADMIN DASHBOARD ====================
 
   /// Obtiene el resumen de datos para el dashboard del administrador.
@@ -652,22 +815,64 @@ class SupabaseService {
     try {
       final empresaId = await _getEmpresaIdSeguro(); // Usamos el método seguro
 
-      final response = await client.rpc('get_asistencias_con_estado', params: {
-        'p_empresa_id': empresaId,
-        'p_fecha_desde': DateTime.now().toIso8601String().split('T').first,
-        'p_fecha_hasta': DateTime.now().toIso8601String().split('T').first
-      });
+      final response = await client.rpc(
+        'get_asistencias_con_estado',
+        params: {
+          'p_empresa_id': empresaId,
+          'p_fecha_desde': DateTime.now().toIso8601String().split('T').first,
+          'p_fecha_hasta': DateTime.now().toIso8601String().split('T').first,
+        },
+      );
 
       // Si RPC retorna null o vacío, manejamos
       if (response == null) return [];
 
       // Ordenamos en Dart si el RPC no lo hizo
-      final lista = (response as List).map((e) => e as Map<String, dynamic>).toList();
+      final lista = (response as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
       // Opcional: ordenar por hora entrada desc
       return lista.take(5).toList();
-
     } catch (e) {
       print('Error en getUltimosRegistros: $e');
+      return [];
+    }
+  }
+
+  /// Obtiene el historial de asistencias del empleado autenticado.
+  /// Retorna los últimos registros ordenados por fecha descendente.
+  Future<List<Map<String, dynamic>>> getHistorialAsistencias({
+    int limite = 30,
+  }) async {
+    try {
+      final user = currentUser;
+      if (user == null) throw Exception('Usuario no autenticado');
+
+      // Obtener empleado_id del usuario actual
+      final empleado = await client
+          .from('empleados')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (empleado == null) throw Exception('Empleado no encontrado');
+      final empleadoId = empleado['id'] as String;
+
+      // Obtener asistencias del empleado
+      final response = await client
+          .from('asistencias')
+          .select(
+            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, created_at',
+          )
+          .eq('empleado_id', empleadoId)
+          .order('fecha', ascending: false)
+          .limit(limite);
+
+      return (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      print('Error en getHistorialAsistencias: $e');
       return [];
     }
   }

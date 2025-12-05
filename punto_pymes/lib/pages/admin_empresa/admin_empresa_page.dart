@@ -102,6 +102,7 @@ class _AdminEmpresaPageState extends State<AdminEmpresaPage> {
                     AdminEmpresaSections(tabIndex: 0),
                     AdminEmpresaSections(tabIndex: 1),
                     AdminEmpresaSections(tabIndex: 2),
+                    AdminEmpresaSections(tabIndex: 3),
                   ],
                 ),
               ),

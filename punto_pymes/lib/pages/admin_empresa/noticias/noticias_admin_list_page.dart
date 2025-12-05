@@ -139,6 +139,7 @@ class _NoticiasAdminListPageState extends State<NoticiasAdminListPage> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_noticias',
         onPressed: () async {
           final result = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
