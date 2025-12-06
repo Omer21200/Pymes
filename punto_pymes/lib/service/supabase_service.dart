@@ -317,7 +317,7 @@ class SupabaseService {
         .select()
         .eq('id', departamentoId)
         .maybeSingle();
-    return response as Map<String, dynamic>?;
+    return response;
   }
 
   /// Actualiza los campos de un departamento.
@@ -874,6 +874,75 @@ class SupabaseService {
     } catch (e) {
       print('Error en getHistorialAsistencias: $e');
       return [];
+    }
+  }
+
+  // ==================== ESTADÍSTICAS DEL EMPLEADO ====================
+
+  /// Obtiene estadísticas de asistencia del empleado actual
+  Future<Map<String, dynamic>> getEmpleadoEstadisticas() async {
+    try {
+      final user = client.auth.currentUser;
+      if (user == null) throw Exception('Usuario no autenticado');
+
+      // Obtener empleado_id
+      final empleado = await client
+          .from('empleados')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (empleado == null) throw Exception('Empleado no encontrado');
+      final empleadoId = empleado['id'] as String;
+
+      // Obtener asistencias del mes actual
+      final ahora = DateTime.now();
+      final primerDiaDelMes = DateTime(ahora.year, ahora.month, 1);
+      final ultimoDiaDelMes = DateTime(ahora.year, ahora.month + 1, 0);
+
+      final asistencias = await client
+          .from('asistencias')
+          .select('fecha, hora_entrada, hora_salida')
+          .eq('empleado_id', empleadoId)
+          .gte('fecha', primerDiaDelMes.toIso8601String().split('T')[0])
+          .lte('fecha', ultimoDiaDelMes.toIso8601String().split('T')[0]);
+
+      // Calcular estadísticas
+      int diasAsistidos = 0;
+      int aTiempo = 0;
+      int tardanzas = 0;
+
+      for (final asistencia in asistencias) {
+        if (asistencia['hora_entrada'] != null) {
+          diasAsistidos++;
+
+          // Obtener hora de entrada
+          final horaEntrada = asistencia['hora_entrada'] as String;
+
+          // Comparar si fue a tiempo (simple: si llegó antes del mediodía)
+          // En producción, esto debería compararse contra el horario del departamento
+          if (horaEntrada.compareTo('12:00:00') < 0) {
+            aTiempo++;
+          } else {
+            tardanzas++;
+          }
+        }
+      }
+
+      return {
+        'dias_asistidos': diasAsistidos,
+        'a_tiempo': aTiempo,
+        'tardanzas': tardanzas,
+        'total_registros': asistencias.length,
+      };
+    } catch (e) {
+      print('Error en getEmpleadoEstadisticas: $e');
+      return {
+        'dias_asistidos': 0,
+        'a_tiempo': 0,
+        'tardanzas': 0,
+        'total_registros': 0,
+      };
     }
   }
 }

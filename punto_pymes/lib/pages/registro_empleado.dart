@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../service/supabase_service.dart';
+import '../service/supabase_service.dart';
 
 class RegisterPageEmpleado extends StatefulWidget {
   final Map<String, dynamic>? empresa;
