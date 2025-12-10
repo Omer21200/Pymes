@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../pages/empleado/widgets/hora_internet_ecuador.dart';
 
 /// Servicio centralizado para operaciones con Supabase.
 class SupabaseService {
@@ -48,6 +51,26 @@ class SupabaseService {
   }
 
   User? get currentUser => client.auth.currentUser;
+
+  // ==================== HORA DE ECUADOR (LOJA) ====================
+  /// Obtiene la hora actual de Ecuador desde worldtimeapi.org
+  Future<DateTime> getEcuadorTime() async {
+    try {
+      final response = await http
+          .get(Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'))
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final datetimeStr = data['datetime'] as String;
+        final dt = DateTime.parse(datetimeStr).toUtc();
+        print('✓ Hora de Ecuador (internet): ${dt.hour}:${dt.minute}:${dt.second}');
+        return dt;
+      }
+    } catch (e) {
+      print('⚠️ Error obteniendo hora de Ecuador: $e');
+    }
+    return DateTime.now();
+  }
 
   // ==================== QUERIES EJEMPLO ====================
   /// Obtiene lista de empresas (select *).
@@ -723,6 +746,7 @@ class SupabaseService {
   /// - Si no existe asistencia hoy: crea con `hora_entrada = now()`.
   /// - Si existe asistencia hoy con `hora_entrada` y sin `hora_salida`: actualiza `hora_salida = now()` (marca salida).
   /// - Si ya tiene entrada y salida, lanza excepción informando que ya registró ambos.
+  /// - Usa la hora de Ecuador (America/Guayaquil) desde internet.
   Future<Map<String, dynamic>> registrarAsistencia({
     double? latitud,
     double? longitud,
@@ -743,8 +767,15 @@ class SupabaseService {
       );
     final empleadoId = empleado['id'] as String;
 
-    // Fecha de hoy (YYYY-MM-DD)
-    final today = DateTime.now().toIso8601String().split('T').first;
+    // Obtener hora de Ecuador: primero desde EcuadorTimeManager (si está sincronizado)
+    // Si no está disponible, hacer request a la API
+    DateTime now = EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+    
+    // Convertir de UTC a hora de Ecuador (UTC-5, es decir, restar 5 horas)
+    final ecuadorTime = now.toUtc().subtract(const Duration(hours: 5));
+    
+    // Fecha de hoy (YYYY-MM-DD) usando hora de Ecuador
+    final today = ecuadorTime.toIso8601String().split('T').first;
 
     // Buscar asistencia de hoy
     final existing = await client
@@ -754,9 +785,8 @@ class SupabaseService {
         .eq('fecha', today)
         .maybeSingle();
 
-    final now = DateTime.now();
     final horaNow =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+        '${ecuadorTime.hour.toString().padLeft(2, '0')}:${ecuadorTime.minute.toString().padLeft(2, '0')}:${ecuadorTime.second.toString().padLeft(2, '0')}';
 
     if (existing == null) {
       // Crear entrada
