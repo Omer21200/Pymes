@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../noticias/noticias_admin_list_page.dart';
 import 'admin_dashboard_view.dart';
 import '../departamentos/departamentos_admin_list_page.dart';
+import 'admin_registros_view.dart';
 
 class AdminEmpresaSections extends StatelessWidget {
   final int tabIndex;
@@ -22,7 +23,7 @@ class AdminEmpresaSections extends StatelessWidget {
         content = const DepartamentosAdminListPage();
         break;
       case 3: // Reportes
-        content = const Center(child: Text('Sección de Reportes')); // Placeholder
+        content = const AdminRegistrosView();
         break;
       default:
         content = const Center(child: Text('Sección no encontrada'));

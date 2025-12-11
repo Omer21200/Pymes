@@ -7,10 +7,12 @@ class DepartamentosAdminListPage extends StatefulWidget {
   const DepartamentosAdminListPage({super.key});
 
   @override
-  State<DepartamentosAdminListPage> createState() => _DepartamentosAdminListPageState();
+  State<DepartamentosAdminListPage> createState() =>
+      _DepartamentosAdminListPageState();
 }
 
-class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage> {
+class _DepartamentosAdminListPageState
+    extends State<DepartamentosAdminListPage> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _departamentos = [];
 
@@ -30,7 +32,9 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
         throw Exception('No se pudo identificar la empresa asociada.');
       }
       final empresaId = empleado['empresa_id'].toString();
-      final data = await SupabaseService.instance.getDepartamentosPorEmpresa(empresaId);
+      final data = await SupabaseService.instance.getDepartamentosPorEmpresa(
+        empresaId,
+      );
       if (!mounted) return;
       setState(() {
         _departamentos = data;
@@ -40,7 +44,12 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
       if (!mounted) return;
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar departamentos: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar departamentos: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -50,10 +59,18 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar Eliminación'),
-        content: const Text('¿Estás seguro de que deseas eliminar este departamento? Esta acción no se puede deshacer.'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar este departamento? Esta acción no se puede deshacer.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
@@ -63,13 +80,23 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
         await SupabaseService.instance.deleteDepartamento(departamentoId);
         if (!mounted) return;
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Departamento eliminado'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Departamento eliminado'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
         await _fetchDepartamentos();
       } catch (e) {
         if (!mounted) return;
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al eliminar: $e'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     }
@@ -77,6 +104,9 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
 
   @override
   Widget build(BuildContext context) {
+    const Color brandRed = Color(0xFFE2183D);
+    const Color accentBlue = Color(0xFF3F51B5);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: _isLoading
@@ -87,10 +117,21 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
+                    padding: EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0.0),
                     child: Text(
                       'Departamentos',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 16.0),
+                    child: Text(
+                      'Crea, edita y organiza los departamentos de tu empresa.',
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
                     ),
                   ),
                   Expanded(
@@ -99,11 +140,24 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: const [
-                                Icon(Icons.business_center, size: 60, color: Colors.grey),
+                                Icon(
+                                  Icons.business_center,
+                                  size: 60,
+                                  color: Colors.grey,
+                                ),
                                 SizedBox(height: 16),
-                                Text('No hay departamentos creados.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                                Text(
+                                  'No hay departamentos creados.',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                                 SizedBox(height: 8),
-                                Text('Usa el botón para crear el primero.', style: TextStyle(color: Colors.grey)),
+                                Text(
+                                  'Usa el botón para crear el primero.',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ],
                             ),
                           )
@@ -111,52 +165,131 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
                             itemCount: _departamentos.length,
                             itemBuilder: (context, index) {
                               final depto = _departamentos[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                child: ListTile(
-                                  title: Text(depto['nombre'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: depto['descripcion'] != null ? Text(depto['descripcion']) : null,
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.schedule),
-                                        tooltip: 'Horario',
-                                        onPressed: () async {
-                                          final result = await Navigator.of(context).push<bool>(
-                                            MaterialPageRoute(
-                                              builder: (_) => DepartamentoDetallePage(
+                              final nombre = depto['nombre'] ?? '';
+                              final descripcion =
+                                  depto['descripcion']?.toString() ?? '';
+                              return GestureDetector(
+                                onTap: () async {
+                                  final result = await Navigator.of(context)
+                                      .push<bool>(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              DepartamentoDetallePage(
                                                 departamentoId: depto['id'],
-                                                departamentoNombre: depto['nombre'] ?? 'Departamento',
+                                                departamentoNombre: nombre,
                                               ),
-                                            ),
-                                          );
-                                            if (result == true) {
-                                              if (mounted) await _fetchDepartamentos();
-                                            }
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                        onPressed: () => _deleteDepartamento(depto['id']),
+                                        ),
+                                      );
+                                  if (result == true) {
+                                    if (mounted) await _fetchDepartamentos();
+                                  }
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    // Fondo y sombra alineados con las tarjetas de noticias
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(22),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color.fromARGB(
+                                          255,
+                                          0,
+                                          0,
+                                          0,
+                                        ).withValues(alpha: 0.08),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 8),
                                       ),
                                     ],
                                   ),
-                                  onTap: () async {
-                                    final result = await Navigator.of(context).push<bool>(
-                                      MaterialPageRoute(
-                                        builder: (_) => DepartamentoDetallePage(
-                                          departamentoId: depto['id'],
-                                          departamentoNombre: depto['nombre'] ?? 'Departamento',
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        // Ícono/figura del departamento
+                                        Container(
+                                          width: 42,
+                                          height: 42,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: accentBlue.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.grid_view_rounded,
+                                            size: 22,
+                                            color: accentBlue,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                    if (result == true) {
-                                      if (mounted) await _fetchDepartamentos();
-                                    }
-                                  },
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                nombre,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                descripcion.isNotEmpty
+                                                    ? descripcion
+                                                    : 'Sin descripción',
+                                                style: const TextStyle(
+                                                  color: Colors.black54,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            24,
+                                          ),
+                                          onTap: () =>
+                                              _deleteDepartamento(depto['id']),
+                                          child: Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: brandRed.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.04),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 6),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.delete_outline,
+                                              color: brandRed,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               );
                             },
@@ -170,22 +303,33 @@ class _DepartamentosAdminListPageState extends State<DepartamentosAdminListPage>
         onPressed: () async {
           // Obtener empresa id para pasar a la pantalla de creación
           final empleado = await SupabaseService.instance.getEmpleadoActual();
+          if (!mounted) return;
           final empresaId = empleado?['empresa_id']?.toString();
           if (empresaId == null) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se encontró la empresa asociada.'), backgroundColor: Colors.red));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se encontró la empresa asociada.'),
+                backgroundColor: Colors.red,
+              ),
+            );
             return;
           }
 
           final result = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(builder: (_) => CreacionDepartamentos(empresaId: empresaId)),
+            MaterialPageRoute(
+              builder: (_) => CreacionDepartamentos(empresaId: empresaId),
+            ),
           );
+          if (!mounted) return;
           if (result == true) {
-            if (mounted) await _fetchDepartamentos();
+            await _fetchDepartamentos();
           }
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Crear Departamento'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Crear Departamento',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
         backgroundColor: Theme.of(context).primaryColor,
       ),
     );

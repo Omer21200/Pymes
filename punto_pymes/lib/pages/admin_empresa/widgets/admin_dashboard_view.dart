@@ -74,16 +74,25 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       child: ListView(
         padding: const EdgeInsets.all(0),
         children: [
-          const Text(
-            'Dashboard',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0.0),
+            child: Text(
+              'Inicio',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 16.0),
+            child: Text(
+              'Resumen general de la actividad y datos clave de tu empresa.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Resumen de actividad del sistema',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
           GridView.count(
             crossAxisCount: 2,
             mainAxisSpacing: 14,

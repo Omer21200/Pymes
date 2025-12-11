@@ -16,7 +16,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   String? _errorMessage;
@@ -53,14 +53,17 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.session == null) {
-        throw Exception('No se pudo iniciar sesión. Verifica tus credenciales.');
+        throw Exception(
+          'No se pudo iniciar sesión. Verifica tus credenciales.',
+        );
       }
 
       // Obtenemos el perfil para verificar el rol
       await SupabaseService.instance.refreshSession();
       final profile = await SupabaseService.instance.getMyProfile();
-      
-      if (profile == null) throw Exception('No se encontró el perfil del usuario.');
+
+      if (profile == null)
+        throw Exception('No se encontró el perfil del usuario.');
 
       final rol = profile['rol'] as String?;
       final userEmpresaId = profile['empresa_id'] as String?;
@@ -73,14 +76,19 @@ class _LoginPageState extends State<LoginPage> {
           await SupabaseService.instance.signOut();
           throw Exception('Esta cuenta no es de Super Administrador.');
         }
-      } else { // Es un login de empresa
+      } else {
+        // Es un login de empresa
         if (rol == 'SUPER_ADMIN') {
           await SupabaseService.instance.signOut();
-          throw Exception('El Super Admin solo puede ingresar por la pantalla principal.');
+          throw Exception(
+            'El Super Admin solo puede ingresar por la pantalla principal.',
+          );
         }
         if (userEmpresaId != widget.empresa!['id']) {
           await SupabaseService.instance.signOut();
-          throw Exception('Esta cuenta no pertenece a la empresa seleccionada.');
+          throw Exception(
+            'Esta cuenta no pertenece a la empresa seleccionada.',
+          );
         }
       }
       // --- FIN DE VALIDACIÓN ---
@@ -90,35 +98,50 @@ class _LoginPageState extends State<LoginPage> {
       // Redirección según el rol verificado
       switch (rol) {
         case 'SUPER_ADMIN':
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const InicioSuperadmin()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const InicioSuperadmin()),
+          );
           break;
         case 'ADMIN_EMPRESA':
         case 'EMPLEADO':
-          final empleadoData = await SupabaseService.instance.getEmpleadoActual();
+          final empleadoData = await SupabaseService.instance
+              .getEmpleadoActual();
           if (!mounted) return;
-          
-          final cedula = (empleadoData?['empleado_raw'] as Map<String, dynamic>?)?['cedula'] as String?;
-          
+
+          final cedula =
+              (empleadoData?['empleado_raw']
+                      as Map<String, dynamic>?)?['cedula']
+                  as String?;
+
           if (cedula == null || cedula.isEmpty) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileCompletionPage()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileCompletionPage()),
+            );
           } else {
             if (rol == 'ADMIN_EMPRESA') {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminEmpresaPage()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminEmpresaPage()),
+              );
             } else {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const EmpleadoPage()),
+              );
             }
           }
           break;
         default:
           throw Exception('Rol no reconocido');
       }
-
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
       setState(() {
         if (msg.contains('invalid_grant')) {
-           _errorMessage = 'Credenciales incorrectas.';
+          _errorMessage = 'Credenciales incorrectas.';
         } else if (msg.contains('Database error querying schema')) {
           _errorMessage = 'Error de servidor. Intenta más tarde.';
         } else {
@@ -156,19 +179,27 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: Colors.grey[600]),
-          suffixIcon: isPassword 
-            ? IconButton(
-                icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-              ) 
-            : null,
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
         ),
       ),
     );
@@ -184,13 +215,14 @@ class _LoginPageState extends State<LoginPage> {
     final String subtitle;
     final Widget logoWidget;
 
-      if (isSuperAdminLogin) {
+    if (isSuperAdminLogin) {
       title = 'Acceso Super Admin';
       subtitle = 'Ingresa tus credenciales maestras';
       logoWidget = Image.asset(
         'assets/images/pymes.png', // Logo principal de la app
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
       );
     } else {
       final empresaNombre = widget.empresa!['nombre'];
@@ -202,7 +234,8 @@ class _LoginPageState extends State<LoginPage> {
         logoWidget = Image.network(
           empresaFoto,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, size: 50, color: primaryColor),
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.business, size: 50, color: primaryColor),
         );
       } else {
         logoWidget = const Icon(Icons.business, size: 50, color: primaryColor);
@@ -218,11 +251,11 @@ class _LoginPageState extends State<LoginPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () {
-             if (Navigator.canPop(context)) {
-               Navigator.pop(context);
-             } else {
-               Navigator.pushReplacementNamed(context, '/access-selection');
-             }
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, '/access-selection');
+            }
           },
         ),
       ),
@@ -242,7 +275,9 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(26), // Corrección de withOpacity
+                        color: Colors.black.withAlpha(
+                          26,
+                        ), // Corrección de withOpacity
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -254,9 +289,9 @@ class _LoginPageState extends State<LoginPage> {
                     child: logoWidget,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // 2. TEXTOS DE BIENVENIDA (Dinámicos)
                 Text(
                   title,
@@ -287,12 +322,19 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red[900], size: 20),
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red[900],
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(color: Colors.red[900], fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.red[900],
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -306,7 +348,7 @@ class _LoginPageState extends State<LoginPage> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                 ),
-                
+
                 _buildCustomTextField(
                   controller: _passwordController,
                   label: 'Contraseña',
@@ -319,12 +361,52 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Acción para recuperar contraseña
+                    onPressed: () async {
+                      final email = _emailController.text.trim();
+
+                      if (email.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Ingresa tu correo para recuperar tu contraseña.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        await SupabaseService.instance.client.auth
+                            .resetPasswordForEmail(email);
+
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Te hemos enviado un enlace para restablecer tu contraseña.',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'No se pudo enviar el correo de recuperación: $e',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     },
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
-                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -341,26 +423,32 @@ class _LoginPageState extends State<LoginPage> {
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 4,
-                      shadowColor: primaryColor.withAlpha(102), // Corrección de withOpacity
+                      shadowColor: primaryColor.withAlpha(
+                        102,
+                      ), // Corrección de withOpacity
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            height: 24, width: 24,
+                            height: 24,
+                            width: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white, 
-                              strokeWidth: 2.5
+                              color: Colors.white,
+                              strokeWidth: 2.5,
                             ),
                           )
                         : const Text(
                             'Ingresar',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
               ],
             ),
