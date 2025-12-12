@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 // logout_helper removed: no onWillPop logic here anymore
 import 'widgets/superadmin_header.dart';
 import '../../service/supabase_service.dart';
@@ -29,6 +32,9 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
   final _correoController = TextEditingController();
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
+  // Mapa - selección de ubicación
+  LatLng? _selectedLocation;
+  GoogleMapController? _mapController;
 
   @override
   void dispose() {
@@ -145,19 +151,26 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         destinationPath: finalFilePath,
       );
       movedToFinal = true;
-
       double? lat;
       double? lng;
-      if (_latitudController.text.trim().isNotEmpty) {
-        lat = double.tryParse(_latitudController.text.trim());
-        if (lat != null && (lat < -90 || lat > 90)) {
-          throw Exception('Latitud debe estar entre -90 y 90');
+      // Si el usuario seleccionó ubicación en el mapa, priorizamos esa ubicación
+      if (_selectedLocation != null) {
+        lat = _selectedLocation!.latitude;
+        lng = _selectedLocation!.longitude;
+        _latitudController.text = lat.toString();
+        _longitudController.text = lng.toString();
+      } else {
+        if (_latitudController.text.trim().isNotEmpty) {
+          lat = double.tryParse(_latitudController.text.trim());
+          if (lat != null && (lat < -90 || lat > 90)) {
+            throw Exception('Latitud debe estar entre -90 y 90');
+          }
         }
-      }
-      if (_longitudController.text.trim().isNotEmpty) {
-        lng = double.tryParse(_longitudController.text.trim());
-        if (lng != null && (lng < -180 || lng > 180)) {
-          throw Exception('Longitud debe estar entre -180 y 180');
+        if (_longitudController.text.trim().isNotEmpty) {
+          lng = double.tryParse(_longitudController.text.trim());
+          if (lng != null && (lng < -180 || lng > 180)) {
+            throw Exception('Longitud debe estar entre -180 y 180');
+          }
         }
       }
 
@@ -209,6 +222,101 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
+    }
+  }
+
+  Future<void> _openMapPicker() async {
+    // Inicio: si hay coordenadas en el form, úsalas; si no, centro en Ecuador
+    LatLng initial = const LatLng(-2.8895, -79.0086);
+    if (_selectedLocation != null) initial = _selectedLocation!;
+    else if (_latitudController.text.isNotEmpty && _longitudController.text.isNotEmpty) {
+      final lat = double.tryParse(_latitudController.text) ?? initial.latitude;
+      final lng = double.tryParse(_longitudController.text) ?? initial.longitude;
+      initial = LatLng(lat, lng);
+    }
+
+    final result = await showModalBottomSheet<LatLng>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        LatLng picked = initial;
+        final markers = <Marker>{};
+        if (_selectedLocation != null) {
+          picked = _selectedLocation!;
+          markers.add(Marker(markerId: const MarkerId('selected'), position: picked));
+        }
+
+        return StatefulBuilder(builder: (context, setStateModal) {
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * 0.75,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Selecciona la ubicación', style: TextStyle(fontWeight: FontWeight.w600))),
+                      TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(target: initial, zoom: 15),
+                      onTap: (pos) {
+                        setStateModal(() {
+                          picked = pos;
+                          markers.clear();
+                          markers.add(Marker(markerId: const MarkerId('selected'), position: picked));
+                        });
+                      },
+                      markers: markers,
+                      // Performance: avoid extra heavy gestures and buttons
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: true,
+                      rotateGesturesEnabled: false,
+                      tiltGesturesEnabled: false,
+                      compassEnabled: false,
+                      mapToolbarEnabled: false,
+                      onMapCreated: (c) => _mapController = c,
+                      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                        Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Lat: ${picked.latitude.toStringAsFixed(6)}, Lng: ${picked.longitude.toStringAsFixed(6)}')),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(picked),
+                        child: const Text('Confirmar'),
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          );
+        });
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLocation = result;
+        _latitudController.text = result.latitude.toString();
+        _longitudController.text = result.longitude.toString();
+      });
+      // Dispose temporary map controller to free resources and avoid retained platform view
+      try {
+        _mapController?.dispose();
+      } catch (_) {}
+      _mapController = null;
     }
   }
 
@@ -288,6 +396,26 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                     _buildTextField(controller: _latitudController, label: 'Latitud', enabled: !_isCreating, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), helperText: 'Rango: -90 a 90'),
                                     const SizedBox(height: 8),
                                     _buildTextField(controller: _longitudController, label: 'Longitud', enabled: !_isCreating, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), helperText: 'Rango: -180 a 180'),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: _openMapPicker,
+                                            icon: const Icon(Icons.map),
+                                            label: const Text('Seleccionar ubicación en mapa'),
+                                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1976D2)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (_selectedLocation != null)
+                                          Text('${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}')
+                                        else if (_latitudController.text.isNotEmpty && _longitudController.text.isNotEmpty)
+                                          Text('${_latitudController.text}, ${_longitudController.text}')
+                                        else
+                                          const SizedBox.shrink(),
+                                      ],
+                                    ),
                                     const SizedBox(height: 16),
 
                                     SizedBox(
