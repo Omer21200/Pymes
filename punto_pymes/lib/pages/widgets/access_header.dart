@@ -24,7 +24,7 @@ class AccessHeader extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.black.withOpacity(0.06), Colors.transparent],
+            colors: [Colors.black.withValues(alpha: 0.06), Colors.transparent],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),

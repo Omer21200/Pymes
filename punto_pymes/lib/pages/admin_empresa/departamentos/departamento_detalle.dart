@@ -7,10 +7,15 @@ class DepartamentoDetallePage extends StatefulWidget {
   final String departamentoId;
   final String departamentoNombre;
 
-  const DepartamentoDetallePage({super.key, required this.departamentoId, required this.departamentoNombre});
+  const DepartamentoDetallePage({
+    super.key,
+    required this.departamentoId,
+    required this.departamentoNombre,
+  });
 
   @override
-  State<DepartamentoDetallePage> createState() => _DepartamentoDetallePageState();
+  State<DepartamentoDetallePage> createState() =>
+      _DepartamentoDetallePageState();
 }
 
 class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
@@ -30,10 +35,13 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
 
   Future<void> _fetchDepartamentoDetails() async {
     try {
-      final dep = await SupabaseService.instance.getDepartamentoById(widget.departamentoId);
+      final dep = await SupabaseService.instance.getDepartamentoById(
+        widget.departamentoId,
+      );
       if (mounted && dep != null) {
         setState(() {
-          _nombreController.text = dep['nombre']?.toString() ?? widget.departamentoNombre;
+          _nombreController.text =
+              dep['nombre']?.toString() ?? widget.departamentoNombre;
           _descripcionController.text = dep['descripcion']?.toString() ?? '';
         });
       } else if (mounted && dep == null) {
@@ -51,7 +59,9 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
     if (!mounted) return;
     setState(() => _loadingHorario = true);
     try {
-      final data = await SupabaseService.instance.getHorarioPorDepartamento(widget.departamentoId);
+      final data = await SupabaseService.instance.getHorarioPorDepartamento(
+        widget.departamentoId,
+      );
       if (mounted) {
         setState(() {
           _horario = data;
@@ -59,7 +69,12 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar el horario: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar el horario: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loadingHorario = false);
@@ -69,147 +84,208 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AdminEmpresaHeader(nombreAdmin: null, nombreEmpresa: null, onLogout: null),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _isEditing
-                            ? TextField(
-                                controller: _nombreController,
-                                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Nombre del departamento'),
-                              )
-                            : Text(
-                                _nombreController.text.isNotEmpty ? _nombreController.text : widget.departamentoNombre,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (!_isEditing)
-                        IconButton(
-                          onPressed: () {
-                            setState(() => _isEditing = true);
-                          },
-                          icon: const Icon(Icons.edit),
-                          tooltip: 'Editar',
-                        ),
-                      if (_isEditing) ...[
-                        IconButton(
-                          onPressed: _isSaving
-                              ? null
-                              : () async {
-                                  // Guardar cambios
-                                  await _saveDepartamento();
-                                },
-                          icon: const Icon(Icons.save),
-                          tooltip: 'Guardar',
-                        ),
-                        IconButton(
-                          onPressed: _isSaving
-                              ? null
-                              : () {
-                                  // Cancelar edición: recargar valores originales
-                                  _fetchDepartamentoDetails();
-                                  setState(() => _isEditing = false);
-                                },
-                          icon: const Icon(Icons.cancel_outlined),
-                          tooltip: 'Cancelar',
-                        ),
-                      ],
-                      const SizedBox(width: 4),
-                      IconButton(
-                        onPressed: () {
-                          if (mounted) Navigator.of(context).pop();
-                        },
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Cerrar',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _isEditing
-                      ? TextField(
-                          controller: _descripcionController,
-                          maxLines: 3,
-                          decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Descripción'),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 6.0),
-                          child: Text(
-                            _descripcionController.text.isNotEmpty ? _descripcionController.text : 'Sin descripción',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                ],
-              ),
+            AdminEmpresaHeader(
+              nombreAdmin: null,
+              nombreEmpresa: null,
+              onLogout: null,
             ),
             Expanded(
-              child: Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _isEditing
+                              ? TextField(
+                                  controller: _nombreController,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    labelText: 'Nombre del departamento',
+                                  ),
+                                )
+                              : Text(
+                                  _nombreController.text.isNotEmpty
+                                      ? _nombreController.text
+                                      : widget.departamentoNombre,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (!_isEditing)
+                          IconButton(
+                            onPressed: () {
+                              setState(() => _isEditing = true);
+                            },
+                            icon: const Icon(Icons.edit),
+                            tooltip: 'Editar',
+                          ),
+                        if (_isEditing) ...[
+                          IconButton(
+                            onPressed: _isSaving
+                                ? null
+                                : () async {
+                                    await _saveDepartamento();
+                                  },
+                            icon: const Icon(Icons.save),
+                            tooltip: 'Guardar',
+                          ),
+                          IconButton(
+                            onPressed: _isSaving
+                                ? null
+                                : () {
+                                    _fetchDepartamentoDetails();
+                                    setState(() => _isEditing = false);
+                                  },
+                            icon: const Icon(Icons.cancel_outlined),
+                            tooltip: 'Cancelar',
+                          ),
+                        ],
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () {
+                            if (mounted) Navigator.of(context).pop();
+                          },
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Cerrar',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _isEditing
+                        ? TextField(
+                            controller: _descripcionController,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'Descripción',
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 6.0),
                             child: Text(
-                              'Horario del Departamento',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              _descripcionController.text.isNotEmpty
+                                  ? _descripcionController.text
+                                  : 'Sin descripción',
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final result = await Navigator.of(context).push<bool>(
-                                MaterialPageRoute(
-                                  builder: (_) => GestionHorarioPage(
-                                    departamentoId: widget.departamentoId,
-                                    horarioInicial: _horario,
-                                  ),
-                                ),
-                              );
-                              if (result == true) {
-                                _fetchHorario();
-                              }
-                            },
-                            icon: const Icon(Icons.edit, size: 18),
-                            label: Text(_horario == null ? 'Crear' : 'Editar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD92344),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
+                    const SizedBox(height: 16),
+                    Container(
+                      // Fondo suave azul inspirado en las tarjetas del dashboard
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6F0FF),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 12,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      _loadingHorario
-                          ? const Center(child: CircularProgressIndicator())
-                          : _horario == null
-                              ? const Expanded(
-                                  child: Center(
-                                    child: Text('No hay un horario definido.'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        'Horario del Departamento',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 18,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Días laborables, horas de entrada y salida de este departamento.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                )
-                              : Expanded(
-                                  child: _buildHorarioDetails(),
                                 ),
-                    ],
-                  ),
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final result = await Navigator.of(context)
+                                        .push<bool>(
+                                          MaterialPageRoute(
+                                            builder: (_) => GestionHorarioPage(
+                                              departamentoId:
+                                                  widget.departamentoId,
+                                              horarioInicial: _horario,
+                                            ),
+                                          ),
+                                        );
+                                    if (result == true) {
+                                      _fetchHorario();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: Text(
+                                    _horario == null ? 'Crear' : 'Editar',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFE2183D),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (_loadingHorario)
+                              const Center(child: CircularProgressIndicator())
+                            else if (_horario == null)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(
+                                  child: Text(
+                                    'Aún no has configurado un horario para este departamento.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ),
+                              )
+                            else
+                              _buildHorarioDetails(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -227,14 +303,44 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
       'Domingo': _horario!['domingo'] as bool? ?? false,
     };
 
-    final diasLaborables = dias.entries.where((e) => e.value).map((e) => e.key).join(', ');
+    final diasLaborables = dias.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .join(', ');
 
-    return ListView(
+    const titleStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: Colors.black87,
+    );
+
+    const valueStyle = TextStyle(fontSize: 14, color: Colors.black87);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ListTile(title: const Text('Días Laborables'), subtitle: Text(diasLaborables.isNotEmpty ? diasLaborables : 'Ninguno')),
-        ListTile(title: const Text('Hora de Entrada'), subtitle: Text(_horario!['hora_entrada'] ?? 'N/A')),
-        ListTile(title: const Text('Hora de Salida'), subtitle: Text(_horario!['hora_salida'] ?? 'N/A')),
-        ListTile(title: const Text('Tolerancia de Entrada'), subtitle: Text('${_horario!['tolerancia_entrada_minutos'] ?? 0} minutos')),
+        const SizedBox(height: 4),
+        const Text('Días Laborables', style: titleStyle),
+        const SizedBox(height: 4),
+        Text(
+          diasLaborables.isNotEmpty ? diasLaborables : 'Ninguno',
+          style: valueStyle,
+        ),
+        const SizedBox(height: 24),
+        const Text('Hora de Entrada', style: titleStyle),
+        const SizedBox(height: 4),
+        Text(_horario!['hora_entrada'] ?? 'N/A', style: valueStyle),
+        const SizedBox(height: 24),
+        const Text('Hora de Salida', style: titleStyle),
+        const SizedBox(height: 4),
+        Text(_horario!['hora_salida'] ?? 'N/A', style: valueStyle),
+        const SizedBox(height: 24),
+        const Text('Tolerancia de Entrada', style: titleStyle),
+        const SizedBox(height: 4),
+        Text(
+          '${_horario!["tolerancia_entrada_minutos"] ?? 0} minutos',
+          style: valueStyle,
+        ),
       ],
     );
   }
@@ -254,11 +360,21 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
         setState(() {
           _isEditing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Departamento actualizado'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Departamento actualizado'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
