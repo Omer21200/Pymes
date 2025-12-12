@@ -892,7 +892,7 @@ class SupabaseService {
       final response = await client
           .from('asistencias')
           .select(
-            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, created_at',
+            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, latitud, longitud, created_at',
           )
           .eq('empleado_id', empleadoId)
           .order('fecha', ascending: false)

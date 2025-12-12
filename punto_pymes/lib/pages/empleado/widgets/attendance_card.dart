@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'asistencia_detalle.dart';
 
 class AttendanceCard extends StatelessWidget {
   final Map<String, dynamic> record;
@@ -53,16 +54,28 @@ class AttendanceCard extends StatelessWidget {
             ? 'Entrada'
             : 'Sin registro';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AsistenciaDetalleScreen(
+              asistencia: record,
+              fotoUrl: fotoUrl,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,6 +199,7 @@ class AttendanceCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
