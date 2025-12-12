@@ -20,6 +20,19 @@ class SupabaseService {
 
   SupabaseClient get client => Supabase.instance.client;
 
+  /// Asegurar que la sesión está activa y refrescar si es necesario
+  Future<void> ensureSessionValid() async {
+    try {
+      final session = client.auth.currentSession;
+      if (session != null) {
+        // Intentar refrescar la sesión
+        await client.auth.refreshSession();
+      }
+    } catch (e) {
+      print('⚠️ Error refrescando sesión: $e');
+    }
+  }
+
   // ==================== AUTH ====================
   Future<AuthResponse> signInEmail({
     required String email,
@@ -75,14 +88,36 @@ class SupabaseService {
   // ==================== QUERIES EJEMPLO ====================
   /// Obtiene lista de empresas (select *).
   Future<List<Map<String, dynamic>>> getEmpresas() async {
-    final response = await client
-        .from('empresas')
-        .select()
-        .order('created_at', ascending: false);
-    final list = (response as List)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
-    return list;
+    try {
+      // Refrescar sesión antes de hacer la consulta
+      await ensureSessionValid();
+      
+      final response = await client
+          .from('empresas')
+          .select()
+          .order('created_at', ascending: false);
+      final list = (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return list;
+    } catch (e) {
+      print('❌ Error en getEmpresas: $e');
+      // Intentar refrescar sesión y reintentar una vez
+      try {
+        await client.auth.refreshSession();
+        final response = await client
+            .from('empresas')
+            .select()
+            .order('created_at', ascending: false);
+        final list = (response as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        return list;
+      } catch (retryError) {
+        print('❌ Error en getEmpresas (reintento): $retryError');
+        rethrow;
+      }
+    }
   }
 
   /// Obtiene una empresa por id
