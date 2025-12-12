@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/service/supabase_service.dart';
+import '../../service/supabase_service.dart';
 import 'widgets/admin_empresa_header.dart';
 import 'widgets/admin_empresa_nav.dart';
 import 'widgets/admin_empresa_sections.dart';

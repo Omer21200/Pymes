@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../pages/empleado/widgets/hora_internet_ecuador.dart';
 
 /// Servicio centralizado para operaciones con Supabase.
 class SupabaseService {
@@ -48,6 +51,26 @@ class SupabaseService {
   }
 
   User? get currentUser => client.auth.currentUser;
+
+  // ==================== HORA DE ECUADOR (LOJA) ====================
+  /// Obtiene la hora actual de Ecuador desde worldtimeapi.org
+  Future<DateTime> getEcuadorTime() async {
+    try {
+      final response = await http
+          .get(Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'))
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final datetimeStr = data['datetime'] as String;
+        final dt = DateTime.parse(datetimeStr).toUtc();
+        print('✓ Hora de Ecuador (internet): ${dt.hour}:${dt.minute}:${dt.second}');
+        return dt;
+      }
+    } catch (e) {
+      print('⚠️ Error obteniendo hora de Ecuador: $e');
+    }
+    return DateTime.now();
+  }
 
   // ==================== QUERIES EJEMPLO ====================
   /// Obtiene lista de empresas (select *).
@@ -317,7 +340,7 @@ class SupabaseService {
         .select()
         .eq('id', departamentoId)
         .maybeSingle();
-    return response as Map<String, dynamic>?;
+    return response;
   }
 
   /// Actualiza los campos de un departamento.
@@ -723,6 +746,7 @@ class SupabaseService {
   /// - Si no existe asistencia hoy: crea con `hora_entrada = now()`.
   /// - Si existe asistencia hoy con `hora_entrada` y sin `hora_salida`: actualiza `hora_salida = now()` (marca salida).
   /// - Si ya tiene entrada y salida, lanza excepción informando que ya registró ambos.
+  /// - Usa la hora de Ecuador (America/Guayaquil) desde internet.
   Future<Map<String, dynamic>> registrarAsistencia({
     double? latitud,
     double? longitud,
@@ -743,8 +767,15 @@ class SupabaseService {
       );
     final empleadoId = empleado['id'] as String;
 
-    // Fecha de hoy (YYYY-MM-DD)
-    final today = DateTime.now().toIso8601String().split('T').first;
+    // Obtener hora de Ecuador: primero desde EcuadorTimeManager (si está sincronizado)
+    // Si no está disponible, hacer request a la API
+    DateTime now = EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+    
+    // Convertir de UTC a hora de Ecuador (UTC-5, es decir, restar 5 horas)
+    final ecuadorTime = now.toUtc().subtract(const Duration(hours: 5));
+    
+    // Fecha de hoy (YYYY-MM-DD) usando hora de Ecuador
+    final today = ecuadorTime.toIso8601String().split('T').first;
 
     // Buscar asistencia de hoy
     final existing = await client
@@ -754,9 +785,8 @@ class SupabaseService {
         .eq('fecha', today)
         .maybeSingle();
 
-    final now = DateTime.now();
     final horaNow =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+        '${ecuadorTime.hour.toString().padLeft(2, '0')}:${ecuadorTime.minute.toString().padLeft(2, '0')}:${ecuadorTime.second.toString().padLeft(2, '0')}';
 
     if (existing == null) {
       // Crear entrada
@@ -862,7 +892,7 @@ class SupabaseService {
       final response = await client
           .from('asistencias')
           .select(
-            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, created_at',
+            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, latitud, longitud, created_at',
           )
           .eq('empleado_id', empleadoId)
           .order('fecha', ascending: false)
@@ -874,6 +904,75 @@ class SupabaseService {
     } catch (e) {
       print('Error en getHistorialAsistencias: $e');
       return [];
+    }
+  }
+
+  // ==================== ESTADÍSTICAS DEL EMPLEADO ====================
+
+  /// Obtiene estadísticas de asistencia del empleado actual
+  Future<Map<String, dynamic>> getEmpleadoEstadisticas() async {
+    try {
+      final user = client.auth.currentUser;
+      if (user == null) throw Exception('Usuario no autenticado');
+
+      // Obtener empleado_id
+      final empleado = await client
+          .from('empleados')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (empleado == null) throw Exception('Empleado no encontrado');
+      final empleadoId = empleado['id'] as String;
+
+      // Obtener asistencias del mes actual
+      final ahora = DateTime.now();
+      final primerDiaDelMes = DateTime(ahora.year, ahora.month, 1);
+      final ultimoDiaDelMes = DateTime(ahora.year, ahora.month + 1, 0);
+
+      final asistencias = await client
+          .from('asistencias')
+          .select('fecha, hora_entrada, hora_salida')
+          .eq('empleado_id', empleadoId)
+          .gte('fecha', primerDiaDelMes.toIso8601String().split('T')[0])
+          .lte('fecha', ultimoDiaDelMes.toIso8601String().split('T')[0]);
+
+      // Calcular estadísticas
+      int diasAsistidos = 0;
+      int aTiempo = 0;
+      int tardanzas = 0;
+
+      for (final asistencia in asistencias) {
+        if (asistencia['hora_entrada'] != null) {
+          diasAsistidos++;
+
+          // Obtener hora de entrada
+          final horaEntrada = asistencia['hora_entrada'] as String;
+
+          // Comparar si fue a tiempo (simple: si llegó antes del mediodía)
+          // En producción, esto debería compararse contra el horario del departamento
+          if (horaEntrada.compareTo('12:00:00') < 0) {
+            aTiempo++;
+          } else {
+            tardanzas++;
+          }
+        }
+      }
+
+      return {
+        'dias_asistidos': diasAsistidos,
+        'a_tiempo': aTiempo,
+        'tardanzas': tardanzas,
+        'total_registros': asistencias.length,
+      };
+    } catch (e) {
+      print('Error en getEmpleadoEstadisticas: $e');
+      return {
+        'dias_asistidos': 0,
+        'a_tiempo': 0,
+        'tardanzas': 0,
+        'total_registros': 0,
+      };
     }
   }
 }
