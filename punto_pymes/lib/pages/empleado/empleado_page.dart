@@ -163,47 +163,59 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F8),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            FutureBuilder<Map<String, dynamic>?>(
-              future: SupabaseService.instance.getEmpleadoActual(),
-              builder: (context, snapshot) {
-                final loading = snapshot.connectionState == ConnectionState.waiting;
-                final data = snapshot.data;
-                final nombre = data?['nombre_completo'] ?? (loading ? 'Cargando...' : 'Sin nombre');
-                final rol = data?['rol'] ?? '';
-                final afiliacion = loading
-                    ? 'Obteniendo datos'
-                    : rol == 'EMPLEADO'
-                        ? 'Empleado'
-                        : (rol.isEmpty ? 'Rol desconocido' : rol);
-                return EmpleadoHeader(
-                  name: nombre,
-                  affiliation: afiliacion,
-                  onLogout: () => showLogoutConfirmation(context),
-                );
-              },
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: EmpleadoSections(
-                  key: _sectionsKey,
-                  tabIndex: _selectedTab,
-                  onNavigateTab: (tab) => setState(() => _selectedTab = tab),
-                  onRegistrarAsistencia: _handleRegister,
+            Column(
+              children: [
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: SupabaseService.instance.getEmpleadoActual(),
+                  builder: (context, snapshot) {
+                    final loading = snapshot.connectionState == ConnectionState.waiting;
+                    final data = snapshot.data;
+                    final nombre = data?['nombre_completo'] ?? (loading ? 'Cargando...' : 'Sin nombre');
+                    final rol = data?['rol'] ?? '';
+                    final afiliacion = loading
+                        ? 'Obteniendo datos'
+                        : rol == 'EMPLEADO'
+                            ? 'Empleado'
+                            : (rol.isEmpty ? 'Rol desconocido' : rol);
+                    return EmpleadoHeader(
+                      name: nombre,
+                      affiliation: afiliacion,
+                      onLogout: () => showLogoutConfirmation(context),
+                    );
+                  },
                 ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: EmpleadoSections(
+                      key: _sectionsKey,
+                      tabIndex: _selectedTab,
+                      onNavigateTab: (tab) => setState(() => _selectedTab = tab),
+                      onRegistrarAsistencia: _handleRegister,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: EmpleadoNav(
+                    currentIndex: _selectedTab,
+                    onTabSelected: _handleTabChange,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+            Positioned(
+              right: 16,
+              bottom: 96, // Levanta el botón para que quede arriba del nav
+              child: FloatingActionButton(
+                onPressed: _handleRegister,
+                backgroundColor: const Color(0xFFD92344),
+                child: const Icon(Icons.add, color: Colors.white, size: 28),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: EmpleadoNav(
-                currentIndex: _selectedTab,
-                onTabSelected: _handleTabChange,
-                onRegister: _handleRegister,
-              ),
-            ),
-            const SizedBox(height: 12),
           ],
         ),
       ),

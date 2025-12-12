@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 class EmpleadoNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
-  final VoidCallback? onRegister;
 
-  const EmpleadoNav({super.key, required this.currentIndex, required this.onTabSelected, this.onRegister});
+  const EmpleadoNav({super.key, required this.currentIndex, required this.onTabSelected});
 
   static const _tabs = [
     {'icon': Icons.home, 'label': 'Inicio'},
@@ -131,20 +130,6 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
                 ),
                 if (index != EmpleadoNav._tabs.length - 1) const SizedBox(width: 8),
               ],
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: widget.onRegister,
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFFD92344),
-                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 28),
-                ),
-              ),
             ],
           ),
         ),
