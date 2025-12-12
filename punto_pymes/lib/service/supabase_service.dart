@@ -706,6 +706,7 @@ class SupabaseService {
     String? cedula,
     String? telefono,
     String? direccion,
+    String? departamentoId,
   }) async {
     final user = currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
@@ -721,6 +722,7 @@ class SupabaseService {
     if (cedula != null) updates['cedula'] = cedula;
     if (telefono != null) updates['telefono'] = telefono;
     if (direccion != null) updates['direccion'] = direccion;
+    if (departamentoId != null) updates['departamento_id'] = departamentoId;
 
     if (updates.isEmpty) return Map<String, dynamic>.from(empleado as Map);
 

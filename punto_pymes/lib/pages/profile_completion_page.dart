@@ -14,6 +14,10 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
   final _cedulaController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _direccionController = TextEditingController();
+  // Departamentos
+  List<Map<String, dynamic>> _departamentos = [];
+  String? _selectedDepartamentoId;
+  bool _isLoadingDepartamentos = false;
   bool _isLoading = false;
   String? _error;
 
@@ -23,6 +27,40 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     _telefonoController.dispose();
     _direccionController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDepartamentos();
+  }
+
+  Future<void> _loadDepartamentos() async {
+    setState(() {
+      _isLoadingDepartamentos = true;
+    });
+    try {
+      final empleado = await SupabaseService.instance.getEmpleadoActual();
+      final empresaId = empleado?['empresa_id']?.toString();
+      if (empresaId == null) {
+        setState(() {
+          _error = 'No se encontró empresa asociada al usuario.';
+          _departamentos = [];
+        });
+        return;
+      }
+
+      final deps = await SupabaseService.instance.getDepartamentosPorEmpresa(empresaId);
+      setState(() {
+        _departamentos = deps;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Error cargando departamentos: ${e.toString()}';
+      });
+    } finally {
+      if (mounted) setState(() { _isLoadingDepartamentos = false; });
+    }
   }
 
   Future<void> _submit() async {
@@ -37,11 +75,17 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       return;
     }
 
+    if (_selectedDepartamentoId == null) {
+      setState(() { _error = 'Selecciona el departamento al que perteneces'; _isLoading = false; });
+      return;
+    }
+
     try {
       await SupabaseService.instance.updateEmpleadoProfile(
         cedula: cedula,
         telefono: telefono.isEmpty ? null : telefono,
         direccion: direccion.isEmpty ? null : direccion,
+        departamentoId: _selectedDepartamentoId,
       );
 
       // Es crucial verificar si el widget sigue "montado" después de una operación asíncrona.
@@ -93,6 +137,24 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
               TextField(controller: _telefonoController, decoration: const InputDecoration(labelText: 'Teléfono')),
               const SizedBox(height: 8),
               TextField(controller: _direccionController, decoration: const InputDecoration(labelText: 'Dirección')),
+              const SizedBox(height: 12),
+              // Selector de Departamento
+              if (_isLoadingDepartamentos)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12.0),
+                  child: CircularProgressIndicator(),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  value: _selectedDepartamentoId,
+                  items: _departamentos.map((d) {
+                    final id = d['id']?.toString();
+                    final nombre = d['nombre']?.toString() ?? d['nombre'];
+                    return DropdownMenuItem<String>(value: id, child: Text(nombre ?? ''));
+                  }).toList(),
+                  onChanged: (val) => setState(() => _selectedDepartamentoId = val),
+                  decoration: const InputDecoration(labelText: 'Departamento'),
+                ),
               const SizedBox(height: 16),
               if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 12),
