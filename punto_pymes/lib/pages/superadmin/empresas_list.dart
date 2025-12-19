@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pymes2/theme.dart'; 
+import 'package:pymes2/theme.dart'; // Importamos el diseño centralizado
+import 'widgets/superadmin_header.dart';
 import 'empresa_detalle.dart';
 import 'creacionempresas.dart';
 import '../../service/supabase_service.dart';
@@ -22,7 +23,7 @@ class _EmpresasListState extends State<EmpresasList> {
   }
 
   Future<void> _loadEmpresas() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     try {
       final empresas = await SupabaseService.instance.getEmpresas();
       if (mounted) {
@@ -34,12 +35,6 @@ class _EmpresasListState extends State<EmpresasList> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar empresas: $e'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
       }
     }
   }
@@ -50,19 +45,16 @@ class _EmpresasListState extends State<EmpresasList> {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Empresa'),
         content: Text('¿Estás seguro de eliminar a "$nombre"?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
+            onPressed: () => Navigator.pop(context, true),
+            // Única excepción: Color de error específico para esta acción destructiva
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -72,109 +64,88 @@ class _EmpresasListState extends State<EmpresasList> {
       try {
         await SupabaseService.instance.deleteEmpresa(empresaId);
         await _loadEmpresas();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Empresa eliminada')),
-          );
-        }
       } catch (e) {
-        // Manejo de error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al eliminar')));
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Obtenemos los estilos del texto desde el Theme
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      
-      // 1. CORRECCIÓN: HEADER (AppBar)
-      // Añadimos el AppBar rojo para mantener consistencia y que no se vea vacío
-      appBar: AppBar(
-        title: const Text(
-          'Gestión de Empresas',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.primaryColor, // El rojo de tu marca
-        elevation: 0,
-        centerTitle: false,
-        automaticallyImplyLeading: false, // Quitamos la flecha de volver porque es una pestaña principal
-      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. HEADER GLOBAL
+            const SuperadminHeader(
+              title: 'Gestión de Empresas',
+              subtitle: 'Administra las organizaciones del sistema',
+              showLogout: false,
+            ),
 
-      // 2. CORRECCIÓN: BOTÓN FLOTANTE (Posición)
-      // Usamos un Padding para levantar el botón 80 pixeles y que no lo tape el menú
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0), // <-- ESTO EVITA EL SOLAPAMIENTO
-        child: FloatingActionButton.extended(
-          onPressed: () async {
-            final created = await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreacionEmpresas())
-            );
-            if (created == true) _loadEmpresas();
-          },
-          backgroundColor: AppTheme.primaryColor,
-          icon: const Icon(Icons.add_business_rounded, color: Colors.white),
-          label: const Text('Crear Empresa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          elevation: 4,
-        ),
-      ),
+            // 2. ZONA SUPERIOR: BOTÓN CREAR (Arriba del listado)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Listado de Empresas',
+                    style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final created = await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CreacionEmpresas())
+                      );
+                      if (created == true) _loadEmpresas();
+                    },
+                    icon: const Icon(Icons.add_business_rounded, size: 18, color: Colors.white),
+                    label: const Text('Crear Empresa'),
+                  ),
+                ],
+              ),
+            ),
 
-      body: RefreshIndicator(
-        onRefresh: _loadEmpresas,
-        child: CustomScrollView(
-          slivers: [
-            // Pequeño espacio superior
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // Lista de empresas
-            _isLoading
-                ? const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : _empresas.isEmpty
-                    ? SliverFillRemaining(child: _buildEmptyState())
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final empresa = _empresas[index];
-                            // Añadimos padding extra al final para scroll seguro
-                            final isLast = index == _empresas.length - 1;
-                            return Padding(
-                              padding: EdgeInsets.fromLTRB(16, 0, 16, isLast ? 100 : 12),
-                              child: _buildCompanyCard(empresa),
-                            );
-                          },
-                          childCount: _empresas.length,
-                        ),
-                      ),
+            // 3. LISTADO DE TARJETAS
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadEmpresas,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _empresas.isEmpty
+                        ? _buildEmptyState(textTheme)
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                            itemCount: _empresas.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              return _buildCompanyCard(_empresas[index], textTheme);
+                            },
+                          ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGETS DE DISEÑO ---
-
-  Widget _buildCompanyCard(Map<String, dynamic> empresa) {
+  Widget _buildCompanyCard(Map<String, dynamic> empresa, TextTheme textTheme) {
     final nombre = empresa['nombre'] ?? 'Sin Nombre';
     final ruc = empresa['ruc'] ?? 'Sin RUC';
-    final email = empresa['email'] ?? 'Sin Email'; 
     final fotoUrl = empresa['empresa_foto_url'];
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-      ),
+      // AQUÍ ESTÁ LA CLAVE: Usamos la decoración definida en theme.dart
+      decoration: AppTheme.cardDecoration, 
+      
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
@@ -192,49 +163,42 @@ class _EmpresasListState extends State<EmpresasList> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Logo
+                // Logo de la empresa
                 Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  width: 50, height: 50,
+                  // Usamos la decoración de avatar definida en theme.dart
+                  decoration: AppTheme.avatarDecoration, 
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: fotoUrl != null
                         ? Image.network(fotoUrl, fit: BoxFit.cover)
-                        : Icon(Icons.business_rounded, color: Colors.blue.shade700, size: 28),
+                        : const Icon(Icons.business_rounded, size: 28),
                   ),
                 ),
                 
                 const SizedBox(width: 16),
                 
-                // Info
+                // Textos
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        nombre,
-                        style: const TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.bold, 
-                          color: AppTheme.secondaryColor
-                        ),
-                      ),
+                      Text(nombre, style: textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text(
-                        'RUC: $ruc',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      Row(
+                        children: [
+                          Icon(Icons.badge_outlined, size: 14, color: AppTheme.iconGrey),
+                          const SizedBox(width: 4),
+                          Text('RUC: $ruc', style: textTheme.bodySmall),
+                        ],
                       ),
                     ],
                   ),
                 ),
 
-                // Eliminar
+                // Botón Eliminar
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                  icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor),
                   onPressed: () => _confirmDelete(empresa['id'], nombre),
                 ),
               ],
@@ -245,17 +209,14 @@ class _EmpresasListState extends State<EmpresasList> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(TextTheme textTheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.domain_disabled_rounded, size: 60, color: Colors.grey[300]),
+          const Icon(Icons.domain_disabled_rounded, size: 60, color: AppTheme.iconGrey),
           const SizedBox(height: 16),
-          Text(
-            'No hay empresas',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
+          Text('No hay empresas registradas', style: textTheme.bodyMedium),
         ],
       ),
     );

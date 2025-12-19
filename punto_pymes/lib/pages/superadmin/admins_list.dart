@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pymes2/theme.dart';
+import 'package:pymes2/theme.dart'; // Importamos el diseño centralizado
 import '../../service/supabase_service.dart';
-import 'creacionadmis.dart'; // Asegúrate de que este nombre sea correcto (a veces es creacion_admins.dart)
+import 'widgets/superadmin_header.dart';
+import 'creacionadmis.dart';
 
 class AdminsList extends StatefulWidget {
   const AdminsList({super.key});
@@ -38,169 +39,110 @@ class _AdminsListState extends State<AdminsList> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar admins: $e'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        // Manejo de error silencioso o snackbar si prefieres
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Referencia rápida a los textos del tema
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      
-      // 1. APPBAR ROJO (COHERENCIA VISUAL)
-      appBar: AppBar(
-        title: const Text(
-          'Administradores',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 0,
-        centerTitle: false,
-        automaticallyImplyLeading: false, // Sin flecha de volver
-      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. HEADER GLOBAL
+            const SuperadminHeader(
+              title: 'Administradores',
+              subtitle: 'Gestión de usuarios del sistema',
+              showLogout: false,
+            ),
 
-      // 2. BOTÓN FLOTANTE (LEVANTADO)
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0), // Evita solapamiento con el menú
-        child: FloatingActionButton.extended(
-          onPressed: () async {
-            final created = await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreacionAdmis())
-            );
-            if (created == true) _loadAdmins();
-          },
-          backgroundColor: AppTheme.primaryColor,
-          icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-          label: const Text('Nuevo Admin', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          elevation: 4,
-        ),
-      ),
-
-      body: RefreshIndicator(
-        onRefresh: _loadAdmins,
-        child: CustomScrollView(
-          slivers: [
-            // Header descriptivo grande
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Gestión de Usuarios',
-                      style: TextStyle(
-                        fontSize: 24, 
-                        fontWeight: FontWeight.bold, 
-                        color: AppTheme.secondaryColor
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Lista completa de administradores de empresa registrados.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
+            // 2. ZONA SUPERIOR: BOTÓN CREAR (Integrado en el cuerpo)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Listado de Usuarios',
+                    style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final created = await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CreacionAdmis())
+                      );
+                      if (created == true) _loadAdmins();
+                    },
+                    icon: const Icon(Icons.person_add_rounded, size: 18, color: Colors.white),
+                    label: const Text('Nuevo Admin'),
+                  ),
+                ],
               ),
             ),
 
-            // Lista de admins
-            _isLoading
-                ? const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : _admins.isEmpty
-                    ? SliverFillRemaining(child: _buildEmptyState())
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final admin = _admins[index];
-                            final isLast = index == _admins.length - 1;
-                            
-                            return Padding(
-                              padding: EdgeInsets.fromLTRB(20, 0, 20, isLast ? 100 : 12), // Padding inferior extra
-                              child: _buildAdminCard(admin),
-                            );
-                          },
-                          childCount: _admins.length,
-                        ),
-                      ),
+            // 3. LISTADO DE ADMINS
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadAdmins,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _admins.isEmpty
+                        ? _buildEmptyState(textTheme)
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                            itemCount: _admins.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              return _buildAdminCard(_admins[index], textTheme);
+                            },
+                          ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGETS DE DISEÑO ---
-
-  Widget _buildAdminCard(Map<String, dynamic> admin) {
+  Widget _buildAdminCard(Map<String, dynamic> admin, TextTheme textTheme) {
     final empresaNombre = admin['empresas'] != null ? admin['empresas']['nombre'] : 'Sin Asignar';
-    final nombres = admin['nombres'] ?? '';
-    final apellidos = admin['apellidos'] ?? '';
-    final fullName = '$nombres $apellidos'.trim().isEmpty ? 'Usuario Sin Nombre' : '$nombres $apellidos';
+    final fullName = '${admin['nombres'] ?? ''} ${admin['apellidos'] ?? ''}'.trim();
     
-    // Iniciales para el avatar
-    String initials = '';
-    if (nombres.isNotEmpty) initials += nombres[0];
-    if (apellidos.isNotEmpty) initials += apellidos[0];
-    if (initials.isEmpty) initials = '?';
+    // Lógica de Iniciales (Mantenemos la lógica aquí, el diseño en el theme)
+    String initials = '?';
+    if (fullName.isNotEmpty) {
+      initials = fullName[0].toUpperCase();
+    }
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-      ),
+      // DISEÑO: Decoración de tarjeta desde Theme
+      decoration: AppTheme.cardDecoration,
+      
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Aquí podrías navegar al detalle del admin si existiera esa pantalla
-            // Navigator.push(...) 
+            // Acción al tocar la tarjeta (Detalle, Editar, etc.)
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // 1. AVATAR CON INICIALES
+                // 1. AVATAR
                 Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.primaryColor.withOpacity(0.8), AppTheme.primaryColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
+                  width: 50, height: 50,
+                  // DISEÑO: Decoración de avatar desde Theme
+                  decoration: AppTheme.adminAvatarDecoration,
                   child: Center(
                     child: Text(
-                      initials.toUpperCase(),
+                      initials,
                       style: const TextStyle(
                         color: Colors.white, 
                         fontWeight: FontWeight.bold, 
@@ -218,46 +160,44 @@ class _AdminsListState extends State<AdminsList> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        fullName,
-                        style: const TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.bold, 
-                          color: AppTheme.secondaryColor
-                        ),
+                        fullName.isEmpty ? 'Usuario Sin Nombre' : fullName,
+                        style: textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
+                      
+                      // Nombre de la empresa con icono
                       Row(
                         children: [
-                          Icon(Icons.business_rounded, size: 14, color: Colors.grey[500]),
+                          Icon(Icons.business_rounded, size: 14, color: AppTheme.iconGrey),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               empresaNombre,
-                              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                              style: textTheme.bodyMedium,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      
+                      const SizedBox(height: 6),
+
+                      // Etiqueta de Rol (Chip)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: AppTheme.roleTagDecoration, // Desde Theme
                         child: Text(
                           'ADMIN EMPRESA',
-                          style: TextStyle(fontSize: 10, color: Colors.blue.shade800, fontWeight: FontWeight.bold),
+                          style: AppTheme.roleTagTextStyle, // Desde Theme
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // 3. ICONO DE ACCIÓN
-                Icon(Icons.more_vert_rounded, color: Colors.grey[400]),
+                // 3. MENÚ O ACCIÓN
+                Icon(Icons.more_vert_rounded, color: AppTheme.iconGrey),
               ],
             ),
           ),
@@ -266,29 +206,14 @@ class _AdminsListState extends State<AdminsList> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(TextTheme textTheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.people_outline_rounded, size: 60, color: Colors.grey[400]),
-          ),
+          const Icon(Icons.people_outline_rounded, size: 60, color: AppTheme.iconGrey),
           const SizedBox(height: 16),
-          Text(
-            'No hay administradores',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Toca el botón + para añadir uno.',
-            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
-          ),
+          Text('No hay administradores registrados', style: textTheme.bodyMedium),
         ],
       ),
     );

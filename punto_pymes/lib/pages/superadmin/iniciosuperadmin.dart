@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:pymes2/theme.dart'; // Asegúrate de importar tu theme
+import 'package:pymes2/theme.dart'; // Tu archivo theme.dart
 import '../../service/supabase_service.dart';
 
-// Importa tus páginas de listas para la navegación
+// Widgets y Páginas
+import 'widgets/superadmin_header.dart'; // El header personalizado
 import 'empresas_list.dart';
 import 'admins_list.dart';
-import 'empresa_detalle.dart'; 
-// import 'widgets/logout_helper.dart'; // Si tienes el helper de logout, úsalo
+import 'empresa_detalle.dart';
 
 class InicioSuperadmin extends StatefulWidget {
   const InicioSuperadmin({super.key});
@@ -32,16 +32,17 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
 
   Future<void> _loadData() async {
     try {
+      // Cargar Empresas
       final empresas = await SupabaseService.instance.getEmpresas();
       
-      // Contar admins de empresas (Optimizado: count exact)
+      // Contar Admins (Optimizado)
       final profilesCount = await SupabaseService.instance.client
           .from('profiles')
-          .select('id') // Solo traemos ID para contar más rápido
+          .select('id')
           .eq('rol', 'ADMIN_EMPRESA')
-          .count(); // Usamos count si supabase lo permite, sino .length abajo
+          .count();
 
-      // Cargar admins recientes con empresa
+      // Cargar Admins recientes
       final adminsRecientes = await SupabaseService.instance.client
           .from('profiles')
           .select('id,nombres,apellidos,rol,created_at,empresa_id,empresas(nombre)')
@@ -59,12 +60,10 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      // Fallback si count falla (versión antigua de supabase flutter)
-      debugPrint('Error cargando datos: $e');
+      // Opcional: print('Error: $e');
     }
   }
 
-  // Lógica de "Hace X tiempo"
   String _timeAgo(String? dateString) {
     if (dateString == null) return 'Reciente';
     try {
@@ -72,7 +71,6 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
       final diff = DateTime.now().difference(date);
       if (diff.inDays > 0) return 'Hace ${diff.inDays} ${diff.inDays == 1 ? 'día' : 'días'}';
       if (diff.inHours > 0) return 'Hace ${diff.inHours} ${diff.inHours == 1 ? 'hora' : 'horas'}';
-      if (diff.inMinutes > 0) return 'Hace ${diff.inMinutes} ${diff.inMinutes == 1 ? 'minuto' : 'minutos'}';
       return 'Hace un momento';
     } catch (_) {
       return 'Reciente';
@@ -82,23 +80,20 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      // AppBar unificada para todas las pestañas o dinámica según el index
-      appBar: _currentIndex == 0 ? _buildDashboardAppBar() : null,
-      
+      backgroundColor: AppTheme.backgroundColor, // Color del theme
       body: Stack(
         children: [
-          // 1. Contenido Principal (IndexedStack para mantener estado)
+          // 1. Contenido Principal (Pestañas)
           IndexedStack(
             index: _currentIndex,
             children: [
-              _buildDashboardTab(), // Tab 0: Resumen
-              const EmpresasList(), // Tab 1: Empresas
-              const AdminsList(),   // Tab 2: Admins
+              _buildDashboardTab(), // Pestaña 0: Inicio
+              const EmpresasList(), // Pestaña 1: Lista de Empresas
+              const AdminsList(),   // Pestaña 2: Lista de Admins
             ],
           ),
 
-          // 2. Barra de Navegación Flotante
+          // 2. Navegación Flotante
           Positioned(
             left: 20,
             right: 20,
@@ -110,148 +105,121 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     );
   }
 
-  // --- APPBAR ---
-  AppBar _buildDashboardAppBar() {
-    return AppBar(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // --- PESTAÑA 0: DASHBOARD ---
+  Widget _buildDashboardTab() {
+    return SafeArea(
+      child: Column(
         children: [
-          const Text('Panel de Control', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text('Super Administrador', 
-            style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.normal)
+          // Header personalizado
+          const SuperadminHeader(
+            title: 'Panel de Control',
+            subtitle: 'Bienvenido Super Administrador',
+            showLogout: true, // Mostramos botón de salir aquí
+          ),
+
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: SingleChildScrollView(
+                    // Padding abajo para que el menú flotante no tape el contenido
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), 
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        
+                        // 1. GRID DE ESTADÍSTICAS
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1.1, // Solución al "Bottom Overflow"
+                          children: [
+                            _buildStatCard(
+                              title: 'Empresas',
+                              count: '${_empresas.length}',
+                              icon: Icons.business_rounded,
+                              color: Colors.blue,
+                              bgColor: AppTheme.accentBlue,
+                              onTap: () => setState(() => _currentIndex = 1),
+                            ),
+                            _buildStatCard(
+                              title: 'Admins',
+                              count: '$_totalAdmins',
+                              icon: Icons.supervisor_account_rounded,
+                              color: AppTheme.primaryColor,
+                              bgColor: AppTheme.accentPink,
+                              onTap: () => setState(() => _currentIndex = 2),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // 2. EMPRESAS RECIENTES
+                        _buildSectionHeader('Empresas Recientes', Icons.new_releases_outlined),
+                        const SizedBox(height: 12),
+                        
+                        if (_empresas.isEmpty)
+                          _buildEmptyState('No hay empresas registradas')
+                        else
+                          ..._empresas.take(3).map((empresa) {
+                             return _buildListCard(
+                              title: empresa['nombre'] ?? 'Sin Nombre',
+                              subtitle: empresa['ruc'] ?? 'Sin RUC',
+                              icon: Icons.apartment,
+                              iconColor: Colors.blue,
+                              timeAgo: _timeAgo(empresa['created_at']),
+                              onTap: () {
+                                 final id = empresa['id'] as String?;
+                                 if (id != null) {
+                                   Navigator.of(context).push(MaterialPageRoute(
+                                     builder: (_) => EmpresaDetallePage(empresaId: id, initialEmpresa: empresa),
+                                   )).then((_) => _loadData());
+                                 }
+                              },
+                             );
+                          }),
+
+                        const SizedBox(height: 24),
+
+                        // 3. ADMINS RECIENTES
+                        _buildSectionHeader('Nuevos Administradores', Icons.history),
+                        const SizedBox(height: 12),
+                        
+                        if (_adminsRecientes.isEmpty)
+                           _buildEmptyState('No hay actividad reciente')
+                        else
+                          ..._adminsRecientes.map((admin) {
+                            final nombreEmpresa = admin['empresas'] != null ? admin['empresas']['nombre'] : 'Sin empresa';
+                            final nombreCompleto = '${admin['nombres'] ?? ''} ${admin['apellidos'] ?? ''}'.trim();
+                            
+                            return _buildListCard(
+                              title: nombreCompleto.isEmpty ? 'Usuario' : nombreCompleto,
+                              subtitle: 'Empresa: $nombreEmpresa',
+                              icon: Icons.person_add_alt_1_rounded,
+                              iconColor: Colors.teal,
+                              timeAgo: _timeAgo(admin['created_at']),
+                              onTap: () {
+                                // Opcional: Navegar a detalle admin
+                              },
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+                ),
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.logout_rounded, size: 18),
-          ),
-          onPressed: () {
-            // Tu lógica de logout
-             SupabaseService.instance.signOut();
-             Navigator.of(context).pushReplacementNamed('/access-selection');
-          },
-        ),
-        const SizedBox(width: 16),
-      ],
     );
   }
 
-  // --- PESTAÑA RESUMEN (DASHBOARD) ---
-  Widget _buildDashboardTab() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  // --- WIDGETS AUXILIARES ---
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Padding inferior extra para el nav
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Texto de bienvenida
-            const Text(
-              'Resumen del Sistema',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor),
-            ),
-            Text(
-              'Estadísticas generales de NEXUS',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-
-            // 1. GRID DE ESTADÍSTICAS
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-              children: [
-                _buildStatCard(
-                  title: 'Empresas',
-                  count: '${_empresas.length}',
-                  icon: Icons.business_rounded,
-                  color: Colors.blue,
-                  bgColor: const Color(0xFFE3F2FD),
-                  onTap: () => setState(() => _currentIndex = 1),
-                ),
-                _buildStatCard(
-                  title: 'Admins',
-                  count: '$_totalAdmins',
-                  icon: Icons.supervisor_account_rounded,
-                  color: AppTheme.primaryColor,
-                  bgColor: const Color(0xFFFFEBEE),
-                  onTap: () => setState(() => _currentIndex = 2),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // 2. EMPRESAS RECIENTES
-            _buildSectionHeader('Empresas Recientes', Icons.new_releases_outlined),
-            const SizedBox(height: 12),
-            if (_empresas.isEmpty)
-              _buildEmptyState('No hay empresas registradas')
-            else
-              ..._empresas.take(3).map((empresa) {
-                 // Ordenar por fecha si fuera necesario, aquí asumo que vienen como sea o las ordenas
-                 return _buildListCard(
-                  title: empresa['nombre'] ?? 'Sin Nombre',
-                  subtitle: empresa['ruc'] ?? 'Sin RUC', // O email
-                  icon: Icons.apartment,
-                  iconColor: Colors.blue,
-                  timeAgo: _timeAgo(empresa['created_at']),
-                  onTap: () {
-                     final id = empresa['id'] as String?;
-                     if (id != null) {
-                       Navigator.of(context).push(MaterialPageRoute(
-                         builder: (_) => EmpresaDetallePage(empresaId: id, initialEmpresa: empresa),
-                       )).then((_) => _loadData());
-                     }
-                  },
-                 );
-              }),
-
-            const SizedBox(height: 24),
-
-            // 3. ACTIVIDAD RECIENTE (ADMINS)
-            _buildSectionHeader('Nuevos Administradores', Icons.history),
-            const SizedBox(height: 12),
-            if (_adminsRecientes.isEmpty)
-               _buildEmptyState('No hay actividad reciente')
-            else
-              ..._adminsRecientes.map((admin) {
-                final nombreEmpresa = admin['empresas'] != null ? admin['empresas']['nombre'] : 'Sin empresa';
-                final nombreCompleto = '${admin['nombres'] ?? ''} ${admin['apellidos'] ?? ''}';
-                
-                return _buildListCard(
-                  title: nombreCompleto,
-                  subtitle: 'Empresa: $nombreEmpresa',
-                  icon: Icons.person_add_alt_1_rounded,
-                  iconColor: Colors.teal,
-                  timeAgo: _timeAgo(admin['created_at']),
-                  onTap: () {}, // Acción al tocar admin si se desea
-                );
-              }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- WIDGETS DE DISEÑO ---
-
-  // Header de sección
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
@@ -259,13 +227,12 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.secondaryColor),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18),
         ),
       ],
     );
   }
 
-  // Tarjeta de Estadística (Grid)
   Widget _buildStatCard({
     required String title,
     required String count,
@@ -277,17 +244,8 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
+        // USAMOS EL DECORATION DEL THEME
+        decoration: AppTheme.cardDecoration, 
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,19 +264,11 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
               children: [
                 Text(
                   count,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.secondaryColor,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24),
                 ),
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
             )
@@ -328,7 +278,6 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     );
   }
 
-  // Tarjeta de Lista (Para Empresas y Admins recientes)
   Widget _buildListCard({
     required String title,
     required String subtitle,
@@ -339,18 +288,8 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-      ),
+      // USAMOS EL DECORATION DEL THEME
+      decoration: AppTheme.cardDecoration,
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
@@ -376,7 +315,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.secondaryColor),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -412,7 +351,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     );
   }
 
-  // --- BARRA DE NAVEGACIÓN FLOTANTE (ESTILO CÁPSULA) ---
+  // --- NAVEGACIÓN FLOTANTE ---
   Widget _buildFloatingBottomNav() {
     return Container(
       padding: const EdgeInsets.all(6),
