@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
 import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
 import 'widgets/empleado_news_section.dart';
@@ -47,23 +48,14 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Encabezado de bienvenida
-          const Text(
+          Text(
             'Bienvenido',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-              color: Colors.black87,
-              letterSpacing: 0.3,
-            ),
+            style: AppTextStyles.headline,
           ),
           const SizedBox(height: 4),
           const Text(
             'Tu espacio de empleado',
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
+            style: AppTextStyles.subtitle,
           ),
           const SizedBox(height: 20),
 
@@ -98,7 +90,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                       label: 'Asistencias',
                       value: '${stats['dias_asistidos'] ?? 0}',
                       icon: Icons.check_circle,
-                      color: const Color(0xFFD92344),
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -107,7 +99,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                       label: 'A tiempo',
                       value: '${stats['a_tiempo'] ?? 0}',
                       icon: Icons.thumb_up,
-                      color: const Color(0xFF4CAF50),
+                      color: AppColors.success,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -116,7 +108,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                       label: 'Tardanzas',
                       value: '${stats['tardanzas'] ?? 0}',
                       icon: Icons.schedule,
-                      color: const Color(0xFFFFA500),
+                      color: AppColors.warning,
                     ),
                   ),
                 ],
@@ -133,7 +125,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           const SizedBox(height: 24),
 
           // Divider
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const Divider(height: 1, color: AppColors.divider),
           const SizedBox(height: 20),
 
           // Noticias y anuncios

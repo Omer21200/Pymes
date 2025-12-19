@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme.dart';
 
 class EmpleadoNewsSection extends StatelessWidget {
   final Future<List<Map<String, dynamic>>> noticiasFuture;
@@ -22,14 +23,9 @@ class EmpleadoNewsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Noticias y anuncios',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-            color: Colors.black87,
-            letterSpacing: 0.3,
-          ),
+          style: AppTextStyles.sectionTitle,
         ),
         const SizedBox(height: 12),
         FutureBuilder<List<Map<String, dynamic>>>(
@@ -58,7 +54,7 @@ class EmpleadoNewsSection extends StatelessWidget {
 
             // Sin datos
             if (noticias.isEmpty) {
-              return Padding(
+                return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Center(
                   child: Column(
@@ -66,15 +62,12 @@ class EmpleadoNewsSection extends StatelessWidget {
                       Icon(
                         Icons.inbox,
                         size: 48,
-                        color: Colors.black12,
+                        color: AppColors.lightGray,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'No hay noticias disponibles',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 14,
-                        ),
+                        style: AppTextStyles.subtitle,
                       ),
                     ],
                   ),
@@ -83,19 +76,15 @@ class EmpleadoNewsSection extends StatelessWidget {
             }
 
             // Mostrar las primeras 3 noticias
-            return Column(
+                return Column(
               children: noticias.take(3).map((noticia) {
                 final titulo = noticia['titulo'] ?? '';
                 final contenido = noticia['contenido'] ?? '';
                 final fechaPublicacion = noticia['fecha_publicacion'] ?? '';
                 final esImportante = noticia['es_importante'] ?? false;
 
-                final accentColor = esImportante 
-                    ? const Color(0xFFD92344) 
-                    : const Color(0xFF4A90E2);
-                final backgroundColor = esImportante 
-                    ? const Color(0xFFFDEFF0) 
-                    : const Color(0xFFF8F9FB);
+                final accentColor = esImportante ? AppColors.brandRedAlt : AppColors.accentBlueAdmin;
+                final backgroundColor = esImportante ? AppColors.notificationBg : AppColors.subtleBg;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -139,11 +128,7 @@ class EmpleadoNewsSection extends StatelessWidget {
                           Expanded(
                             child: Text(
                               titulo,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
+                              style: AppTextStyles.sectionTitle.copyWith(fontSize: 14, color: Colors.black87),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -155,12 +140,7 @@ class EmpleadoNewsSection extends StatelessWidget {
                       // Contenido
                       Text(
                         contenido,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                          height: 1.4,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        style: AppTextStyles.smallLabel.copyWith(height: 1.4),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -172,11 +152,7 @@ class EmpleadoNewsSection extends StatelessWidget {
                         children: [
                           Text(
                             _formatearFecha(fechaPublicacion),
-                            style: const TextStyle(
-                              color: Colors.black38,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(

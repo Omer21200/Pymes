@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../theme.dart';
 
 class EmpleadoNav extends StatefulWidget {
   final int currentIndex;
@@ -71,7 +72,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
 
   Widget _buildItem(IconData icon, String label, int index) {
     final bool selected = index == widget.currentIndex;
-    const primary = Color(0xFFD92344);
+    final primary = AppColors.primary;
 
     final width = _computeWidthForLabel(label, selected);
 
@@ -82,7 +83,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
       height: 52,
       padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 0),
       decoration: BoxDecoration(
-        color: selected ? primary : Colors.white,
+        color: selected ? primary : AppColors.surface,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           if (!selected) const BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
@@ -97,7 +98,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
             Flexible(
               child: Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                style: AppTextStyles.smallLabel.copyWith(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                 overflow: TextOverflow.visible,
                 maxLines: 1,
                 softWrap: false,

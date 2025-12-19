@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme.dart';
 
 class NotificationCard extends StatelessWidget {
   final String titulo;
@@ -25,9 +26,9 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = esImportante ? const Color(0xFFD92344) : const Color(0xFF4A90E2);
-    final backgroundColor = esImportante ? const Color(0xFFFDEFF0) : const Color(0xFFF8F9FB);
-    final borderColor = esImportante ? const Color(0xFFFFD6E0) : const Color(0xFFE0E7FF);
+    final accentColor = esImportante ? AppColors.brandRedAlt : AppColors.accentBlueAdmin;
+    final backgroundColor = esImportante ? AppColors.notificationBg : AppColors.subtleBg;
+    final borderColor = accentColor.withOpacity(0.15);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -90,12 +91,7 @@ class NotificationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         titulo,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Colors.black87,
-                          letterSpacing: 0.1,
-                        ),
+                        style: AppTextStyles.sectionTitle.copyWith(fontSize: 15, color: Colors.black87),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -107,12 +103,7 @@ class NotificationCard extends StatelessWidget {
                 // Contenido
                 Text(
                   contenido,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: AppTextStyles.smallLabel.copyWith(fontSize: 13, height: 1.5),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -128,16 +119,12 @@ class NotificationCard extends StatelessWidget {
                         Icon(
                           Icons.schedule,
                           size: 13,
-                          color: Colors.black38,
+                          color: AppColors.mutedGray,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           _formatearFecha(fechaPublicacion),
-                          style: const TextStyle(
-                            color: Colors.black38,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray),
                         ),
                       ],
                     ),

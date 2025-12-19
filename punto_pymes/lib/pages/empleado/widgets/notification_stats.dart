@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme.dart';
 
 class NotificationStats extends StatelessWidget {
   final int noticiasNuevas;
@@ -16,14 +17,9 @@ class NotificationStats extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Encabezado
-        const Text(
+        Text(
           'Resumen',
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-          ),
+          style: AppTextStyles.sectionTitle.copyWith(fontSize: 16, color: Colors.black87),
         ),
         const SizedBox(height: 14),
 
@@ -34,8 +30,8 @@ class NotificationStats extends StatelessWidget {
             Expanded(
               child: _StatCard(
                 icon: Icons.priority_high,
-                iconColor: const Color(0xFFD92344),
-                backgroundColor: const Color(0xFFFDEFF0),
+                iconColor: AppColors.brandRedAlt,
+                  backgroundColor: AppColors.notificationBg,
                 label: 'Nuevas',
                 value: noticiasNuevas,
               ),
@@ -46,8 +42,8 @@ class NotificationStats extends StatelessWidget {
             Expanded(
               child: _StatCard(
                 icon: Icons.inbox,
-                iconColor: const Color(0xFF666666),
-                backgroundColor: const Color(0xFFF0F0F0),
+                iconColor: AppColors.mutedGray,
+                  backgroundColor: AppColors.subtleBg,
                 label: 'Total',
                 value: totalNoticias,
               ),
@@ -78,52 +74,35 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.statCardDecoration(iconColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icono con fondo
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+          // Icono top-right
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: Colors.white, size: 18),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
           ),
-          const SizedBox(height: 10),
-          
+          const SizedBox(height: 18),
+
           // Label
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-            ),
+            style: AppTextStyles.smallLabel.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: 6),
-          
+
           // Valor
           Text(
             value.toString(),
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
-              height: 1,
-            ),
+            style: AppTextStyles.statsValue.copyWith(fontSize: 32, color: Colors.white),
           ),
         ],
       ),

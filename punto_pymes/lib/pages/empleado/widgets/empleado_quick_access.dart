@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme.dart';
 
 class EmpleadoQuickAccess extends StatelessWidget {
   final VoidCallback? onRegistrarPressed;
@@ -51,17 +52,7 @@ class EmpleadoQuickAccess extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              decoration: AppDecorations.card,
               child: Row(
                 children: [
                   // Icono con fondo
@@ -86,20 +77,12 @@ class EmpleadoQuickAccess extends StatelessWidget {
                       children: [
                         Text(
                           item['label'] as String,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
+                          style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           item['subtitle'] as String,
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
+                          style: AppTextStyles.smallLabel,
                         ),
                       ],
                     ),
