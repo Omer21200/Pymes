@@ -3,6 +3,9 @@ allprojects {
         google()
         mavenCentral()
     }
+    extra["compileSdkVersion"] = 34
+    extra["targetSdkVersion"] = 34
+    extra["minSdkVersion"] = 21
 }
 
 val newBuildDir: Directory =

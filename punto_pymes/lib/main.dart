@@ -30,8 +30,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
-      theme: lightmode,
-      darkTheme: darkmode,
+      theme: AppTheme.lightTheme,
+      //darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
       home: const SplashScreen(),
       routes: {

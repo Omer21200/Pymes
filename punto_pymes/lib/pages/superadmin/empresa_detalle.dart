@@ -1,11 +1,10 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../service/supabase_service.dart';
+import 'package:pymes2/theme.dart'; // Importamos el tema para los colores
 import 'creacion_departamentos.dart';
 import 'departamento_detalle.dart';
-import 'widgets/superadmin_header.dart';
 
 class EmpresaDetallePage extends StatefulWidget {
   final String empresaId;
@@ -20,10 +19,12 @@ class EmpresaDetallePage extends StatefulWidget {
 class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   Map<String, dynamic>? _empresa;
   List<Map<String, dynamic>> _departamentos = [];
+  
   bool _loading = true;
   bool _saving = false;
   bool _loadingDepartamentos = true;
 
+  // Controladores
   final _nombre = TextEditingController();
   final _ruc = TextEditingController();
   final _direccion = TextEditingController();
@@ -59,6 +60,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     super.dispose();
   }
 
+  // --- LOGICA DE DATOS (Mantenida igual para no romper funcionalidad) ---
   Future<void> _fetch() async {
     try {
       final data = await SupabaseService.instance.getEmpresaById(widget.empresaId);
@@ -66,11 +68,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
         _setEmpresa(data);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar empresa: $e')),
-        );
-      }
+      if (mounted) _showSnack('Error al cargar empresa: $e', isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -81,21 +79,11 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     setState(() => _loadingDepartamentos = true);
     try {
       final data = await SupabaseService.instance.getDepartamentosPorEmpresa(widget.empresaId);
-      if (mounted) {
-        setState(() {
-          _departamentos = data;
-        });
-      }
+      if (mounted) setState(() => _departamentos = data);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar departamentos: $e'), backgroundColor: Colors.red),
-        );
-      }
+       // Silent error or debugPrint
     } finally {
-      if (mounted) {
-        setState(() => _loadingDepartamentos = false);
-      }
+      if (mounted) setState(() => _loadingDepartamentos = false);
     }
   }
 
@@ -109,11 +97,11 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     _lat.text = (e['latitud']?.toString() ?? '');
     _lng.text = (e['longitud']?.toString() ?? '');
     _currentLogoUrl = e['empresa_foto_url'] as String?;
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _pickLogo() async {
-    final x = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+    final x = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 80);
     if (x != null) {
       setState(() => _newLogoLocalPath = x.path);
     }
@@ -157,189 +145,323 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
         longitud: lng,
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cambios guardados'), backgroundColor: Colors.green),
-        );
-      }
+      if (mounted) _showSnack('Cambios guardados correctamente');
       await _fetch();
       setState(() => _newLogoLocalPath = null);
     } catch (e) {
       if (moved && finalPath != null) {
-        try {
-          await SupabaseService.instance.deleteFile(bucketName: 'fotos', filePath: finalPath);
-        } catch (_) {}
+        try { await SupabaseService.instance.deleteFile(bucketName: 'fotos', filePath: finalPath); } catch (_) {}
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted) _showSnack('Error al guardar: $e', isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg), 
+        backgroundColor: isError ? AppTheme.errorColor : Colors.green
+      ),
+    );
+  }
+
+  // --- INTERFAZ DE USUARIO ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SuperadminHeader(
-                showBack: true,
-                onBack: () => Navigator.of(context).pop(),
-                actions: [
-                  TextButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Guardar', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          GestureDetector(
+      backgroundColor: AppTheme.backgroundColor,
+      
+      // 1. APPBAR (Reemplaza al Header antiguo)
+      appBar: AppBar(
+        title: const Text('Detalle de Empresa', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppTheme.primaryColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          // Botón Guardar integrado en la barra
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: _saving 
+              ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
+              : IconButton(
+                  icon: const Icon(Icons.save_rounded, size: 28),
+                  onPressed: _save,
+                  tooltip: 'Guardar Cambios',
+                ),
+          )
+        ],
+      ),
+
+      body: _loading 
+          ? const Center(child: CircularProgressIndicator()) 
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  
+                  // 2. SECCIÓN DEL LOGO (Avatar grande)
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))
+                            ],
+                            border: Border.all(color: Colors.grey.shade200, width: 2),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: _newLogoLocalPath != null
+                                ? Image.file(File(_newLogoLocalPath!), fit: BoxFit.cover)
+                                : (_currentLogoUrl != null
+                                    ? Image.network(_currentLogoUrl!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.business, size: 50, color: Colors.grey))
+                                    : const Icon(Icons.add_a_photo, size: 40, color: Colors.grey)),
+                          ),
+                        ),
+                        // Botón flotante para editar foto
+                        Positioned(
+                          bottom: -5,
+                          right: -5,
+                          child: GestureDetector(
                             onTap: _saving ? null : _pickLogo,
                             child: Container(
-                              height: 150,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF3F3F3),
-                                borderRadius: BorderRadius.circular(12),
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(blurRadius: 5, color: Colors.black26)]
                               ),
-                              child: Center(
-                                child: _newLogoLocalPath != null
-                                    ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(_newLogoLocalPath!), height: 150, width: double.infinity, fit: BoxFit.cover))
-                                        : (_currentLogoUrl != null
-                                        ? ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(_currentLogoUrl!, height: 150, width: double.infinity, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported)))
-                                        : const Icon(Icons.add_a_photo_outlined, size: 36)),
-                              ),
+                              child: const Icon(Icons.edit, color: Colors.white, size: 16),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          if (_empresa?['codigo_acceso_empleado'] != null)
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: const Color(0xFFFFECEF), borderRadius: BorderRadius.circular(8)),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.key, color: Color(0xFFD92344)),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text('Código de acceso: ${_empresa!['codigo_acceso_empleado']}')),
-                                ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 3. TARJETA DE CÓDIGO DE ACCESO (Destacado)
+                  if (_empresa?['codigo_acceso_empleado'] != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE), // Fondo rojizo muy suave
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                            child: const Icon(Icons.vpn_key_rounded, color: AppTheme.primaryColor),
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Código de Acceso Empleados',
+                                style: TextStyle(fontSize: 12, color: Colors.red.shade800, fontWeight: FontWeight.bold),
                               ),
-                            ),
-                          const SizedBox(height: 12),
-                          _buildField('Nombre', _nombre),
-                          _buildField('RUC', _ruc),
-                          _buildField('Dirección', _direccion),
-                          _buildField('Teléfono', _telefono),
-                          _buildField('Email', _correo, keyboardType: TextInputType.emailAddress),
-                          _buildField('Latitud', _lat, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-                          _buildField('Longitud', _lng, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-                          const SizedBox(height: 24),
-                          Card(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 4,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const CircleAvatar(backgroundColor: Color(0xFFE0F2F1), child: Icon(Icons.business_center_outlined, color: Color(0xFF00796B))),
-                                      const SizedBox(width: 12),
-                                      const Expanded(child: Text('Departamentos', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16))),
-                                      ElevatedButton.icon(
-                                        onPressed: () async {
-                                          final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-                                            builder: (_) => CreacionDepartamentos(empresaId: widget.empresaId),
-                                          ));
-                                          if (result == true) {
-                                            _fetchDepartamentos();
-                                          }
-                                        },
-                                        icon: const Icon(Icons.add, size: 18),
-                                        label: const Text('Añadir'),
-                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                                      )
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _loadingDepartamentos
-                                      ? const Center(child: Padding(padding: EdgeInsets.all(24.0), child: CircularProgressIndicator()))
-                                      : _departamentos.isEmpty
-                                          ? Center(
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 24.0),
-                                                child: Column(
-                                                  children: [
-                                                    Icon(Icons.hourglass_empty, color: Colors.grey.shade400, size: 32),
-                                                    const SizedBox(height: 8),
-                                                    const Text('No hay departamentos creados.', style: TextStyle(color: Colors.black54)),
-                                                  ],
-                                                ),
-                                              ),
-                                            )
-                                          : ListView.builder(
-                                              shrinkWrap: true,
-                                              physics: const NeverScrollableScrollPhysics(),
-                                              itemCount: _departamentos.length,
-                                              itemBuilder: (context, index) {
-                                                final depto = _departamentos[index];
-                                                return ListTile(
-                                                  title: Text(depto['nombre'] ?? 'Sin nombre'),
-                                                  subtitle: depto['descripcion'] != null ? Text(depto['descripcion']) : null,
-                                                  trailing: const Icon(Icons.chevron_right),
-                                                  onTap: () {
-                                                    Navigator.of(context).push(MaterialPageRoute(
-                                                      builder: (_) => DepartamentoDetallePage(
-                                                        departamentoId: depto['id'],
-                                                        departamentoNombre: depto['nombre'] ?? 'Sin nombre',
-                                                      ),
-                                                    ));
-                                                  },
-                                                );
-                                              },
-                                            )
-                                ],
+                              Text(
+                                '${_empresa!['codigo_acceso_empleado']}',
+                                style: const TextStyle(fontSize: 18, color: Colors.black87, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
-              )
-            ],
-          ),
+                    ),
+
+                  // 4. FORMULARIO ORGANIZADO
+                  _buildSectionTitle('Información General'),
+                  _buildCustomTextField(controller: _nombre, label: 'Nombre Comercial', icon: Icons.store),
+                  _buildCustomTextField(controller: _ruc, label: 'RUC', icon: Icons.badge_outlined),
+                  _buildCustomTextField(controller: _direccion, label: 'Dirección', icon: Icons.location_on_outlined),
+
+                  const SizedBox(height: 12),
+                  _buildSectionTitle('Contacto'),
+                  _buildCustomTextField(controller: _telefono, label: 'Teléfono', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+                  _buildCustomTextField(controller: _correo, label: 'Correo Electrónico', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+
+                  const SizedBox(height: 12),
+                  _buildSectionTitle('Ubicación GPS'),
+                  Row(
+                    children: [
+                      Expanded(child: _buildCustomTextField(controller: _lat, label: 'Latitud', icon: Icons.map, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildCustomTextField(controller: _lng, label: 'Longitud', icon: Icons.map, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  Divider(color: Colors.grey.shade300),
+                  const SizedBox(height: 24),
+                  
+                  // 5. SECCIÓN DE DEPARTAMENTOS
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('Departamentos', noPadding: true),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+                            builder: (_) => CreacionDepartamentos(empresaId: widget.empresaId),
+                          ));
+                          if (result == true) _fetchDepartamentos();
+                        },
+                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                        label: const Text('Añadir'),
+                        style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  _loadingDepartamentos
+                    ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    : _departamentos.isEmpty
+                      ? _buildEmptyDepartments()
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _departamentos.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final depto = _departamentos[index];
+                            return _buildDepartmentTile(depto);
+                          },
+                        ),
+                  
+                  const SizedBox(height: 50),
+                ],
+              ),
+            ),
+    );
+  }
+
+  // --- WIDGETS DE DISEÑO ---
+
+  Widget _buildSectionTitle(String title, {bool noPadding = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12, left: noPadding ? 0 : 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.secondaryColor,
         ),
       ),
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, {TextInputType? keyboardType}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+  Widget _buildCustomTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
       child: TextField(
         controller: controller,
         enabled: !_saving,
         keyboardType: keyboardType,
+        style: const TextStyle(fontSize: 15),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(icon, color: AppTheme.primaryColor.withOpacity(0.7), size: 22),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
           filled: true,
-          fillColor: const Color(0xFFF3F3F3),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDepartmentTile(Map<String, dynamic> depto) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8)
+          ),
+          child: Icon(Icons.work_outline, color: Colors.blue[800], size: 20),
+        ),
+        title: Text(depto['nombre'] ?? 'Sin nombre', style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: depto['descripcion'] != null 
+          ? Text(depto['descripcion'], maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.grey[600])) 
+          : null,
+        trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey[400]),
+        onTap: () {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => DepartamentoDetallePage(
+              departamentoId: depto['id'],
+              departamentoNombre: depto['nombre'] ?? 'Sin nombre',
+            ),
+          ));
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyDepartments() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, style: BorderStyle.solid),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.domain_disabled_outlined, size: 40, color: Colors.grey[300]),
+          const SizedBox(height: 8),
+          Text('No hay departamentos', style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
