@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../notificacion.dart';
 import '../reportes.dart';
 import '../empleado_inicio_view.dart';
+import '../departamento/departamento_page.dart';
 
 class EmpleadoSections extends StatefulWidget {
   final int tabIndex;
@@ -38,6 +39,8 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
         return const NotificacionView(padding: EdgeInsets.only(top: 16, bottom: 140));
       case 2:
         return ReportesPage(key: _reportesKey);
+      case 3:
+        return const DepartamentoPage();
       default:
         return const SizedBox.shrink();
     }

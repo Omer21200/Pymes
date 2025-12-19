@@ -4,12 +4,16 @@ class EmpleadoHeader extends StatelessWidget {
   final String name;
   final String affiliation;
   final VoidCallback? onLogout;
+  final VoidCallback? onProfile;
+  final String? avatarUrl;
 
   const EmpleadoHeader({
     super.key,
     required this.name,
     required this.affiliation,
     this.onLogout,
+    this.onProfile,
+    this.avatarUrl,
   });
 
   @override
@@ -37,8 +41,8 @@ class EmpleadoHeader extends StatelessWidget {
           bottomRight: Radius.circular(20),
         ),
         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD92344).withOpacity(0.3),
+                BoxShadow(
+                  color: const Color(0xFFD92344).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -46,33 +50,55 @@ class EmpleadoHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar mejorado
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, Color(0xFFF5F5F5)],
+          // Avatar: muestra foto si existe, si no muestra iniciales
+          GestureDetector(
+            onTap: onProfile,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Color(0xFFF5F5F5)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Color(0xFFD92344),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: ClipOval(
+                child: avatarUrl != null && avatarUrl!.isNotEmpty
+                    ? Image.network(
+                        avatarUrl!,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) => Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Color(0xFFD92344),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            color: Color(0xFFD92344),
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -98,7 +124,7 @@ class EmpleadoHeader extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -117,6 +143,7 @@ class EmpleadoHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          // (Se removió el botón de perfil redundante; el avatar es clickeable)
           // Botón de logout mejorado
           Material(
             color: Colors.transparent,
@@ -126,10 +153,10 @@ class EmpleadoHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'widgets/empleado_header.dart';
+import 'profile_page.dart';
 import '../../service/supabase_service.dart';
 import 'widgets/empleado_nav.dart';
 import 'widgets/empleado_sections.dart';
@@ -42,11 +43,13 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
           }
           if (permission == LocationPermission.deniedForever) {
             // Permiso denegado permanentemente -> no bloquear, sugerir ajuste
-            if (mounted) NotificationHelper.showWarningNotification(
-              context,
-              title: 'Permisos desactivados',
-              message: 'Activa permisos de ubicación en ajustes.',
-            );
+            if (mounted) {
+              NotificationHelper.showWarningNotification(
+                context,
+                title: 'Permisos desactivados',
+                message: 'Activa permisos de ubicación en ajustes.',
+              );
+            }
             lat = null;
             lon = null;
           } else if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
@@ -92,11 +95,13 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             );
           } catch (upErr) {
             uploadedUrl = null;
-            if (mounted) NotificationHelper.showErrorNotification(
-              context,
-              title: 'Error en la foto',
-              message: 'No se pudo subir. Continuando sin ella.',
-            );
+            if (mounted) {
+              NotificationHelper.showErrorNotification(
+                context,
+                title: 'Error en la foto',
+                message: 'No se pudo subir. Continuando sin ella.',
+              );
+            }
           }
         }
       } catch (camErr) {
@@ -179,10 +184,20 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
                         : rol == 'EMPLEADO'
                             ? 'Empleado'
                             : (rol.isEmpty ? 'Rol desconocido' : rol);
+                    final profileRaw = data?['profile_raw'] as Map<String, dynamic>?;
+                    final avatar = profileRaw?['foto_url'] as String?;
                     return EmpleadoHeader(
                       name: nombre,
                       affiliation: afiliacion,
+                      avatarUrl: avatar,
                       onLogout: () => showLogoutConfirmation(context),
+                      onProfile: () async {
+                        // Abrir la página de perfil y refrescar al volver si se guardó
+                        final res = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmpleadoProfilePage()));
+                        if (res == true) {
+                          setState(() {});
+                        }
+                      },
                     );
                   },
                 ),

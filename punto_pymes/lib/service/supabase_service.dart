@@ -736,6 +736,53 @@ class SupabaseService {
     };
   }
 
+  /// Sube una foto de perfil para el usuario actual y retorna la URL pública.
+  Future<String> uploadProfilePhoto({
+    required String filePath,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Usuario no autenticado');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final destination = 'profiles/${user.id}_avatar_$timestamp.jpg';
+    return await uploadFile(filePath: filePath, bucketName: 'fotos', destinationPath: destination);
+  }
+
+  /// Actualiza campos de la tabla `profiles` para el usuario actual.
+  Future<Map<String, dynamic>?> updateMyProfile({
+    String? nombres,
+    String? apellidos,
+    String? fotoUrl,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Usuario no autenticado');
+
+    final updates = <String, dynamic>{};
+    if (nombres != null) updates['nombres'] = nombres;
+    if (apellidos != null) updates['apellidos'] = apellidos;
+    if (fotoUrl != null) updates['foto_url'] = fotoUrl;
+
+    if (updates.isEmpty) {
+      final profile = await client.from('profiles').select().eq('id', user.id).maybeSingle();
+      return profile == null ? null : Map<String, dynamic>.from(profile as Map);
+    }
+
+    try {
+      final dynamic res = await client
+          .from('profiles')
+          .update(updates)
+          .eq('id', user.id)
+          .select();
+      if (res is List) {
+        if (res.isEmpty) return null;
+        return Map<String, dynamic>.from(res.first as Map);
+      }
+      if (res is Map) return Map<String, dynamic>.from(res);
+      return null;
+    } catch (e) {
+      throw Exception('Error actualizando profile: $e');
+    }
+  }
+
   /// Actualiza los campos del empleado asociado al usuario actual.
   Future<Map<String, dynamic>?> updateEmpleadoProfile({
     String? cedula,

@@ -10,6 +10,7 @@ class EmpleadoNav extends StatefulWidget {
     {'icon': Icons.home, 'label': 'Inicio'},
     {'icon': Icons.notifications, 'label': 'Notificaciones'},
     {'icon': Icons.description, 'label': 'Reportes'},
+    {'icon': Icons.apartment, 'label': 'Departamento'},
   ];
 
   @override
@@ -18,13 +19,17 @@ class EmpleadoNav extends StatefulWidget {
 
 class _EmpleadoNavState extends State<EmpleadoNav> {
   final ScrollController _scrollController = ScrollController();
-  late final List<GlobalKey> _keys;
+  late List<GlobalKey> _keys;
 
   @override
   void initState() {
     super.initState();
     _keys = List.generate(EmpleadoNav._tabs.length, (_) => GlobalKey());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(widget.currentIndex));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.currentIndex >= 0 && widget.currentIndex < _keys.length) {
+        _scrollToIndex(widget.currentIndex);
+      }
+    });
   }
 
   @override
@@ -32,16 +37,24 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentIndex != widget.currentIndex) {
       // center new index
-      Future.delayed(const Duration(milliseconds: 160), () => _scrollToIndex(widget.currentIndex));
+      Future.delayed(const Duration(milliseconds: 160), () {
+        if (widget.currentIndex >= 0 && widget.currentIndex < _keys.length) {
+          _scrollToIndex(widget.currentIndex);
+        }
+      });
     }
   }
 
   void _onTap(int index) {
+    if (index < 0 || index >= EmpleadoNav._tabs.length) return;
     widget.onTabSelected(index);
-    Future.delayed(const Duration(milliseconds: 160), () => _scrollToIndex(index));
+    Future.delayed(const Duration(milliseconds: 160), () {
+      if (index >= 0 && index < _keys.length) _scrollToIndex(index);
+    });
   }
 
   void _scrollToIndex(int index) {
+    if (index < 0 || index >= _keys.length) return;
     final ctx = _keys[index].currentContext;
     if (ctx == null) return;
     Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.5);
@@ -104,6 +117,11 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
 
   @override
   Widget build(BuildContext context) {
+    // Guard: si por alguna razón la lista de _keys está desincronizada
+    // con la cantidad de tabs (p. ej. hot-reload parcial), regenerarla.
+    if (_keys.length != EmpleadoNav._tabs.length) {
+      _keys = List.generate(EmpleadoNav._tabs.length, (_) => GlobalKey());
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Container(
