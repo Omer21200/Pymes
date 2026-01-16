@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'asistencia_detalle.dart';
 
 class AttendanceCard extends StatelessWidget {
   final Map<String, dynamic> record;
 
-  const AttendanceCard({super.key, required this.record});
+  const AttendanceCard({
+    super.key,
+    required this.record,
+  });
 
   String _formatearFecha(String fecha) {
     try {
@@ -41,27 +45,37 @@ class AttendanceCard extends StatelessWidget {
     final statusColor = tieneSalida
         ? Colors.green
         : tieneEntrada
-        ? Colors.orange
-        : Colors.grey;
+            ? Colors.orange
+            : Colors.grey;
 
     final statusText = tieneSalida
         ? 'Completo'
         : tieneEntrada
-        ? 'Entrada'
-        : 'Sin registro';
+            ? 'Entrada'
+            : 'Sin registro';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AsistenciaDetalleScreen(
+              asistencia: record,
+              fotoUrl: fotoUrl,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,12 +83,8 @@ class AttendanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        // ignore: deprecated_member_use
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -154,7 +164,10 @@ class AttendanceCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'Estado: ${estado.substring(0, 1).toUpperCase()}${estado.substring(1)}',
-                        style: TextStyle(color: statusColor, fontSize: 12),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -171,11 +184,10 @@ class AttendanceCard extends StatelessWidget {
               border: Border.all(color: statusColor, width: 2),
               boxShadow: [
                 BoxShadow(
-                  // ignore: deprecated_member_use
                   color: statusColor.withOpacity(0.2),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
-                ),
+                )
               ],
             ),
             child: CircleAvatar(
@@ -187,6 +199,7 @@ class AttendanceCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

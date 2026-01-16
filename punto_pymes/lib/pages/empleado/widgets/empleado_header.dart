@@ -27,7 +27,10 @@ class EmpleadoHeader extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFD92344), Color(0xFFA81830)],
+          colors: [
+            Color(0xFFD92344),
+            Color(0xFFA81830),
+          ],
         ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
@@ -35,7 +38,6 @@ class EmpleadoHeader extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
             color: const Color(0xFFD92344).withOpacity(0.3),
             blurRadius: 16,
             offset: const Offset(0, 8),
@@ -57,7 +59,6 @@ class EmpleadoHeader extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  // ignore: deprecated_member_use
                   color: Colors.black.withOpacity(0.15),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
@@ -95,12 +96,8 @@ class EmpleadoHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -129,16 +126,18 @@ class EmpleadoHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  // ignore: deprecated_member_use
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.3),
                     width: 1.5,
                   ),
                 ),
-                child: const Icon(Icons.logout, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.logout,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
             ),
           ),

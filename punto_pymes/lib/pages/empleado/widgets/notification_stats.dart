@@ -41,7 +41,7 @@ class NotificationStats extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-
+            
             // Estadística de Total
             Expanded(
               child: _StatCard(
@@ -83,7 +83,6 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
@@ -97,14 +96,13 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              // ignore: deprecated_member_use
               color: iconColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(height: 10),
-
+          
           // Label
           Text(
             label,
@@ -116,7 +114,7 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-
+          
           // Valor
           Text(
             value.toString(),

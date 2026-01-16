@@ -5,6 +5,7 @@ class NotificationCard extends StatelessWidget {
   final String contenido;
   final String fechaPublicacion;
   final bool esImportante;
+  final String? imagenUrl;
 
   const NotificationCard({
     super.key,
@@ -12,6 +13,7 @@ class NotificationCard extends StatelessWidget {
     required this.contenido,
     required this.fechaPublicacion,
     this.esImportante = false,
+    this.imagenUrl,
   });
 
   String _formatearFecha(String fecha) {
@@ -25,15 +27,9 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = esImportante
-        ? const Color(0xFFD92344)
-        : const Color(0xFF4A90E2);
-    final backgroundColor = esImportante
-        ? const Color(0xFFFDEFF0)
-        : const Color(0xFFF8F9FB);
-    final borderColor = esImportante
-        ? const Color(0xFFFFD6E0)
-        : const Color(0xFFE0E7FF);
+    final accentColor = esImportante ? const Color(0xFFD92344) : const Color(0xFF4A90E2);
+    final backgroundColor = esImportante ? const Color(0xFFFDEFF0) : const Color(0xFFF8F9FB);
+    final borderColor = esImportante ? const Color(0xFFFFD6E0) : const Color(0xFFE0E7FF);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -43,134 +39,143 @@ class NotificationCard extends StatelessWidget {
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
             color: accentColor.withOpacity(0.06),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Barra de color izquierda
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(14),
-                  bottomLeft: Radius.circular(14),
-                ),
+          // Banda de acento a la izquierda
+          Container(
+            width: 4,
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                bottomLeft: Radius.circular(14),
               ),
             ),
           ),
 
+          // Imagen
+          SizedBox(
+            width: 110,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(0),
+                bottomRight: Radius.circular(0),
+                topLeft: Radius.circular(0),
+                bottomLeft: Radius.circular(0),
+              ),
+              child: (imagenUrl != null && imagenUrl!.isNotEmpty)
+                  ? Image.network(
+                      imagenUrl!,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: Colors.grey.shade200,
+                        child: Icon(Icons.image, color: Colors.grey.shade400),
+                      ),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: Colors.grey.shade100,
+                          child: const Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                    )
+                  : Container(
+                      color: const Color(0xFFF3F3F4),
+                      child: Icon(Icons.newspaper, color: Colors.grey.shade500),
+                    ),
+            ),
+          ),
+
           // Contenido
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Encabezado con título y badge
-                Row(
-                  children: [
-                    // Icono
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        // ignore: deprecated_member_use
-                        color: accentColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        esImportante
-                            ? Icons.priority_high
-                            : Icons.notifications_active,
-                        color: accentColor,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-
-                    // Título
-                    Expanded(
-                      child: Text(
-                        titulo,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Colors.black87,
-                          letterSpacing: 0.1,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: accentColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        child: Icon(
+                          esImportante ? Icons.priority_high : Icons.notifications_active,
+                          color: accentColor,
+                          size: 18,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Contenido
-                Text(
-                  contenido,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 10),
-
-                // Footer con fecha y badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Fecha
-                    Row(
-                      children: [
-                        Icon(Icons.schedule, size: 13, color: Colors.black38),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatearFecha(fechaPublicacion),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          titulo,
                           style: const TextStyle(
-                            color: Colors.black38,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.black87,
+                            letterSpacing: 0.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          esImportante ? 'Importante' : 'Nueva',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    contenido,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 13,
+                      height: 1.45,
+                      fontWeight: FontWeight.w400,
                     ),
-
-                    // Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        esImportante ? 'Importante' : 'Nueva',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule, size: 13, color: Colors.black38),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatearFecha(fechaPublicacion),
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
+                          color: Colors.black38,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

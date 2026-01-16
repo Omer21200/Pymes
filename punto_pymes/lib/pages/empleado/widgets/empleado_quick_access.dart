@@ -45,7 +45,7 @@ class EmpleadoQuickAccess extends StatelessWidget {
         ...quickAccessItems.map((item) {
           final color = item['color'] as Color;
           final onTap = item['action'] as VoidCallback?;
-
+          
           return GestureDetector(
             onTap: onTap,
             child: Container(
@@ -56,7 +56,6 @@ class EmpleadoQuickAccess extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    // ignore: deprecated_member_use
                     color: Colors.black.withOpacity(0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
@@ -69,7 +68,6 @@ class EmpleadoQuickAccess extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      // ignore: deprecated_member_use
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -80,7 +78,7 @@ class EmpleadoQuickAccess extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
+                  
                   // Contenido
                   Expanded(
                     child: Column(
@@ -106,7 +104,7 @@ class EmpleadoQuickAccess extends StatelessWidget {
                       ],
                     ),
                   ),
-
+                  
                   // Icono de flecha
                   const Icon(
                     Icons.arrow_forward_ios,

@@ -111,7 +111,6 @@ class NotificationHelper {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
             color: backgroundColor.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -123,11 +122,14 @@ class NotificationHelper {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              // ignore: deprecated_member_use
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

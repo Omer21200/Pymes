@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
 import 'widgets/attendance_card.dart';
+import 'widgets/hora_internet_ecuador.dart';
 
 class ReportesPage extends StatefulWidget {
   const ReportesPage({super.key});
@@ -40,6 +41,9 @@ class _ReportesPageState extends State<ReportesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Reloj digital
+          const HoraInternetEcuador(),
+          const SizedBox(height: 24),
           const Text(
             'Historial de Asistencia',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
