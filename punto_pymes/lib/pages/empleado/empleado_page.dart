@@ -163,6 +163,7 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F8),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             Column(

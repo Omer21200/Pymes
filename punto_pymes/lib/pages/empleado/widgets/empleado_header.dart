@@ -21,8 +21,10 @@ class EmpleadoHeader extends StatelessWidget {
         .join()
         .toUpperCase();
 
+    final topPadding = MediaQuery.of(context).padding.top + 20;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: EdgeInsets.only(left: 20, right: 20, top: topPadding, bottom: 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
