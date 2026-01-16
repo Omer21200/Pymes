@@ -20,19 +20,19 @@ class EcuadorTimeManager {
 /// Widget profesional que obtiene la hora actual de Ecuador (America/Guayaquil)
 /// desde worldtimeapi.org y muestra un reloj sincronizado en tiempo real.
 class HoraInternetEcuador extends StatefulWidget {
-  const HoraInternetEcuador({super.key});
+  const HoraInternetEcuador({Key? key}) : super(key: key);
 
   @override
-  HoraInternetEcuadorState createState() => HoraInternetEcuadorState();
+  _HoraInternetEcuadorState createState() => _HoraInternetEcuadorState();
 
   /// Obtiene la hora actual de Ecuador del state del widget
   static DateTime? getEcuadorTime(BuildContext context) {
-    final state = context.findAncestorStateOfType<HoraInternetEcuadorState>();
+    final state = context.findAncestorStateOfType<_HoraInternetEcuadorState>();
     return state?._currentServerTime;
   }
 }
 
-class HoraInternetEcuadorState extends State<HoraInternetEcuador>
+class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
     with SingleTickerProviderStateMixin {
   DateTime? _serverTimeAtFetch;
   DateTime? _deviceTimeAtFetch;
@@ -63,26 +63,20 @@ class HoraInternetEcuadorState extends State<HoraInternetEcuador>
     });
 
     try {
-      final uri = Uri.parse(
-        'https://worldtimeapi.org/api/timezone/America/Guayaquil',
-      );
+      final uri = Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil');
       final httpClient = HttpClient();
       final request = await httpClient.getUrl(uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final response = await request.close().timeout(
-        const Duration(seconds: 10),
-      );
+      final response = await request.close().timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw HttpException('HTTP ${response.statusCode}');
       }
 
       final body = await response.transform(utf8.decoder).join();
-      final Map<String, dynamic> data =
-          jsonDecode(body) as Map<String, dynamic>;
+      final Map<String, dynamic> data = jsonDecode(body) as Map<String, dynamic>;
       final String datetimeStr = data['datetime'] as String;
-      final String timezone =
-          (data['timezone'] as String?) ?? 'America/Guayaquil';
+      final String timezone = (data['timezone'] as String?) ?? 'America/Guayaquil';
       final DateTime serverTime = DateTime.parse(datetimeStr).toUtc();
 
       setState(() {
@@ -146,7 +140,10 @@ class HoraInternetEcuadorState extends State<HoraInternetEcuador>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFD92344), Color(0xFFA81830)],
+          colors: [
+            Color(0xFFD92344),
+            Color(0xFFA81830),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -233,10 +230,7 @@ class HoraInternetEcuadorState extends State<HoraInternetEcuador>
               ),
             ] else if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 12,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -295,6 +289,7 @@ class HoraInternetEcuadorState extends State<HoraInternetEcuador>
                         color: Colors.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
+                      
                     ),
                   ],
                 ),
@@ -310,7 +305,7 @@ class HoraInternetEcuadorState extends State<HoraInternetEcuador>
                   ),
                 ),
               ),
-            ],
+            ]
           ],
         ),
       ),

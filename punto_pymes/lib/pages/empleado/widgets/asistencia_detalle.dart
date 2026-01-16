@@ -7,14 +7,13 @@ class AsistenciaDetalleScreen extends StatefulWidget {
   final String? fotoUrl;
 
   const AsistenciaDetalleScreen({
-    super.key,
+    Key? key,
     required this.asistencia,
     this.fotoUrl,
-  });
+  }) : super(key: key);
 
   @override
-  State<AsistenciaDetalleScreen> createState() =>
-      _AsistenciaDetalleScreenState();
+  State<AsistenciaDetalleScreen> createState() => _AsistenciaDetalleScreenState();
 }
 
 class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
@@ -37,7 +36,9 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
         Marker(
           markerId: const MarkerId('ubicacion_asistencia'),
           position: LatLng(latitud, longitud),
-          infoWindow: const InfoWindow(title: 'Ubicación de Registro'),
+          infoWindow: const InfoWindow(
+            title: 'Ubicación de Registro',
+          ),
         ),
       );
     }
@@ -91,7 +92,9 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
               Container(
                 width: double.infinity,
                 height: 250,
-                decoration: BoxDecoration(color: Colors.grey.shade200),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                ),
                 child: Image.network(
                   fotoUrl,
                   fit: BoxFit.cover,
@@ -102,10 +105,8 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
                         children: [
                           const Icon(Icons.image_not_supported, size: 48),
                           const SizedBox(height: 8),
-                          Text(
-                            'No se pudo cargar la foto',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
+                          Text('No se pudo cargar la foto',
+                              style: TextStyle(color: Colors.grey.shade600)),
                         ],
                       ),
                     );
@@ -130,11 +131,8 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          color: Color(0xFFD92344),
-                          size: 24,
-                        ),
+                        const Icon(Icons.calendar_today,
+                            color: Color(0xFFD92344), size: 24),
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,11 +175,8 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.login,
-                                    color: Colors.green,
-                                    size: 20,
-                                  ),
+                                  const Icon(Icons.login,
+                                      color: Colors.green, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Entrada',
@@ -219,11 +214,8 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.logout,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
+                                  const Icon(Icons.logout,
+                                      color: Colors.red, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Salida',
@@ -265,11 +257,8 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(
-                                Icons.location_on,
-                                color: Colors.blue,
-                                size: 20,
-                              ),
+                              const Icon(Icons.location_on,
+                                  color: Colors.blue, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Coordenadas GPS',
