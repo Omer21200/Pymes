@@ -46,7 +46,7 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
         'registros': registros,
       };
     } catch (e) {
-      print('Error cargando datos: $e');
+      debugPrint('Error cargando datos: $e');
       return {
         'entradas': 0,
         'salidas': 0,
@@ -255,7 +255,7 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
                                 ],
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
               ),

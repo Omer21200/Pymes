@@ -6,6 +6,7 @@ import 'widgets/empleado_header.dart';
 import '../../service/supabase_service.dart';
 import 'widgets/empleado_nav.dart';
 import 'widgets/empleado_sections.dart';
+import 'widgets/notification_helper.dart';
 import '../superadmin/logout_helper.dart';
 
 class EmpleadoPage extends StatefulWidget {
@@ -17,6 +18,7 @@ class EmpleadoPage extends StatefulWidget {
 
 class _EmpleadoPageState extends State<EmpleadoPage> {
   int _selectedTab = 0;
+  final GlobalKey _sectionsKey = GlobalKey();
 
   void _handleRegister() {
     _registerAttendance();
@@ -40,10 +42,17 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
           }
           if (permission == LocationPermission.deniedForever) {
             // Permiso denegado permanentemente -> no bloquear, sugerir ajuste
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permiso de ubicación denegado permanentemente. Actívalo en ajustes si deseas registrar coordenadas.')));
+            if (mounted) {
+              NotificationHelper.showWarningNotification(
+                context,
+                title: 'Permisos desactivados',
+                message: 'Activa permisos de ubicación en ajustes.',
+              );
+            }
             lat = null;
             lon = null;
-          } else if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+          } else if (permission == LocationPermission.always ||
+              permission == LocationPermission.whileInUse) {
             try {
               final pos = await Geolocator.getCurrentPosition(
                 locationSettings: const LocationSettings(
@@ -73,11 +82,15 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       String? uploadedUrl;
       try {
         final picker = ImagePicker();
-        final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 75);
+        final XFile? photo = await picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 75,
+        );
         if (photo != null) {
           // Subir la foto al storage: bucket 'fotos' en carpeta empleados/asistencias
           final user = SupabaseService.instance.currentUser;
-          final filename = 'empleados/asistencias/${user?.id ?? 'anon'}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final filename =
+              'empleados/asistencias/${user?.id ?? 'anon'}/${DateTime.now().millisecondsSinceEpoch}.jpg';
           try {
             uploadedUrl = await SupabaseService.instance.uploadFile(
               filePath: photo.path,
@@ -86,7 +99,13 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             );
           } catch (upErr) {
             uploadedUrl = null;
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error subiendo foto: ${upErr.toString()}')));
+            if (mounted) {
+              NotificationHelper.showErrorNotification(
+                context,
+                title: 'Error en la foto',
+                message: 'No se pudo subir. Continuando sin ella.',
+              );
+            }
           }
         }
       } catch (camErr) {
@@ -94,17 +113,56 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       }
 
       // 3) Registrar asistencia enviando lat/lon y fotoUrl si disponibles
-      final resp = await SupabaseService.instance.registrarAsistencia(latitud: lat, longitud: lon, fotoUrl: uploadedUrl);
+      final resp = await SupabaseService.instance.registrarAsistencia(
+        latitud: lat,
+        longitud: lon,
+        fotoUrl: uploadedUrl,
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Asistencia registrada: ${resp['id'] ?? ''}')),
-        );
+        final horaEntrada = resp['hora_entrada'] ?? '';
+        final horaSalida = resp['hora_salida'];
+
+        if (horaSalida != null) {
+          NotificationHelper.showSuccessNotification(
+            context,
+            title: '¡Salida registrada!',
+            message: 'Tu salida ha sido registrada a las $horaSalida',
+          );
+        } else {
+          NotificationHelper.showSuccessNotification(
+            context,
+            title: '¡Entrada registrada!',
+            message: 'Tu entrada ha sido registrada a las $horaEntrada',
+          );
+        }
+
+        // Refrescar reportes después de registro exitoso
+        (_sectionsKey.currentState as dynamic)?.refreshReportes();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error registro asistencia: ${e.toString()}')),
-        );
+        final errorMessage = e.toString();
+
+        // Determinar si es un error de duplicado
+        if (errorMessage.contains('registraste entrada y salida')) {
+          NotificationHelper.showWarningNotification(
+            context,
+            title: 'Registro completo',
+            message: 'Ya registraste entrada y salida para hoy.',
+          );
+        } else if (errorMessage.contains('Empleado no encontrado')) {
+          NotificationHelper.showErrorNotification(
+            context,
+            title: 'Error de configuración',
+            message: 'Completa tu perfil primero.',
+          );
+        } else {
+          NotificationHelper.showErrorNotification(
+            context,
+            title: 'Error al registrar',
+            message: 'Intenta de nuevo.',
+          );
+        }
       }
     }
   }
@@ -123,15 +181,18 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             FutureBuilder<Map<String, dynamic>?>(
               future: SupabaseService.instance.getEmpleadoActual(),
               builder: (context, snapshot) {
-                final loading = snapshot.connectionState == ConnectionState.waiting;
+                final loading =
+                    snapshot.connectionState == ConnectionState.waiting;
                 final data = snapshot.data;
-                final nombre = data?['nombre_completo'] ?? (loading ? 'Cargando...' : 'Sin nombre');
+                final nombre =
+                    data?['nombre_completo'] ??
+                    (loading ? 'Cargando...' : 'Sin nombre');
                 final rol = data?['rol'] ?? '';
                 final afiliacion = loading
                     ? 'Obteniendo datos'
                     : rol == 'EMPLEADO'
-                        ? 'Empleado'
-                        : (rol.isEmpty ? 'Rol desconocido' : rol);
+                    ? 'Empleado'
+                    : (rol.isEmpty ? 'Rol desconocido' : rol);
                 return EmpleadoHeader(
                   name: nombre,
                   affiliation: afiliacion,
@@ -142,11 +203,19 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: EmpleadoSections(tabIndex: _selectedTab),
+                child: EmpleadoSections(
+                  key: _sectionsKey,
+                  tabIndex: _selectedTab,
+                  onNavigateTab: (tab) => setState(() => _selectedTab = tab),
+                  onRegistrarAsistencia: _handleRegister,
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: EmpleadoNav(
                 currentIndex: _selectedTab,
                 onTabSelected: _handleTabChange,

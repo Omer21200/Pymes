@@ -5,12 +5,7 @@ class EmpleadoNav extends StatefulWidget {
   final ValueChanged<int> onTabSelected;
   final VoidCallback? onRegister;
 
-  const EmpleadoNav({
-    super.key,
-    required this.currentIndex,
-    required this.onTabSelected,
-    this.onRegister,
-  });
+  const EmpleadoNav({super.key, required this.currentIndex, required this.onTabSelected, this.onRegister});
 
   static const _tabs = [
     {'icon': Icons.home, 'label': 'Inicio'},
@@ -30,9 +25,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
   void initState() {
     super.initState();
     _keys = List.generate(EmpleadoNav._tabs.length, (_) => GlobalKey());
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _scrollToIndex(widget.currentIndex),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(widget.currentIndex));
   }
 
   @override
@@ -40,30 +33,19 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentIndex != widget.currentIndex) {
       // center new index
-      Future.delayed(
-        const Duration(milliseconds: 160),
-        () => _scrollToIndex(widget.currentIndex),
-      );
+      Future.delayed(const Duration(milliseconds: 160), () => _scrollToIndex(widget.currentIndex));
     }
   }
 
   void _onTap(int index) {
     widget.onTabSelected(index);
-    Future.delayed(
-      const Duration(milliseconds: 160),
-      () => _scrollToIndex(index),
-    );
+    Future.delayed(const Duration(milliseconds: 160), () => _scrollToIndex(index));
   }
 
   void _scrollToIndex(int index) {
     final ctx = _keys[index].currentContext;
     if (ctx == null) return;
-    Scrollable.ensureVisible(
-      ctx,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      alignment: 0.5,
-    );
+    Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.5);
   }
 
   double _computeWidthForLabel(String label, bool selected) {
@@ -91,12 +73,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
         color: selected ? primary : Colors.white,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
-          if (!selected)
-            const BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
+          if (!selected) const BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
         ],
       ),
       child: Row(
@@ -108,11 +85,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
             Flexible(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                 overflow: TextOverflow.visible,
                 maxLines: 1,
                 softWrap: false,
@@ -139,13 +112,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 12,
-              offset: Offset(0, 6),
-            ),
-          ],
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 6))],
         ),
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -154,24 +121,15 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (
-                int index = 0;
-                index < EmpleadoNav._tabs.length;
-                index++
-              ) ...[
+              for (int index = 0; index < EmpleadoNav._tabs.length; index++) ...[
                 KeyedSubtree(
                   key: _keys[index],
                   child: GestureDetector(
                     onTap: () => _onTap(index),
-                    child: _buildItem(
-                      EmpleadoNav._tabs[index]['icon'] as IconData,
-                      EmpleadoNav._tabs[index]['label'] as String,
-                      index,
-                    ),
+                    child: _buildItem(EmpleadoNav._tabs[index]['icon'] as IconData, EmpleadoNav._tabs[index]['label'] as String, index),
                   ),
                 ),
-                if (index != EmpleadoNav._tabs.length - 1)
-                  const SizedBox(width: 8),
+                if (index != EmpleadoNav._tabs.length - 1) const SizedBox(width: 8),
               ],
               const SizedBox(width: 10),
               GestureDetector(
@@ -182,13 +140,7 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Color(0xFFD92344),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
+                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
                   ),
                   child: const Icon(Icons.add, color: Colors.white, size: 28),
                 ),

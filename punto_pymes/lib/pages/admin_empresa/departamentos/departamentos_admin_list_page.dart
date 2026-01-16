@@ -301,30 +301,33 @@ class _DepartamentosAdminListPageState
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_departamentos',
         onPressed: () async {
-          // Guardar context antes del gap async
-          final buildContext = context;
           // Obtener empresa id para pasar a la pantalla de creación
           final empleado = await SupabaseService.instance.getEmpleadoActual();
           if (!mounted) return;
           final empresaId = empleado?['empresa_id']?.toString();
           if (empresaId == null) {
-            ScaffoldMessenger.of(buildContext).showSnackBar(
-              const SnackBar(
-                content: Text('No se encontró la empresa asociada.'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            if (mounted) {
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No se encontró la empresa asociada.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
             return;
           }
 
-          final result = await Navigator.of(buildContext).push<bool>(
-            MaterialPageRoute(
-              builder: (_) => CreacionDepartamentos(empresaId: empresaId),
-            ),
-          );
-          if (!mounted) return;
-          if (result == true) {
-            await _fetchDepartamentos();
+          if (mounted) {
+            // ignore: use_build_context_synchronously
+            final result = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => CreacionDepartamentos(empresaId: empresaId),
+              ),
+            );
+            if (mounted && result == true) {
+              await _fetchDepartamentos();
+            }
           }
         },
         icon: const Icon(Icons.add, color: Colors.white),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+import 'widgets/notification_card.dart';
+import 'widgets/notification_stats.dart';
 
 class NotificacionPage extends StatelessWidget {
   const NotificacionPage({super.key});
@@ -38,184 +40,107 @@ class _NotificacionViewState extends State<NotificacionView> {
     _noticiasFuture = SupabaseService.instance.getNoticiasUsuario();
   }
 
-  Widget _buildNotificationCard(Map<String, dynamic> notification) {
-    final titulo = notification['titulo'] ?? '';
-    final contenido = notification['contenido'] ?? '';
-    final fechaPublicacion = notification['fecha_publicacion'] ?? '';
-    final esImportante = notification['es_importante'] ?? false;
-
-    String formatearFecha(String fecha) {
-      try {
-        final date = DateTime.parse(fecha);
-        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-      } catch (e) {
-        return fecha;
-      }
-    }
-
-    final themeColor = esImportante ? Colors.redAccent : Colors.blue;
-    final backgroundColor = esImportante ? const Color(0xFFFDEFF0) : Colors.white;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                esImportante ? Icons.priority_high : Icons.notifications,
-                color: themeColor,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  titulo,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: esImportante ? Colors.redAccent : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  esImportante ? 'Importante' : 'Nueva',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            contenido,
-            style: const TextStyle(color: Colors.black54),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.schedule, size: 14, color: Colors.black45),
-              const SizedBox(width: 6),
-              Text(
-                formatearFecha(fechaPublicacion),
-                style: const TextStyle(color: Colors.black45, fontSize: 12),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _noticiasFuture,
       builder: (context, snapshot) {
-        List<Map<String, dynamic>> noticias = [];
-        int totalNoticias = 0;
-        int noticiasNuevas = 0;
-
+        // Estado: Cargando
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Estado: Error
         if (snapshot.hasError) {
           return Center(
-            child: Text('Error: ${snapshot.error}'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
-        if (snapshot.hasData) {
-          noticias = snapshot.data ?? [];
-          totalNoticias = noticias.length;
-          noticiasNuevas = noticias.where((n) => n['es_importante'] ?? false).length;
+        // Preparar datos
+        final noticias = snapshot.data ?? [];
+        final totalNoticias = noticias.length;
+        final noticiasNuevas = noticias.where((n) => n['es_importante'] ?? false).length;
+
+        // Estado: Sin datos
+        if (noticias.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.inbox, color: Colors.black26, size: 64),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay noticias disponibles',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
+        // Estado: Con datos
         return SingleChildScrollView(
           child: Padding(
             padding: widget.padding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Mensajes y actualizaciones', style: TextStyle(color: Colors.black54)),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFAD1D1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFEEEEEE)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.add_alert, color: Colors.black45),
-                            const SizedBox(height: 12),
-                            const Text('Nuevas', style: TextStyle(color: Colors.black54, fontSize: 14)),
-                            const SizedBox(height: 8),
-                            Text(
-                              noticiasNuevas.toString(),
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFEEEEEE)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.inbox, color: Colors.black45),
-                            const SizedBox(height: 12),
-                            const Text('Total', style: TextStyle(color: Colors.black54, fontSize: 14)),
-                            const SizedBox(height: 8),
-                            Text(
-                              totalNoticias.toString(),
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                // Estadísticas
+                NotificationStats(
+                  noticiasNuevas: noticiasNuevas,
+                  totalNoticias: totalNoticias,
                 ),
+                const SizedBox(height: 28),
+
+                // Título de lista
+                const Text(
+                  'Historial de notificaciones',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Lista de notificaciones
+                ...noticias.map((notification) {
+                  final titulo = notification['titulo'] ?? '';
+                  final contenido = notification['contenido'] ?? '';
+                  final fechaPublicacion = notification['fecha_publicacion'] ?? '';
+                  final esImportante = notification['es_importante'] ?? false;
+
+                  return NotificationCard(
+                    titulo: titulo,
+                    contenido: contenido,
+                    fechaPublicacion: fechaPublicacion,
+                    esImportante: esImportante,
+                  );
+                }),
                 const SizedBox(height: 20),
-                if (noticias.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(
-                      child: Text(
-                        'No hay noticias disponibles',
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    ),
-                  )
-                else
-                  ...noticias.map(_buildNotificationCard),
               ],
             ),
           ),

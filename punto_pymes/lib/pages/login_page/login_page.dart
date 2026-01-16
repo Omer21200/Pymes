@@ -62,8 +62,9 @@ class _LoginPageState extends State<LoginPage> {
       await SupabaseService.instance.refreshSession();
       final profile = await SupabaseService.instance.getMyProfile();
 
-      if (profile == null)
+      if (profile == null) {
         throw Exception('No se encontró el perfil del usuario.');
+      }
 
       final rol = profile['rol'] as String?;
       final userEmpresaId = profile['empresa_id'] as String?;
@@ -358,9 +359,7 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Acción para recuperar contraseña
-                    },
+                    onPressed: () {},
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
                       style: TextStyle(

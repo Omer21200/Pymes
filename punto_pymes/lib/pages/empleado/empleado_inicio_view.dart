@@ -1,0 +1,145 @@
+import 'package:flutter/material.dart';
+import '../../service/supabase_service.dart';
+import 'widgets/empleado_stats_card.dart';
+import 'widgets/empleado_quick_access.dart';
+import 'widgets/empleado_news_section.dart';
+
+class EmpleadoInicioView extends StatefulWidget {
+  final ValueChanged<int>? onNavigateTab;
+  final VoidCallback? onRegistrarAsistencia;
+
+  const EmpleadoInicioView({
+    super.key,
+    this.onNavigateTab,
+    this.onRegistrarAsistencia,
+  });
+
+  @override
+  State<EmpleadoInicioView> createState() => _EmpleadoInicioViewState();
+}
+
+class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
+  late Future<Map<String, dynamic>> _estadisticasFuture;
+  late Future<List<Map<String, dynamic>>> _noticiasFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _estadisticasFuture = SupabaseService.instance.getEmpleadoEstadisticas();
+    _noticiasFuture = SupabaseService.instance.getNoticiasUsuario();
+  }
+
+  void _navigateToRegistrar() {
+    // Llamar al callback de registrar que viene del padre
+    widget.onRegistrarAsistencia?.call();
+  }
+
+  void _navigateToReportes() {
+    // Navegar a la pestaña de Reportes (tab 2)
+    widget.onNavigateTab?.call(2);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(top: 16, bottom: 140),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Encabezado de bienvenida
+          const Text(
+            'Bienvenido',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.black87,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tu espacio de empleado',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Estadísticas
+          FutureBuilder<Map<String, dynamic>>(
+            future: _estadisticasFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Error al cargar estadísticas',
+                    style: TextStyle(color: Colors.red.shade500),
+                  ),
+                );
+              }
+
+              final stats = snapshot.data ?? {};
+              
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: EmpleadoStatsCard(
+                      label: 'Asistencias',
+                      value: '${stats['dias_asistidos'] ?? 0}',
+                      icon: Icons.check_circle,
+                      color: const Color(0xFFD92344),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: EmpleadoStatsCard(
+                      label: 'A tiempo',
+                      value: '${stats['a_tiempo'] ?? 0}',
+                      icon: Icons.thumb_up,
+                      color: const Color(0xFF4CAF50),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: EmpleadoStatsCard(
+                      label: 'Tardanzas',
+                      value: '${stats['tardanzas'] ?? 0}',
+                      icon: Icons.schedule,
+                      color: const Color(0xFFFFA500),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // Accesos rápidos
+          EmpleadoQuickAccess(
+            onRegistrarPressed: _navigateToRegistrar,
+            onReportesPressed: _navigateToReportes,
+          ),
+          const SizedBox(height: 24),
+
+          // Divider
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 20),
+
+          // Noticias y anuncios
+          EmpleadoNewsSection(noticiasFuture: _noticiasFuture),
+        ],
+      ),
+    );
+  }
+}

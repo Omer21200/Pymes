@@ -878,4 +878,66 @@ class SupabaseService {
       return [];
     }
   }
+
+  /// Obtiene las estadísticas de asistencia del empleado autenticado.
+  /// Retorna un mapa con: dias_asistidos, a_tiempo, tardanzas
+  Future<Map<String, dynamic>> getEmpleadoEstadisticas() async {
+    try {
+      final user = currentUser;
+      if (user == null) throw Exception('Usuario no autenticado');
+
+      // Obtener empleado_id del usuario actual
+      final empleado = await client
+          .from('empleados')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (empleado == null) throw Exception('Empleado no encontrado');
+      final empleadoId = empleado['id'] as String;
+
+      // Obtener asistencias del empleado del mes actual
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(
+        now.year,
+        now.month,
+        1,
+      ).toIso8601String().split('T').first;
+
+      final response = await client
+          .from('asistencias')
+          .select('estado, hora_entrada, hora_salida')
+          .eq('empleado_id', empleadoId)
+          .gte('fecha', firstDayOfMonth);
+
+      final asistencias = (response as List).cast<Map<String, dynamic>>();
+
+      int diasAsistidos = 0;
+      int aTiempo = 0;
+      int tardanzas = 0;
+
+      for (final registro in asistencias) {
+        final estado = registro['estado'] as String?;
+        if (estado == 'presente') {
+          diasAsistidos++;
+          // Verificar si fue a tiempo (sin tardanza)
+          if (estado != 'tardanza') {
+            aTiempo++;
+          }
+        }
+        if (estado == 'tardanza') {
+          tardanzas++;
+        }
+      }
+
+      return {
+        'dias_asistidos': diasAsistidos,
+        'a_tiempo': aTiempo,
+        'tardanzas': tardanzas,
+      };
+    } catch (e) {
+      debugPrint('Error en getEmpleadoEstadisticas: $e');
+      return {'dias_asistidos': 0, 'a_tiempo': 0, 'tardanzas': 0};
+    }
+  }
 }
