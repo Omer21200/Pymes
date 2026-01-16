@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 
@@ -283,7 +284,7 @@ class SupabaseService {
     } catch (e) {
       // Manejar el error, por ejemplo, si el nombre ya existe para esa empresa
       // o si hay un problema de permisos.
-      print('Error al crear el departamento: $e');
+      debugPrint('Error al crear el departamento: $e');
       throw Exception('No se pudo crear el departamento');
     }
   }
@@ -317,7 +318,7 @@ class SupabaseService {
         .select()
         .eq('id', departamentoId)
         .maybeSingle();
-    return response as Map<String, dynamic>?;
+    return response;
   }
 
   /// Actualiza los campos de un departamento.
@@ -446,7 +447,7 @@ class SupabaseService {
       );
       return response as bool? ?? false;
     } catch (e) {
-      print('Error marcando noticia como leída: $e');
+      debugPrint('Error marcando noticia como leída: $e');
       return false;
     }
   }
@@ -555,7 +556,7 @@ class SupabaseService {
             .replaceAll('%20', ' ');
         await deleteFile(bucketName: 'fotos', filePath: 'noticias/$path');
       } catch (e) {
-        print('No se pudo eliminar la imagen del storage: $e');
+        debugPrint('No se pudo eliminar la imagen del storage: $e');
       }
     }
   }
@@ -737,10 +738,11 @@ class SupabaseService {
         .select()
         .eq('user_id', user.id)
         .maybeSingle();
-    if (empleado == null)
+    if (empleado == null) {
       throw Exception(
         'Empleado no encontrado. Ejecuta el flujo de registro y confirmación primero.',
       );
+    }
     final empleadoId = empleado['id'] as String;
 
     // Fecha de hoy (YYYY-MM-DD)
@@ -834,7 +836,7 @@ class SupabaseService {
       // Opcional: ordenar por hora entrada desc
       return lista.take(5).toList();
     } catch (e) {
-      print('Error en getUltimosRegistros: $e');
+      debugPrint('Error en getUltimosRegistros: $e');
       return [];
     }
   }
@@ -872,7 +874,7 @@ class SupabaseService {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
     } catch (e) {
-      print('Error en getHistorialAsistencias: $e');
+      debugPrint('Error en getHistorialAsistencias: $e');
       return [];
     }
   }

@@ -83,6 +83,8 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
 
   @override
   Widget build(BuildContext context) {
+    const Color brandRed = Color(0xFFE2183D);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
@@ -101,64 +103,74 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        _iconChip(
+                          icon: Icons.arrow_back,
+                          tooltip: 'Regresar',
+                          bgColor: Colors.grey.withValues(alpha: 0.12),
+                          iconColor: Colors.grey.shade800,
+                          onTap: () => Navigator.of(context).pop(),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _isEditing
                               ? TextField(
                                   controller: _nombreController,
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: 'Nombre del departamento',
+                                  decoration: _styledInputDecoration(
+                                    label: 'Nombre del departamento',
+                                    accent: brandRed,
                                   ),
                                 )
                               : Text(
                                   _nombreController.text.isNotEmpty
                                       ? _nombreController.text
                                       : widget.departamentoNombre,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.black87,
+                                    letterSpacing: -0.1,
+                                  ),
                                 ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         if (!_isEditing)
-                          IconButton(
-                            onPressed: () {
+                          _iconChip(
+                            icon: Icons.edit,
+                            tooltip: 'Editar',
+                            bgColor: brandRed,
+                            iconColor: Colors.white,
+                            onTap: () {
                               setState(() => _isEditing = true);
                             },
-                            icon: const Icon(Icons.edit),
-                            tooltip: 'Editar',
                           ),
                         if (_isEditing) ...[
-                          IconButton(
-                            onPressed: _isSaving
+                          _iconChip(
+                            icon: _isSaving ? Icons.hourglass_top : Icons.save,
+                            tooltip: 'Guardar',
+                            bgColor: brandRed.withValues(alpha: 0.1),
+                            iconColor: brandRed,
+                            onTap: _isSaving
                                 ? null
                                 : () async {
                                     await _saveDepartamento();
                                   },
-                            icon: const Icon(Icons.save),
-                            tooltip: 'Guardar',
                           ),
-                          IconButton(
-                            onPressed: _isSaving
+                          const SizedBox(width: 8),
+                          _iconChip(
+                            icon: Icons.close,
+                            tooltip: 'Cancelar edición',
+                            bgColor: Colors.grey.withValues(alpha: 0.12),
+                            iconColor: Colors.grey.shade800,
+                            onTap: _isSaving
                                 ? null
                                 : () {
                                     _fetchDepartamentoDetails();
                                     setState(() => _isEditing = false);
                                   },
-                            icon: const Icon(Icons.cancel_outlined),
-                            tooltip: 'Cancelar',
                           ),
                         ],
-                        const SizedBox(width: 4),
-                        IconButton(
-                          onPressed: () {
-                            if (mounted) Navigator.of(context).pop();
-                          },
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Cerrar',
-                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -166,9 +178,9 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
                         ? TextField(
                             controller: _descripcionController,
                             maxLines: 3,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                              labelText: 'Descripción',
+                            decoration: _styledInputDecoration(
+                              label: 'Descripción',
+                              accent: brandRed,
                             ),
                           )
                         : Padding(
@@ -182,15 +194,18 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
                           ),
                     const SizedBox(height: 16),
                     Container(
-                      // Fondo suave azul inspirado en las tarjetas del dashboard
+                      // Fondo azul muy suave para evitar saturación visual
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6F0FF),
+                        color: const Color(0xFFF4F7FF),
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFCED6F3).withValues(alpha: 0.7),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 12,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -202,6 +217,21 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFE2183D,
+                                    ).withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.access_time,
+                                    color: Color(0xFFE2183D),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -308,40 +338,139 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
         .map((e) => e.key)
         .join(', ');
 
-    const titleStyle = TextStyle(
-      fontSize: 15,
-      fontWeight: FontWeight.w600,
-      color: Colors.black87,
-    );
-
-    const valueStyle = TextStyle(fontSize: 14, color: Colors.black87);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 4),
-        const Text('Días Laborables', style: titleStyle),
-        const SizedBox(height: 4),
-        Text(
-          diasLaborables.isNotEmpty ? diasLaborables : 'Ninguno',
-          style: valueStyle,
+        _infoRow(
+          title: 'Días Laborables',
+          subtitle: 'Días activos para asistencia.',
+          value: diasLaborables.isNotEmpty ? diasLaborables : 'Ninguno',
         ),
-        const SizedBox(height: 24),
-        const Text('Hora de Entrada', style: titleStyle),
-        const SizedBox(height: 4),
-        Text(_horario!['hora_entrada'] ?? 'N/A', style: valueStyle),
-        const SizedBox(height: 24),
-        const Text('Hora de Salida', style: titleStyle),
-        const SizedBox(height: 4),
-        Text(_horario!['hora_salida'] ?? 'N/A', style: valueStyle),
-        const SizedBox(height: 24),
-        const Text('Tolerancia de Entrada', style: titleStyle),
-        const SizedBox(height: 4),
-        Text(
-          '${_horario!["tolerancia_entrada_minutos"] ?? 0} minutos',
-          style: valueStyle,
+        const SizedBox(height: 12),
+        const Divider(height: 1, color: Color(0xFFE3E6EE)),
+        const SizedBox(height: 12),
+        _infoRow(
+          title: 'Hora de Entrada',
+          subtitle: 'Hora a la que inicia la jornada.',
+          valueChip: _horario!['hora_entrada'] ?? 'N/A',
+        ),
+        const SizedBox(height: 12),
+        _infoRow(
+          title: 'Hora de Salida',
+          subtitle: 'Hora a la que termina la jornada.',
+          valueChip: _horario!['hora_salida'] ?? 'N/A',
+        ),
+        const SizedBox(height: 12),
+        _infoRow(
+          title: 'Tolerancia de Entrada',
+          subtitle: 'Minutos ?e gracia para marcar.',
+          valueChip: '${_horario!["tolerancia_entrada_minutos"] ?? 0} minutos',
         ),
       ],
+    );
+  }
+
+  Widget _infoRow({
+    required String title,
+    required String subtitle,
+    String? value,
+    String? valueChip,
+  }) {
+    final bool stackedValue = value != null && valueChip == null;
+
+    if (stackedValue) {
+      // Usar layout vertical cuando queremos que el valor aparezca debajo del subtítulo
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        if (value != null)
+          Flexible(
+            fit: FlexFit.loose,
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        if (valueChip != null)
+          Flexible(
+            fit: FlexFit.loose,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _valueChip(valueChip),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _valueChip(String text) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8, top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F2F7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFCED6F3).withValues(alpha: 0.7),
+        ),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          color: Color(0xFF3C4259),
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 
@@ -386,5 +515,63 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
     _nombreController.dispose();
     _descripcionController.dispose();
     super.dispose();
+  }
+
+  InputDecoration _styledInputDecoration({
+    required String label,
+    required Color accent,
+  }) {
+    const Color softFill = Color(0xFFFDFDFE);
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: softFill,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: accent, width: 1.6),
+      ),
+      labelStyle: const TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.w700,
+      ),
+      hintStyle: const TextStyle(color: Colors.black45),
+    );
+  }
+
+  Widget _iconChip({
+    required IconData icon,
+    required String tooltip,
+    required Color bgColor,
+    required Color iconColor,
+    VoidCallback? onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 18, color: iconColor),
+        ),
+      ),
+    );
   }
 }

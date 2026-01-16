@@ -44,8 +44,16 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
     ];
 
     final quickAccess = [
-      {'label': 'Registrar', 'subtitle': 'Marcar asistencia', 'icon': Icons.access_time},
-      {'label': 'Reportes', 'subtitle': 'Ver historial', 'icon': Icons.description},
+      {
+        'label': 'Registrar',
+        'subtitle': 'Marcar asistencia',
+        'icon': Icons.access_time,
+      },
+      {
+        'label': 'Reportes',
+        'subtitle': 'Ver historial',
+        'icon': Icons.description,
+      },
     ];
 
     return SingleChildScrollView(
@@ -53,84 +61,141 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Bienvenido', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          const Text(
+            'Bienvenido',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
           const SizedBox(height: 4),
-          const Text('Tu espacio de empleado', style: TextStyle(color: Colors.black54)),
+          const Text(
+            'Tu espacio de empleado',
+            style: TextStyle(color: Colors.black54),
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: stats
                 .map(
                   (item) => Expanded(
-                    child: _buildTinyCard(item['label'] as String, item['value'] as String, item['icon'] as IconData),
+                    child: _buildTinyCard(
+                      item['label'] as String,
+                      item['value'] as String,
+                      item['icon'] as IconData,
+                    ),
                   ),
                 )
                 .toList(),
           ),
           const SizedBox(height: 16),
-          const Text('Accesos rápidos', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Row(
-            children: quickAccess
-                .map(
-                  (item) => Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(backgroundColor: Colors.red.shade50, child: Icon(item['icon'] as IconData, color: Colors.white)),
-                          const SizedBox(height: 12),
-                          Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Text(item['subtitle'] as String, style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-                .toList()
-              ..removeLast(),
+          const Text(
+            'Accesos rápidos',
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
-          ...quickAccess
-              .map(
-                (item) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(backgroundColor: Colors.blue.shade50, child: Icon(item['icon'] as IconData, color: Colors.blue)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item['label'] as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(item['subtitle'] as String, style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                          ],
+          Row(
+            children:
+                quickAccess
+                    .map(
+                      (item) => Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.red.shade50,
+                                child: Icon(
+                                  item['icon'] as IconData,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                item['label'] as String,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item['subtitle'] as String,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    )
+                    .toList()
+                  ..removeLast(),
+          ),
+          const SizedBox(height: 8),
+          ...quickAccess.map(
+            (item) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
                   ),
-                ),
+                ],
               ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.blue.shade50,
+                    child: Icon(item['icon'] as IconData, color: Colors.blue),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['label'] as String,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item['subtitle'] as String,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 8),
-          const Text('Noticias y anuncios', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text(
+            'Noticias y anuncios',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _noticiasFuture,
@@ -185,14 +250,19 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundColor: Colors.red.shade50, child: Icon(icon, color: Colors.white, size: 18)),
+              CircleAvatar(
+                backgroundColor: Colors.red.shade50,
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -205,7 +275,10 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -232,7 +305,9 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
       decoration: BoxDecoration(
         color: esImportante ? Colors.red.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +350,9 @@ class _EmpleadoSectionsState extends State<EmpleadoSections> {
   }
 
   Widget _buildNotifications(BuildContext context) {
-    return const NotificacionView(padding: EdgeInsets.only(top: 16, bottom: 140));
+    return const NotificacionView(
+      padding: EdgeInsets.only(top: 16, bottom: 140),
+    );
   }
 
   Widget _buildReports(BuildContext context) {

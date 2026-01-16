@@ -301,12 +301,14 @@ class _DepartamentosAdminListPageState
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_departamentos',
         onPressed: () async {
+          // Guardar context antes del gap async
+          final buildContext = context;
           // Obtener empresa id para pasar a la pantalla de creación
           final empleado = await SupabaseService.instance.getEmpleadoActual();
           if (!mounted) return;
           final empresaId = empleado?['empresa_id']?.toString();
           if (empresaId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(buildContext).showSnackBar(
               const SnackBar(
                 content: Text('No se encontró la empresa asociada.'),
                 backgroundColor: Colors.red,
@@ -315,7 +317,7 @@ class _DepartamentosAdminListPageState
             return;
           }
 
-          final result = await Navigator.of(context).push<bool>(
+          final result = await Navigator.of(buildContext).push<bool>(
             MaterialPageRoute(
               builder: (_) => CreacionDepartamentos(empresaId: empresaId),
             ),

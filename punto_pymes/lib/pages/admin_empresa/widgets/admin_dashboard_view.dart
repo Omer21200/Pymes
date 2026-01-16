@@ -180,8 +180,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     ), // Bordes bien redondeados
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(
-                          0.04,
+                        color: Colors.black.withValues(
+                          alpha: 0.04,
                         ), // Sombra muy sutil
                         blurRadius: 15,
                         offset: const Offset(0, 5),
@@ -198,7 +198,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           Icon(
                             Icons.assignment_outlined,
                             size: 80,
-                            color: const Color(0xFFD32F2F).withOpacity(0.8),
+                            color: const Color(
+                              0xFFD32F2F,
+                            ).withValues(alpha: 0.8),
                           ),
                           Container(
                             padding: const EdgeInsets.all(4),
@@ -273,7 +275,7 @@ class _StatCard extends StatelessWidget {
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [color.withOpacity(0.8), color],
+      colors: [color.withValues(alpha: 0.8), color],
     );
 
     return Container(
@@ -282,7 +284,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.25),
+            color: color.withValues(alpha: 0.25),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -313,7 +315,7 @@ class _StatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(icon, color: Colors.white, size: 20),

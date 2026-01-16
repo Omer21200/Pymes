@@ -219,7 +219,7 @@ class _LoginPageState extends State<LoginPage> {
       title = 'Acceso Super Admin';
       subtitle = 'Ingresa tus credenciales maestras';
       logoWidget = Image.asset(
-        'assets/images/pymes.png', // Logo principal de la app
+        'assets/images/logo.png', // Logo principal de la app
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) =>
             const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
@@ -271,21 +271,18 @@ class _LoginPageState extends State<LoginPage> {
                   height: 100,
                   width: 100,
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(
-                          26,
-                        ), // Corrección de withOpacity
+                        color: Colors.black.withAlpha(26),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.zero,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     child: logoWidget,
                   ),
                 ),
@@ -361,45 +358,8 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () async {
-                      final email = _emailController.text.trim();
-
-                      if (email.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Ingresa tu correo para recuperar tu contraseña.',
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      try {
-                        await SupabaseService.instance.client.auth
-                            .resetPasswordForEmail(email);
-
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Te hemos enviado un enlace para restablecer tu contraseña.',
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'No se pudo enviar el correo de recuperación: $e',
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
+                    onPressed: () {
+                      // TODO: Acción para recuperar contraseña
                     },
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
