@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
@@ -29,7 +30,7 @@ class SupabaseService {
         await client.auth.refreshSession();
       }
     } catch (e) {
-      print('⚠️ Error refrescando sesión: $e');
+      developer.log('⚠️ Error refrescando sesión: $e', name: 'SupabaseService');
     }
   }
 
@@ -76,11 +77,11 @@ class SupabaseService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final datetimeStr = data['datetime'] as String;
         final dt = DateTime.parse(datetimeStr).toUtc();
-        print('✓ Hora de Ecuador (internet): ${dt.hour}:${dt.minute}:${dt.second}');
+        developer.log('✓ Hora de Ecuador (internet): ${dt.hour}:${dt.minute}:${dt.second}', name: 'SupabaseService');
         return dt;
       }
     } catch (e) {
-      print('⚠️ Error obteniendo hora de Ecuador: $e');
+      developer.log('⚠️ Error obteniendo hora de Ecuador: $e', name: 'SupabaseService');
     }
     return DateTime.now();
   }
@@ -101,7 +102,7 @@ class SupabaseService {
           .toList();
       return list;
     } catch (e) {
-      print('❌ Error en getEmpresas: $e');
+      developer.log('❌ Error en getEmpresas: $e', name: 'SupabaseService');
       // Intentar refrescar sesión y reintentar una vez
       try {
         await client.auth.refreshSession();
@@ -113,8 +114,8 @@ class SupabaseService {
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
         return list;
-      } catch (retryError) {
-        print('❌ Error en getEmpresas (reintento): $retryError');
+        } catch (retryError) {
+        developer.log('❌ Error en getEmpresas (reintento): $retryError', name: 'SupabaseService');
         rethrow;
       }
     }
@@ -341,7 +342,7 @@ class SupabaseService {
     } catch (e) {
       // Manejar el error, por ejemplo, si el nombre ya existe para esa empresa
       // o si hay un problema de permisos.
-      print('Error al crear el departamento: $e');
+      developer.log('Error al crear el departamento: $e', name: 'SupabaseService');
       throw Exception('No se pudo crear el departamento');
     }
   }
@@ -504,7 +505,7 @@ class SupabaseService {
       );
       return response as bool? ?? false;
     } catch (e) {
-      print('Error marcando noticia como leída: $e');
+      developer.log('Error marcando noticia como leída: $e', name: 'SupabaseService');
       return false;
     }
   }
@@ -613,7 +614,7 @@ class SupabaseService {
             .replaceAll('%20', ' ');
         await deleteFile(bucketName: 'fotos', filePath: 'noticias/$path');
       } catch (e) {
-        print('No se pudo eliminar la imagen del storage: $e');
+        developer.log('No se pudo eliminar la imagen del storage: $e', name: 'SupabaseService');
       }
     }
   }
@@ -948,7 +949,7 @@ class SupabaseService {
       // Opcional: ordenar por hora entrada desc
       return lista.take(5).toList();
     } catch (e) {
-      print('Error en getUltimosRegistros: $e');
+      developer.log('Error en getUltimosRegistros: $e', name: 'SupabaseService');
       return [];
     }
   }
@@ -986,7 +987,7 @@ class SupabaseService {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
     } catch (e) {
-      print('Error en getHistorialAsistencias: $e');
+      developer.log('Error en getHistorialAsistencias: $e', name: 'SupabaseService');
       return [];
     }
   }
@@ -1050,7 +1051,7 @@ class SupabaseService {
         'total_registros': asistencias.length,
       };
     } catch (e) {
-      print('Error en getEmpleadoEstadisticas: $e');
+      developer.log('Error en getEmpleadoEstadisticas: $e', name: 'SupabaseService');
       return {
         'dias_asistidos': 0,
         'a_tiempo': 0,

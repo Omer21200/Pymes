@@ -4,6 +4,7 @@ import '../../theme.dart';
 import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
 import 'widgets/empleado_news_section.dart';
+import 'widgets/news_carousel.dart';
 
 class EmpleadoInicioView extends StatefulWidget {
   final ValueChanged<int>? onNavigateTab;
@@ -58,6 +59,33 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
             style: AppTextStyles.subtitle,
           ),
           const SizedBox(height: 20),
+
+          // Carrusel de noticias (si existen) - moved to appear before estadísticas
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _noticiasFuture,
+            builder: (context, snapNoticias) {
+              if (snapNoticias.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 200,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (snapNoticias.hasError) return const SizedBox.shrink();
+
+              final noticias = snapNoticias.data ?? <Map<String, dynamic>>[];
+              if (noticias.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                children: [
+                  NewsCarousel(noticias: noticias, onNewsPressed: () {
+                    // opción: navegar a la sección de noticias o abrir detalle
+                  }),
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          ),
 
           // Estadísticas
           FutureBuilder<Map<String, dynamic>>(
@@ -123,6 +151,8 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
             onReportesPressed: _navigateToReportes,
           ),
           const SizedBox(height: 24),
+
+          
 
           // Divider
           const Divider(height: 1, color: AppColors.divider),

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
 
 class EmpleadoProfilePage extends StatefulWidget {
   const EmpleadoProfilePage({super.key});
@@ -105,49 +106,198 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   }
 
   Widget _buildAvatar() {
-    final radius = 48.0;
+    final radius = AppSizes.avatar;
+    // Avatar con badge de cámara en la esquina inferior derecha
+    Widget avatarImage;
     if (_selectedImageFile != null) {
-      return CircleAvatar(radius: radius, backgroundImage: FileImage(_selectedImageFile!));
+      avatarImage = CircleAvatar(radius: radius, backgroundImage: FileImage(_selectedImageFile!));
+    } else if (_fotoUrl != null && _fotoUrl!.isNotEmpty) {
+      avatarImage = CircleAvatar(radius: radius, backgroundImage: NetworkImage(_fotoUrl!));
+    } else {
+      avatarImage = CircleAvatar(radius: radius, child: const Icon(Icons.person, size: 48));
     }
-    if (_fotoUrl != null && _fotoUrl!.isNotEmpty) {
-      return CircleAvatar(radius: radius, backgroundImage: NetworkImage(_fotoUrl!));
-    }
-    return CircleAvatar(radius: radius, child: const Icon(Icons.person, size: 48));
+
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: AppDecorations.avatarContainer,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Center(child: avatarImage),
+          Positioned(
+            right: -6,
+            bottom: -6,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 6, offset: const Offset(0, 2))],
+                ),
+                child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi Perfil')),
+      appBar: AppBar(title: const Text('Mi Perfil'), backgroundColor: AppColors.primary),
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: GestureDetector(onTap: _pickImage, child: _buildAvatar())),
-            const SizedBox(height: 12),
-            TextButton.icon(onPressed: _pickImage, icon: const Icon(Icons.camera_alt), label: const Text('Cambiar foto')),
-            const SizedBox(height: 12),
-
-            TextField(controller: _nombresController, decoration: const InputDecoration(labelText: 'Nombres')),
-            const SizedBox(height: 8),
-            TextField(controller: _apellidosController, decoration: const InputDecoration(labelText: 'Apellidos')),
-            const SizedBox(height: 8),
-            TextField(controller: TextEditingController(text: _email ?? ''), enabled: false, decoration: const InputDecoration(labelText: 'Correo electrónico')),
-            const SizedBox(height: 8),
-            TextField(controller: _cedulaController, decoration: const InputDecoration(labelText: 'Cédula / Documento')),
-            const SizedBox(height: 8),
-            TextField(controller: _telefonoController, decoration: const InputDecoration(labelText: 'Teléfono')),
-            const SizedBox(height: 8),
-            TextField(controller: _direccionController, decoration: const InputDecoration(labelText: 'Dirección')),
+            Center(child: _buildAvatar()),
             const SizedBox(height: 16),
-            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+
+            // Form card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Nombres
+                    TextField(
+                      controller: _nombresController,
+                      textCapitalization: TextCapitalization.words,
+                      keyboardType: TextInputType.name,
+                      decoration: InputDecoration(
+                        labelText: 'Nombres',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.person),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Apellidos
+                    TextField(
+                      controller: _apellidosController,
+                      textCapitalization: TextCapitalization.words,
+                      keyboardType: TextInputType.name,
+                      decoration: InputDecoration(
+                        labelText: 'Apellidos',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.person),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Correo (solo lectura)
+                    TextFormField(
+                      initialValue: _email ?? '',
+                      enabled: false,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Correo electrónico',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.email),
+                        filled: true,
+                        fillColor: AppColors.lightGray,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Cédula (marcada como no editable para claridad)
+                    TextField(
+                      controller: _cedulaController,
+                      readOnly: true,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Cédula / Documento',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.credit_card),
+                        filled: true,
+                        fillColor: AppColors.lightGray,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Teléfono
+                    TextField(
+                      controller: _telefonoController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Teléfono',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.phone),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Dirección
+                    TextField(
+                      controller: _direccionController,
+                      keyboardType: TextInputType.streetAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Dirección',
+                        labelStyle: AppTextStyles.smallLabel,
+                        prefixIcon: const Icon(Icons.location_on),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                      ),
+                      style: AppTextStyles.smallLabel,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            if (_error != null) Text(_error!, style: AppTextStyles.smallLabel.copyWith(color: AppColors.dangerRed)),
             const SizedBox(height: 12),
             SizedBox(
-              height: 48,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _save,
-                child: _isLoading ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Text('Guardar cambios'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                ),
+                child: _isLoading
+                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                    : const Text('Guardar cambios', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
           ],

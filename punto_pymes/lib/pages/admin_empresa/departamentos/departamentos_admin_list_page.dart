@@ -42,15 +42,14 @@ class _DepartamentosAdminListPageState
       });
     } catch (e) {
       if (!mounted) return;
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar departamentos: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      setState(() => _isLoading = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar departamentos: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -79,25 +78,23 @@ class _DepartamentosAdminListPageState
       try {
         await SupabaseService.instance.deleteDepartamento(departamentoId);
         if (!mounted) return;
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Departamento eliminado'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Departamento eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
         await _fetchDepartamentos();
       } catch (e) {
         if (!mounted) return;
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -306,7 +303,8 @@ class _DepartamentosAdminListPageState
           if (!mounted) return;
           final empresaId = empleado?['empresa_id']?.toString();
           if (empresaId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.showSnackBar(
               const SnackBar(
                 content: Text('No se encontró la empresa asociada.'),
                 backgroundColor: Colors.red,

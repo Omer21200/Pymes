@@ -20,15 +20,14 @@ class EcuadorTimeManager {
 /// Widget profesional que obtiene la hora actual de Ecuador (America/Guayaquil)
 /// desde worldtimeapi.org y muestra un reloj sincronizado en tiempo real.
 class HoraInternetEcuador extends StatefulWidget {
-  const HoraInternetEcuador({Key? key}) : super(key: key);
+  const HoraInternetEcuador({super.key});
 
   @override
   _HoraInternetEcuadorState createState() => _HoraInternetEcuadorState();
 
   /// Obtiene la hora actual de Ecuador del state del widget
   static DateTime? getEcuadorTime(BuildContext context) {
-    final state = context.findAncestorStateOfType<_HoraInternetEcuadorState>();
-    return state?._currentServerTime;
+    return EcuadorTimeManager.getCurrentTime();
   }
 }
 
@@ -148,7 +147,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD92344).withOpacity(0.2),
+            color: const Color(0xFFD92344).withAlpha((0.2 * 255).round()),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -165,7 +164,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withAlpha((0.2 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -222,7 +221,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                   height: 24,
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withOpacity(0.8),
+                      Colors.white.withAlpha((0.8 * 255).round()),
                     ),
                     strokeWidth: 2.5,
                   ),
@@ -232,10 +231,10 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withAlpha((0.3 * 255).round()),
                     width: 1,
                   ),
                 ),
@@ -264,7 +263,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -286,7 +285,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withAlpha((0.15 * 255).round()),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       
@@ -300,7 +299,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                 child: Text(
                   'Sin datos',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withAlpha((0.7 * 255).round()),
                     fontSize: 14,
                   ),
                 ),

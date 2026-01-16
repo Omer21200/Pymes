@@ -180,9 +180,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     ), // Bordes bien redondeados
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(
-                          0.04,
-                        ), // Sombra muy sutil
+                        color: Colors.black.withAlpha((0.04 * 255).round()),
+                        // Sombra muy sutil
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -198,7 +197,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           Icon(
                             Icons.assignment_outlined,
                             size: 80,
-                            color: const Color(0xFFD32F2F).withOpacity(0.8),
+                            color: Color(0xFFD32F2F).withAlpha((0.8 * 255).round()),
                           ),
                           Container(
                             padding: const EdgeInsets.all(4),
@@ -273,7 +272,7 @@ class _StatCard extends StatelessWidget {
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [color.withOpacity(0.8), color],
+      colors: [color.withAlpha((0.8 * 255).round()), color],
     );
 
     return Container(
@@ -282,7 +281,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.25),
+            color: color.withAlpha((0.25 * 255).round()),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -312,8 +311,8 @@ class _StatCard extends StatelessWidget {
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.2 * 255).round()),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(icon, color: Colors.white, size: 20),

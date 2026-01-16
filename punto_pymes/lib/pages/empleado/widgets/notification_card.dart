@@ -6,6 +6,7 @@ class NotificationCard extends StatelessWidget {
   final String contenido;
   final String fechaPublicacion;
   final bool esImportante;
+  final String? imagenUrl;
 
   const NotificationCard({
     super.key,
@@ -13,6 +14,7 @@ class NotificationCard extends StatelessWidget {
     required this.contenido,
     required this.fechaPublicacion,
     this.esImportante = false,
+    this.imagenUrl,
   });
 
   String _formatearFecha(String fecha) {
@@ -28,7 +30,7 @@ class NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accentColor = esImportante ? AppColors.brandRedAlt : AppColors.accentBlueAdmin;
     final backgroundColor = esImportante ? AppColors.notificationBg : AppColors.subtleBg;
-    final borderColor = accentColor.withOpacity(0.15);
+    final borderColor = accentColor.withAlpha((0.15 * 255).round());
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -37,16 +39,16 @@ class NotificationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
+                                      BoxShadow(
+                                        color: accentColor.withAlpha((0.06 * 255).round()),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 2),
+                                      ),
         ],
       ),
       child: Stack(
         children: [
-          // Barra de color izquierda
+          // Banda de acento a la izquierda
           Positioned(
             left: 0,
             top: 0,
@@ -62,94 +64,132 @@ class NotificationCard extends StatelessWidget {
               ),
             ),
           ),
-          
-          // Contenido
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Encabezado con título y badge
-                Row(
-                  children: [
-                    // Icono
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        esImportante ? Icons.priority_high : Icons.notifications_active,
-                        color: accentColor,
-                        size: 18,
-                      ),
+
+          // Contenido en fila: imagen (opcional) + detalles
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Imagen a la izquierda
+              if (imagenUrl != null && imagenUrl!.isNotEmpty)
+                SizedBox(
+                  width: 110,
+                  height: 110,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomLeft: Radius.circular(14),
                     ),
-                    const SizedBox(width: 10),
-                    
-                    // Título
-                    Expanded(
-                      child: Text(
-                        titulo,
-                        style: AppTextStyles.sectionTitle.copyWith(fontSize: 15, color: Colors.black87),
-                        maxLines: 2,
+                    child: Image.network(
+                      imagenUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Container(
+                        color: AppColors.surfaceSoft,
+                        child: Icon(Icons.image_not_supported, color: AppColors.mutedGray, size: 40),
+                      ),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: AppColors.surfaceSoft,
+                          child: const Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: AppColors.subtleBg,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomLeft: Radius.circular(14),
+                    ),
+                  ),
+                  child: Icon(Icons.newspaper, color: AppColors.mutedGray, size: 40),
+                ),
+
+              // Contenido textual
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row: icon + title + badge
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                              color: accentColor.withAlpha((0.12 * 255).round()),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              esImportante ? Icons.priority_high : Icons.notifications_active,
+                              color: accentColor,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              titulo,
+                              style: AppTextStyles.sectionTitle.copyWith(fontSize: 15, color: Colors.black87),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: accentColor.withAlpha((0.95 * 255).round()),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              esImportante ? 'Importante' : 'Nueva',
+                              style: AppTextStyles.smallLabel.copyWith(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Contenido
+                      Text(
+                        contenido,
+                        style: AppTextStyles.smallLabel.copyWith(fontSize: 13, height: 1.45, color: Colors.black87),
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                
-                // Contenido
-                Text(
-                  contenido,
-                  style: AppTextStyles.smallLabel.copyWith(fontSize: 13, height: 1.5),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 10),
-                
-                // Footer con fecha y badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Fecha
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 13,
-                          color: AppColors.mutedGray,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatearFecha(fechaPublicacion),
-                          style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray),
-                        ),
-                      ],
-                    ),
-                    
-                    // Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 12),
+
+                      // Footer con fecha y acción
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 14, color: AppColors.mutedGray),
+                          const SizedBox(width: 6),
+                          Text(
+                            _formatearFecha(fechaPublicacion),
+                            style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray),
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Text('Leer más', style: AppTextStyles.smallLabel.copyWith(color: accentColor)),
+                              const SizedBox(width: 6),
+                              Icon(Icons.chevron_right, size: 16, color: accentColor),
+                            ],
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        esImportante ? 'Importante' : 'Nueva',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

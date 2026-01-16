@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
 import 'widgets/notification_card.dart';
 import 'widgets/notification_stats.dart';
 
@@ -9,9 +10,9 @@ class NotificacionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFD92344),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text('Notificaciones'),
         centerTitle: false,
@@ -84,15 +85,11 @@ class _NotificacionViewState extends State<NotificacionView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.inbox, color: Colors.black26, size: 64),
+                  Icon(Icons.inbox, color: AppColors.mutedGray.withOpacity(0.3), size: 64),
                   const SizedBox(height: 16),
                   Text(
                     'No hay noticias disponibles',
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray, fontSize: 16),
                   ),
                 ],
               ),
@@ -130,16 +127,18 @@ class _NotificacionViewState extends State<NotificacionView> {
                 ...noticias.map((notification) {
                   final titulo = notification['titulo'] ?? '';
                   final contenido = notification['contenido'] ?? '';
-                  final fechaPublicacion = notification['fecha_publicacion'] ?? '';
+                  final fechaPublicacion = notification['fecha_publicacion']?.toString() ?? '';
                   final esImportante = notification['es_importante'] ?? false;
+                  final imagenUrl = notification['imagen_url']?.toString();
 
                   return NotificationCard(
                     titulo: titulo,
                     contenido: contenido,
                     fechaPublicacion: fechaPublicacion,
                     esImportante: esImportante,
+                    imagenUrl: imagenUrl,
                   );
-                }),
+                }).toList(),
                 const SizedBox(height: 20),
               ],
             ),

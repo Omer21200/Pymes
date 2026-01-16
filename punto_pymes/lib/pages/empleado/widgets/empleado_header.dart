@@ -31,7 +31,7 @@ class EmpleadoHeader extends StatelessWidget {
       decoration: AppDecorations.headerGradient.copyWith(
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.28),
+            color: AppColors.primary.withAlpha((0.28 * 255).round()),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -45,10 +45,10 @@ class EmpleadoHeader extends StatelessWidget {
             child: Container(
               width: AppSizes.avatar,
               height: AppSizes.avatar,
-              decoration: AppDecorations.avatarContainer.copyWith(
+                decoration: AppDecorations.avatarContainer.copyWith(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withAlpha((0.15 * 255).round()),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -102,7 +102,7 @@ class EmpleadoHeader extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withAlpha((0.2 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -126,10 +126,10 @@ class EmpleadoHeader extends StatelessWidget {
                 child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withAlpha((0.3 * 255).round()),
                     width: 1.5,
                   ),
                 ),
