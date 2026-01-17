@@ -21,6 +21,33 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
   String? _errorMessage;
 
+  /// Convierte errores técnicos en mensajes amigables para el usuario
+  String _parseErrorMessage(String errorMessage) {
+    final msg = errorMessage.toLowerCase();
+    
+    if (msg.contains('invalid_credentials') || msg.contains('invalid_grant')) {
+      return 'Correo o contraseña incorrectos.\nVerifica tus credenciales e intenta de nuevo.';
+    } else if (msg.contains('user_not_found')) {
+      return 'Esta cuenta no existe.\nVerifica el correo ingresado.';
+    } else if (msg.contains('user_not_confirmed')) {
+      return 'Tu cuenta no ha sido confirmada.\nRevisa tu correo para activarla.';
+    } else if (msg.contains('database error querying schema')) {
+      return 'Error en el servidor.\nIntenta de nuevo en unos momentos.';
+    } else if (msg.contains('this account does not have the required role')) {
+      return 'Tu cuenta no tiene permisos para acceder aquí.';
+    } else if (msg.contains('does not belong to the company selected')) {
+      return 'Esta cuenta no está registrada en la empresa seleccionada.';
+    } else if (msg.contains('super admin only')) {
+      return 'Solo Super Administradores pueden acceder a esta pantalla.';
+    } else if (msg.contains('network')) {
+      return 'Error de conexión.\nVerifica tu conexión a internet.';
+    } else if (msg.contains('timeout')) {
+      return 'La solicitud tardó demasiado.\nIntenta de nuevo.';
+    }
+    
+    return 'Ocurrió un error al iniciar sesión.\nIntenta de nuevo más tarde.';
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -138,7 +165,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
+      final rawError = e.toString();
       setState(() {
         if (msg.contains('invalid_grant')) {
           _errorMessage = 'Credenciales incorrectas.';
@@ -310,17 +337,25 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // 3. MENSAJE DE ERROR
+                // 3. MENSAJE DE ERROR (Profesional y amigable)
                 if (_errorMessage != null)
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade100),
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withAlpha(20),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.error_outline,

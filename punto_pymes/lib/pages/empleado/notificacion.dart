@@ -123,6 +123,18 @@ class _NotificacionViewState extends State<NotificacionView> {
                 ),
                 const SizedBox(height: 12),
 
+                // Lista de notificaciones (eficiente y segura en ScrollViews)
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: noticias.length,
+                  itemBuilder: (context, index) {
+                    final notification = noticias[index];
+                    final titulo = notification['titulo'] ?? '';
+                    final contenido = notification['contenido'] ?? '';
+                    final fechaPublicacion = notification['fecha_publicacion']?.toString() ?? '';
+                    final esImportante = notification['es_importante'] ?? false;
+                    final imagenUrl = notification['imagen_url']?.toString();
                 // Lista de notificaciones
                 ...noticias.map((notification) {
                   final titulo = notification['titulo'] ?? '';
@@ -131,6 +143,15 @@ class _NotificacionViewState extends State<NotificacionView> {
                   final esImportante = notification['es_importante'] ?? false;
                   final imagenUrl = notification['imagen_url']?.toString();
 
+                    return NotificationCard(
+                      titulo: titulo,
+                      contenido: contenido,
+                      fechaPublicacion: fechaPublicacion,
+                      esImportante: esImportante,
+                      imagenUrl: imagenUrl,
+                    );
+                  },
+                ),
                   return NotificationCard(
                     titulo: titulo,
                     contenido: contenido,

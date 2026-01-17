@@ -26,6 +26,8 @@ class EmpleadoHeader extends StatelessWidget {
         .join()
         .toUpperCase();
 
+    final topPadding = MediaQuery.of(context).padding.top + 20;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: AppDecorations.headerGradient.copyWith(

@@ -7,6 +7,7 @@ class NotificationCard extends StatelessWidget {
   final String fechaPublicacion;
   final bool esImportante;
   final String? imagenUrl;
+  final String? imagenUrl;
 
   const NotificationCard({
     super.key,
@@ -14,6 +15,7 @@ class NotificationCard extends StatelessWidget {
     required this.contenido,
     required this.fechaPublicacion,
     this.esImportante = false,
+    this.imagenUrl,
     this.imagenUrl,
   });
 
@@ -46,7 +48,8 @@ class NotificationCard extends StatelessWidget {
                                       ),
         ],
       ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Banda de acento a la izquierda
           Positioned(

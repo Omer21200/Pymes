@@ -5,6 +5,7 @@ import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
 import 'widgets/empleado_news_section.dart';
 import 'widgets/news_carousel.dart';
+import 'widgets/news_carousel.dart';
 
 class EmpleadoInicioView extends StatefulWidget {
   final ValueChanged<int>? onNavigateTab;
@@ -48,6 +49,24 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Noticias y Anuncios - AL INICIO
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _noticiasFuture,
+            builder: (context, snapshot) {
+              final noticias = snapshot.data ?? [];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: NewsCarousel(
+                  noticias: noticias,
+                  onNewsPressed: () {
+                    // Aquí puedes agregar lógica para navegar a detalle de noticia
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+
           // Encabezado de bienvenida
           Text(
             'Bienvenido',
@@ -57,6 +76,31 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           const Text(
             'Tu espacio de empleado',
             style: AppTextStyles.subtitle,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bienvenido',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.black87,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Tu espacio de empleado',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -88,25 +132,27 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           ),
 
           // Estadísticas
-          FutureBuilder<Map<String, dynamic>>(
-            future: _estadisticasFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: CircularProgressIndicator(),
-                );
-              }
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _estadisticasFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-              if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Error al cargar estadísticas',
-                    style: TextStyle(color: Colors.red.shade500),
-                  ),
-                );
-              }
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Error al cargar estadísticas',
+                      style: TextStyle(color: Colors.red.shade500),
+                    ),
+                  );
+                }
 
               final stats = snapshot.data ?? {};
               
@@ -142,6 +188,41 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                 ],
               );
             },
+                final stats = snapshot.data ?? {};
+                
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: EmpleadoStatsCard(
+                        label: 'Asistencias',
+                        value: '${stats['dias_asistidos'] ?? 0}',
+                        icon: Icons.check_circle,
+                        color: const Color(0xFFD92344),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: EmpleadoStatsCard(
+                        label: 'A tiempo',
+                        value: '${stats['a_tiempo'] ?? 0}',
+                        icon: Icons.thumb_up,
+                        color: const Color(0xFF4CAF50),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: EmpleadoStatsCard(
+                        label: 'Tardanzas',
+                        value: '${stats['tardanzas'] ?? 0}',
+                        icon: Icons.schedule,
+                        color: const Color(0xFFFFA500),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -160,6 +241,13 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
 
           // Noticias y anuncios
           EmpleadoNewsSection(noticiasFuture: _noticiasFuture),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: EmpleadoQuickAccess(
+              onRegistrarPressed: _navigateToRegistrar,
+              onReportesPressed: _navigateToReportes,
+            ),
+          ),
         ],
       ),
     );
