@@ -85,7 +85,7 @@ class AttendanceCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -181,10 +181,10 @@ class AttendanceCard extends StatelessWidget {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: statusColor, width: 2),
+              border: Border.all(color: Colors.grey.shade300, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: statusColor.withOpacity(0.2),
+                  color: Colors.black12,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 )
