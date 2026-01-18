@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
+// Using google_maps_flutter for all map interactions (view + edit)
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import '../../service/supabase_service.dart';
 import '../../theme.dart';
+import '../../config/google_maps_config.dart';
 import 'creacion_departamentos.dart';
 import 'departamento_detalle.dart';
 import 'widgets/superadmin_header.dart';
@@ -33,48 +37,55 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   bool _editing = false;
   Map<String, String> _backup = {};
 
+  // Backup coordinates when entering edit mode so Cancel can restore them
+  double? _backupLat;
+  double? _backupLng;
+
   double? _companyLat;
   double? _companyLng;
   bool _locatingCompany = false;
-  final MapController _mapController = MapController();
-  double _mapZoom = 15.0;
+  // Search state for map/address picker
+  final TextEditingController _mapSearchController = TextEditingController();
+  List<Map<String, dynamic>> _mapSearchResults = [];
+  bool _searchingMap = false;
+  Timer? _mapSearchDebounce;
+  gmaps.GoogleMapController? _googleMapController;
+  final TextEditingController _nombre = TextEditingController();
+  final TextEditingController _ruc = TextEditingController();
+  final TextEditingController _direccion = TextEditingController();
+  final TextEditingController _telefono = TextEditingController();
+  final TextEditingController _correo = TextEditingController();
+  final TextEditingController _lat = TextEditingController();
+  final TextEditingController _lng = TextEditingController();
 
-  final _nombre = TextEditingController();
-  final _ruc = TextEditingController();
-  final _direccion = TextEditingController();
-  final _telefono = TextEditingController();
-  final _correo = TextEditingController();
-  final _lat = TextEditingController();
-  final _lng = TextEditingController();
-
-  final ImagePicker _picker = ImagePicker();
   String? _newLogoLocalPath;
   String? _currentLogoUrl;
-  @override
-  void dispose() {
-    _nombre.dispose();
-    _ruc.dispose();
-    _direccion.dispose();
-    _telefono.dispose();
-    _correo.dispose();
-    _lat.dispose();
-    _lng.dispose();
-    super.dispose();
+  final ImagePicker _picker = ImagePicker();
+
+  double _mapZoom = 15.0;
+
+  void _onMapSearchChanged(String v) {
+    _mapSearchDebounce?.cancel();
+    _mapSearchDebounce = Timer(const Duration(milliseconds: 350), () {
+      _performMapSearch(v);
+    });
   }
 
   Future<void> _fetch() async {
+    setState(() => _loading = true);
     try {
       final data = await SupabaseService.instance.getEmpresaById(
         widget.empresaId,
       );
-      if (data != null) {
-        _setEmpresa(data);
-      }
+      if (data != null) _setEmpresa(data);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al cargar empresa: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar empresa: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -82,17 +93,12 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   }
 
   Future<void> _fetchDepartamentos() async {
-    if (!mounted) return;
     setState(() => _loadingDepartamentos = true);
     try {
       final data = await SupabaseService.instance.getDepartamentosPorEmpresa(
         widget.empresaId,
       );
-      if (mounted) {
-        setState(() {
-          _departamentos = data;
-        });
-      }
+      if (mounted) setState(() => _departamentos = data);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,9 +109,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _loadingDepartamentos = false);
-      }
+      if (mounted) setState(() => _loadingDepartamentos = false);
     }
   }
 
@@ -150,6 +154,9 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       'lat': _lat.text,
       'lng': _lng.text,
     };
+    // store current coordinates so we can restore on cancel
+    _backupLat = _companyLat;
+    _backupLng = _companyLng;
     setState(() => _editing = true);
   }
 
@@ -161,7 +168,28 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     _correo.text = _backup['correo'] ?? '';
     _lat.text = _backup['lat'] ?? '';
     _lng.text = _backup['lng'] ?? '';
-    setState(() => _editing = false);
+    // restore backed-up coordinates (if any) and move camera back
+    if (_backupLat != null && _backupLng != null) {
+      setState(() {
+        _companyLat = _backupLat;
+        _companyLng = _backupLng;
+        _lat.text = _companyLat?.toString() ?? '';
+        _lng.text = _companyLng?.toString() ?? '';
+        _editing = false;
+      });
+      try {
+        _googleMapController?.animateCamera(
+          gmaps.CameraUpdate.newCameraPosition(
+            gmaps.CameraPosition(
+              target: gmaps.LatLng(_companyLat ?? 0.0, _companyLng ?? 0.0),
+              zoom: _mapZoom,
+            ),
+          ),
+        );
+      } catch (_) {}
+    } else {
+      setState(() => _editing = false);
+    }
   }
 
   Future<void> _ensureCompanyLocation() async {
@@ -195,6 +223,116 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       }
     } catch (_) {}
     if (mounted) setState(() => _locatingCompany = false);
+  }
+
+  Future<void> _performMapSearch(String q) async {
+    if (q.trim().isEmpty) {
+      setState(() {
+        _mapSearchResults = [];
+      });
+      return;
+    }
+    setState(() {
+      _searchingMap = true;
+      _mapSearchResults = [];
+    });
+    try {
+      // If editing and a Google API key is available, use Places Autocomplete for better suggestions
+      List<Map<String, dynamic>> results = [];
+      if (_editing && googleMapsApiKey.trim().isNotEmpty) {
+        try {
+          final encoded = Uri.encodeComponent(q);
+          final url = Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$encoded&key=$googleMapsApiKey&language=es&types=geocode|establishment',
+          );
+          final resp = await http.get(url).timeout(const Duration(seconds: 6));
+          if (resp.statusCode == 200) {
+            final data = jsonDecode(resp.body) as Map<String, dynamic>;
+            final preds = (data['predictions'] as List<dynamic>?) ?? [];
+            results = preds.map((p) {
+              final m = Map<String, dynamic>.from(p as Map<String, dynamic>);
+              return {
+                'display_name':
+                    m['description'] ??
+                    m['structured_formatting']?['main_text'] ??
+                    '',
+                'description': m['description'] ?? '',
+                'place_id': m['place_id'] ?? '',
+              };
+            }).toList();
+          }
+        } catch (_) {
+          results = [];
+        }
+      }
+
+      // Fallback to Nominatim if Google not used or returned nothing
+      if (results.isEmpty) {
+        final nom = await SupabaseService.instance.geocodeSearch(q, limit: 6);
+        results = nom;
+      }
+
+      if (mounted) setState(() => _mapSearchResults = results);
+    } catch (_) {
+      if (mounted) setState(() => _mapSearchResults = []);
+    } finally {
+      if (mounted) setState(() => _searchingMap = false);
+    }
+  }
+
+  Future<void> _selectMapSearchResult(Map<String, dynamic> item) async {
+    double? lat;
+    double? lon;
+    String? display = item['display_name'] ?? item['description'];
+
+    final placeId = item['place_id']?.toString();
+    if (placeId != null &&
+        placeId.isNotEmpty &&
+        googleMapsApiKey.trim().isNotEmpty) {
+      // Resolve place details to get lat/lng
+      try {
+        final encoded = Uri.encodeComponent(placeId);
+        final url = Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/details/json?place_id=$encoded&key=$googleMapsApiKey&language=es',
+        );
+        final resp = await http.get(url).timeout(const Duration(seconds: 6));
+        if (resp.statusCode == 200) {
+          final data = jsonDecode(resp.body) as Map<String, dynamic>;
+          final res = data['result'] as Map<String, dynamic>?;
+          if (res != null) {
+            display = res['formatted_address'] as String? ?? display;
+            final geom = res['geometry'] as Map<String, dynamic>?;
+            final loc = geom != null
+                ? (geom['location'] as Map<String, dynamic>?)
+                : null;
+            if (loc != null) {
+              lat = (loc['lat'] is num)
+                  ? (loc['lat'] as num).toDouble()
+                  : double.tryParse(loc['lat']?.toString() ?? '');
+              lon = (loc['lng'] is num)
+                  ? (loc['lng'] as num).toDouble()
+                  : double.tryParse(loc['lng']?.toString() ?? '');
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    lat ??= double.tryParse(item['lat']?.toString() ?? '');
+    lon ??= double.tryParse(item['lon']?.toString() ?? '');
+
+    if (lat == null || lon == null) return;
+
+    setState(() {
+      _companyLat = lat;
+      _companyLng = lon;
+      _lat.text = lat.toString();
+      _lng.text = lon.toString();
+      _mapSearchResults = [];
+      _mapSearchController.text = display ?? '';
+    });
+
+    // Move map to selected position
   }
 
   Future<void> _pickLogo() async {
@@ -257,6 +395,10 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
         );
       }
       await _fetch();
+      // saved successfully — clear edit backups
+      _backup = {};
+      _backupLat = null;
+      _backupLng = null;
       setState(() => _newLogoLocalPath = null);
     } catch (e) {
       if (moved && finalPath != null) {
@@ -416,6 +558,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   AppColors.primary,
+                                              foregroundColor: Colors.white,
                                               shape: const StadiumBorder(),
                                             ),
                                             child: _saving
@@ -469,6 +612,100 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
+                          // Search box for address/place (visible when editing)
+                          if (_editing) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 0.0,
+                                vertical: 8,
+                              ),
+                              child: TextField(
+                                controller: _mapSearchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Buscar dirección o lugar',
+                                  prefixIcon: const Icon(Icons.search),
+                                  suffixIcon: _searchingMap
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : (_mapSearchController.text.isNotEmpty
+                                            ? IconButton(
+                                                icon: const Icon(Icons.clear),
+                                                onPressed: () {
+                                                  _mapSearchController.clear();
+                                                  setState(
+                                                    () =>
+                                                        _mapSearchResults = [],
+                                                  );
+                                                },
+                                              )
+                                            : null),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                ),
+                                onChanged: _onMapSearchChanged,
+                                onSubmitted: (v) => _performMapSearch(v),
+                              ),
+                            ),
+                            if (_mapSearchResults.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 0,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 200,
+                                  ),
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    itemCount: _mapSearchResults.length,
+                                    separatorBuilder: (_, __) =>
+                                        const Divider(height: 1),
+                                    itemBuilder: (ctx, i) {
+                                      final item = _mapSearchResults[i];
+                                      return ListTile(
+                                        title: Text(
+                                          item['display_name']
+                                                  ?.toString()
+                                                  .split(',')
+                                                  .first ??
+                                              '',
+                                        ),
+                                        subtitle: Text(
+                                          item['display_name']?.toString() ??
+                                              '',
+                                        ),
+                                        onTap: () =>
+                                            _selectMapSearchResult(item),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+
                           Card(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -483,31 +720,38 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                   : (_companyLat != null && _companyLng != null)
                                   ? Stack(
                                       children: [
-                                        FlutterMap(
-                                          mapController: _mapController,
-                                          options: MapOptions(
-                                            initialCenter: LatLng(
-                                              _companyLat!,
-                                              _companyLng!,
-                                            ),
-                                            initialZoom: _mapZoom,
-                                            onTap: (tapPos, point) {
-                                              if (_editing) {
+                                        // Show GoogleMap when not editing (nicer tiles),
+                                        // keep FlutterMap available when editing so user
+                                        // can tap to change coords.
+                                        // Use Google Map for both view and edit. In edit mode taps/drags update coords.
+                                        gmaps.GoogleMap(
+                                          initialCameraPosition:
+                                              gmaps.CameraPosition(
+                                                target: gmaps.LatLng(
+                                                  _companyLat!,
+                                                  _companyLng!,
+                                                ),
+                                                zoom: _mapZoom,
+                                              ),
+                                          markers: {
+                                            gmaps.Marker(
+                                              markerId: const gmaps.MarkerId(
+                                                'company',
+                                              ),
+                                              position: gmaps.LatLng(
+                                                _companyLat!,
+                                                _companyLng!,
+                                              ),
+                                              draggable: _editing,
+                                              onDragEnd: (pos) {
                                                 setState(() {
-                                                  _companyLat = point.latitude;
-                                                  _companyLng = point.longitude;
+                                                  _companyLat = pos.latitude;
+                                                  _companyLng = pos.longitude;
                                                   _lat.text = _companyLat!
                                                       .toString();
                                                   _lng.text = _companyLng!
                                                       .toString();
                                                 });
-                                                _mapController.move(
-                                                  LatLng(
-                                                    _companyLat!,
-                                                    _companyLng!,
-                                                  ),
-                                                  _mapZoom,
-                                                );
                                                 if (mounted) {
                                                   ScaffoldMessenger.of(
                                                     context,
@@ -519,35 +763,36 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                     ),
                                                   );
                                                 }
+                                              },
+                                            ),
+                                          },
+                                          zoomControlsEnabled: false,
+                                          myLocationButtonEnabled: false,
+                                          onMapCreated: (ctrl) =>
+                                              _googleMapController = ctrl,
+                                          onTap: (pos) {
+                                            if (_editing) {
+                                              setState(() {
+                                                _companyLat = pos.latitude;
+                                                _companyLng = pos.longitude;
+                                                _lat.text = _companyLat!
+                                                    .toString();
+                                                _lng.text = _companyLng!
+                                                    .toString();
+                                              });
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Ubicación actualizada en el mapa',
+                                                    ),
+                                                  ),
+                                                );
                                               }
-                                            },
-                                          ),
-                                          children: [
-                                            TileLayer(
-                                              urlTemplate:
-                                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                              subdomains: const ['a', 'b', 'c'],
-                                              userAgentPackageName:
-                                                  'com.example.punto_pymes',
-                                            ),
-                                            MarkerLayer(
-                                              markers: [
-                                                Marker(
-                                                  width: 48,
-                                                  height: 48,
-                                                  point: LatLng(
-                                                    _companyLat!,
-                                                    _companyLng!,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.location_on,
-                                                    color: Colors.red,
-                                                    size: 36,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                            }
+                                          },
                                         ),
 
                                         // Controls: recenter + zoom
@@ -580,13 +825,23 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                                 null &&
                                                             _companyLng !=
                                                                 null) {
-                                                          _mapController.move(
-                                                            LatLng(
-                                                              _companyLat!,
-                                                              _companyLng!,
-                                                            ),
-                                                            _mapZoom,
-                                                          );
+                                                          // Use Google map controller for camera moves
+                                                          if (_googleMapController !=
+                                                              null) {
+                                                            _googleMapController!.animateCamera(
+                                                              gmaps
+                                                                  .CameraUpdate.newCameraPosition(
+                                                                gmaps.CameraPosition(
+                                                                  target: gmaps.LatLng(
+                                                                    _companyLat!,
+                                                                    _companyLng!,
+                                                                  ),
+                                                                  zoom:
+                                                                      _mapZoom,
+                                                                ),
+                                                              ),
+                                                            );
+                                                          }
                                                         }
                                                       },
                                                     ),
@@ -604,13 +859,16 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                                 null &&
                                                             _companyLng !=
                                                                 null) {
-                                                          _mapController.move(
-                                                            LatLng(
-                                                              _companyLat!,
-                                                              _companyLng!,
-                                                            ),
-                                                            _mapZoom,
-                                                          );
+                                                          if (_googleMapController !=
+                                                              null) {
+                                                            _googleMapController!
+                                                                .animateCamera(
+                                                                  gmaps
+                                                                      .CameraUpdate.zoomTo(
+                                                                    _mapZoom,
+                                                                  ),
+                                                                );
+                                                          }
                                                         }
                                                       },
                                                     ),
@@ -627,13 +885,16 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                                 null &&
                                                             _companyLng !=
                                                                 null) {
-                                                          _mapController.move(
-                                                            LatLng(
-                                                              _companyLat!,
-                                                              _companyLng!,
-                                                            ),
-                                                            _mapZoom,
-                                                          );
+                                                          if (_googleMapController !=
+                                                              null) {
+                                                            _googleMapController!
+                                                                .animateCamera(
+                                                                  gmaps
+                                                                      .CameraUpdate.zoomTo(
+                                                                    _mapZoom,
+                                                                  ),
+                                                                );
+                                                          }
                                                         }
                                                       },
                                                     ),

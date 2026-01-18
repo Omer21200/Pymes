@@ -17,18 +17,28 @@ class CompanyTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final foto = empresa['empresa_foto_url'] as String?;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: AppDecorations.card,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           child: Row(
             children: [
               if (foto != null)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: Image.network(
                     foto,
                     width: 56,
@@ -38,9 +48,8 @@ class CompanyTile extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        // ignore: deprecated_member_use
                         color: AppColors.accentBlue.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.business,
@@ -54,9 +63,8 @@ class CompanyTile extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
                     color: AppColors.accentBlue.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.business,
@@ -73,18 +81,25 @@ class CompanyTile extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: AppColors.darkText,
                       ),
                     ),
                     const SizedBox(height: 4),
                     if (empresa['ruc'] != null)
                       Text(
                         'RUC: ${empresa['ruc']}',
-                        style: TextStyle(color: AppColors.mutedGray),
+                        style: TextStyle(
+                          color: AppColors.mutedGray,
+                          fontSize: 13,
+                        ),
                       ),
                     if (empresa['correo'] != null)
                       Text(
                         '${empresa['correo']}',
-                        style: TextStyle(color: AppColors.mutedGray),
+                        style: TextStyle(
+                          color: AppColors.mutedGray,
+                          fontSize: 13,
+                        ),
                       ),
                   ],
                 ),

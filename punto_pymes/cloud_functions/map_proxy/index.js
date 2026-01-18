@@ -5,8 +5,10 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Read key from env var GOOGLE_MAPS_API_KEY
-const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+// Read key from env var GOOGLE_MAPS_API_KEY. If not set, fall back to
+// the Android/iOS API key present in the project (not recommended for
+// production — prefer setting the env var in your deployment).
+const API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyAQotbaHvSA1So3d13mrykIA0XgsE1Ebq0';
 
 app.get('/', async (req, res) => {
   try {

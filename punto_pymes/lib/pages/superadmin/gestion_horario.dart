@@ -33,13 +33,32 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
   // Controladores de tiempo y tolerancia
   TimeOfDay _horaEntrada = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _horaSalida = const TimeOfDay(hour: 17, minute: 0);
+  TimeOfDay? _horaSalidaAlm;
+  TimeOfDay? _horaRegresoAlm;
   final _toleranciaController = TextEditingController(text: '10');
 
   @override
   void initState() {
     super.initState();
+    // If the caller passed an initial horario, load it immediately for snappy UI;
+    // then always fetch the latest from the server to ensure we reflect persisted values
+    // (prevents accidental overwrites when the passed object is stale).
     if (widget.horarioInicial != null) {
       _cargarHorario(widget.horarioInicial!);
+    }
+    _refreshHorarioFromServer();
+  }
+
+  Future<void> _refreshHorarioFromServer() async {
+    try {
+      final server = await SupabaseService.instance.getHorarioPorDepartamento(
+        widget.departamentoId,
+      );
+      if (server != null) {
+        _cargarHorario(server);
+      }
+    } catch (e) {
+      // ignore — keep whatever is currently displayed; parent will show errors when appropriate
     }
   }
 
@@ -52,11 +71,39 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
       _dias['viernes'] = data['viernes'] ?? true;
       _dias['sabado'] = data['sabado'] ?? false;
       _dias['domingo'] = data['domingo'] ?? false;
+      // Load times safely if present and valid
+      String? he = data['hora_entrada'] as String?;
+      String? hs = data['hora_salida'] as String?;
+      String? hSalidaAlm = data['hora_salida_almuerzo'] as String?;
+      String? hRegresoAlm = data['hora_regreso_almuerzo'] as String?;
 
-      _horaEntrada = _parseTime(data['hora_entrada'] ?? '08:00:00');
-      _horaSalida = _parseTime(data['hora_salida'] ?? '17:00:00');
-      _toleranciaController.text = (data['tolerancia_entrada_minutos'] ?? 10)
-          .toString();
+      final timePattern = RegExp(r'^\d{2}:\d{2}:\d{2}');
+      if (he != null && he.isNotEmpty && timePattern.hasMatch(he)) {
+        _horaEntrada = _parseTime(he);
+      }
+      if (hs != null && hs.isNotEmpty && timePattern.hasMatch(hs)) {
+        _horaSalida = _parseTime(hs);
+      }
+      if (hSalidaAlm != null &&
+          hSalidaAlm.isNotEmpty &&
+          timePattern.hasMatch(hSalidaAlm)) {
+        _horaSalidaAlm = _parseTime(hSalidaAlm);
+      } else {
+        _horaSalidaAlm = null;
+      }
+      if (hRegresoAlm != null &&
+          hRegresoAlm.isNotEmpty &&
+          timePattern.hasMatch(hRegresoAlm)) {
+        _horaRegresoAlm = _parseTime(hRegresoAlm);
+      } else {
+        _horaRegresoAlm = null;
+      }
+
+      // Tolerancia
+      final tol = data['tolerancia_entrada_minutos'];
+      _toleranciaController.text = (tol is int)
+          ? tol.toString()
+          : (int.tryParse('${tol ?? 10}')?.toString() ?? '10');
     });
   }
 
@@ -65,9 +112,17 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
+  int _timeOfDayToMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
+
+  TimeOfDay _minutesToTimeOfDay(int minutes) {
+    final m = minutes.clamp(0, 23 * 60 + 59);
+    return TimeOfDay(hour: m ~/ 60, minute: m % 60);
+  }
+
   Future<void> _selectTime(
     BuildContext context, {
-    required bool isEntrada,
+    String field =
+        'entrada', // 'entrada' | 'salida' | 'salida_alm' | 'regreso_alm'
   }) async {
     const brandRed = Color(0xFFE2183D);
     const accentBlue = Color(0xFF3F51B5);
@@ -76,7 +131,13 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
 
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: isEntrada ? _horaEntrada : _horaSalida,
+      initialTime: field == 'entrada'
+          ? _horaEntrada
+          : field == 'salida'
+          ? _horaSalida
+          : field == 'salida_alm'
+          ? (_horaSalidaAlm ?? TimeOfDay(hour: 12, minute: 0))
+          : (_horaRegresoAlm ?? TimeOfDay(hour: 13, minute: 0)),
       builder: (ctx, child) {
         if (child == null) return const SizedBox.shrink();
 
@@ -102,12 +163,65 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
     );
     if (picked != null) {
       setState(() {
-        if (isEntrada) {
-          _horaEntrada = picked;
-        } else {
-          _horaSalida = picked;
+        switch (field) {
+          case 'entrada':
+            _horaEntrada = picked;
+            break;
+          case 'salida':
+            _horaSalida = picked;
+            break;
+          case 'salida_alm':
+            _horaSalidaAlm = picked;
+            break;
+          case 'regreso_alm':
+            _horaRegresoAlm = picked;
+            break;
         }
       });
+
+      // If user selected a day-end that conflicts with existing lunch times, clear them
+      if (field == 'salida' && _horaSalidaAlm != null) {
+        final salidaMin = _timeOfDayToMinutes(_horaSalida);
+        final salidaAlmMin = _timeOfDayToMinutes(_horaSalidaAlm!);
+        if (salidaAlmMin >= salidaMin) {
+          setState(() {
+            _horaSalidaAlm = null;
+            _horaRegresoAlm = null;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Se quitó la salida/regreso de comida porque coincide con la hora de salida.',
+                ),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+
+      // If user selected a lunch start that is at/after day-end, clear it and notify
+      if (field == 'salida_alm' && _horaSalidaAlm != null) {
+        final salidaMin = _timeOfDayToMinutes(_horaSalida);
+        final salidaAlmMin = _timeOfDayToMinutes(_horaSalidaAlm!);
+        if (salidaAlmMin >= salidaMin) {
+          setState(() {
+            _horaSalidaAlm = null;
+            _horaRegresoAlm = null;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'La "Salida a comer" no puede ser igual o posterior a la hora de salida; se ha limpiado.',
+                ),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
     }
   }
 
@@ -115,6 +229,112 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
     setState(() => _isSaving = true);
     try {
       final tolerancia = int.tryParse(_toleranciaController.text) ?? 10;
+
+      // Validate lunch/time conflicts before saving
+      final entradaMin = _timeOfDayToMinutes(_horaEntrada);
+      final salidaMin = _timeOfDayToMinutes(_horaSalida);
+      final salidaAlmMin = _horaSalidaAlm != null
+          ? _timeOfDayToMinutes(_horaSalidaAlm!)
+          : null;
+      final regresoAlmMin = _horaRegresoAlm != null
+          ? _timeOfDayToMinutes(_horaRegresoAlm!)
+          : null;
+
+      // If lunch start is at or after end of day, prompt user for action
+      if (salidaAlmMin != null && salidaAlmMin >= salidaMin) {
+        final choice = await showDialog<int>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Conflicto de horario'),
+            content: const Text(
+              'La "Salida a comer" seleccionada ocurre al mismo tiempo o después de la "Hora de Salida" del día. ¿Qué deseas hacer?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(0),
+                child: const Text('Quitar salida a comer'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(1),
+                child: const Text('Ajustar hora de salida'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(2),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        );
+
+        if (choice == 0) {
+          setState(() {
+            _horaSalidaAlm = null;
+            _horaRegresoAlm = null;
+          });
+        } else if (choice == 1) {
+          // If we have a regreso time, set salida after it; otherwise add 60 minutes after lunch start
+          final newSalidaMin = (regresoAlmMin ?? (salidaAlmMin + 60));
+          setState(() {
+            _horaSalida = _minutesToTimeOfDay(newSalidaMin);
+          });
+        } else {
+          // Cancel save
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      // Ensure regreso (return) is after salida_alm and not after end of day
+      if (regresoAlmMin != null && salidaAlmMin != null) {
+        if (regresoAlmMin <= salidaAlmMin) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'La hora de regreso debe ser posterior a la hora de salida a comer.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() => _isSaving = false);
+          }
+          return;
+        }
+        if (regresoAlmMin > salidaMin) {
+          final choice2 = await showDialog<int>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Conflicto de horario'),
+              content: const Text(
+                'La hora de regreso de comer está después de la hora de salida del día. Puedes ajustar la hora de salida o quitar la hora de regreso.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(0),
+                  child: const Text('Quitar regreso'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(1),
+                  child: const Text('Ajustar hora de salida'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(2),
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            ),
+          );
+
+          if (choice2 == 0) {
+            setState(() => _horaRegresoAlm = null);
+          } else if (choice2 == 1) {
+            setState(() => _horaSalida = _minutesToTimeOfDay(regresoAlmMin));
+          } else {
+            if (mounted) setState(() => _isSaving = false);
+            return;
+          }
+        }
+      }
 
       await SupabaseService.instance.upsertHorarioDepartamento(
         departamentoId: widget.departamentoId,
@@ -130,6 +350,12 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
         horaSalida:
             '${_horaSalida.hour.toString().padLeft(2, '0')}:${_horaSalida.minute.toString().padLeft(2, '0')}:00',
         tolerancia: tolerancia,
+        horaSalidaAlmuerzo: _horaSalidaAlm != null
+            ? '${_horaSalidaAlm!.hour.toString().padLeft(2, '0')}:${_horaSalidaAlm!.minute.toString().padLeft(2, '0')}:00'
+            : null,
+        horaRegresoAlmuerzo: _horaRegresoAlm != null
+            ? '${_horaRegresoAlm!.hour.toString().padLeft(2, '0')}:${_horaRegresoAlm!.minute.toString().padLeft(2, '0')}:00'
+            : null,
       );
 
       if (mounted) {
@@ -373,7 +599,7 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
                                 ),
                               ),
                             ),
-                            onTap: () => _selectTime(context, isEntrada: true),
+                            onTap: () => _selectTime(context, field: 'entrada'),
                           ),
                           const Divider(height: 12),
                           ListTile(
@@ -398,7 +624,59 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
                                 ),
                               ),
                             ),
-                            onTap: () => _selectTime(context, isEntrada: false),
+                            onTap: () => _selectTime(context, field: 'salida'),
+                          ),
+                          const Divider(height: 18),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Salida a comer'),
+                            subtitle: const Text(
+                              'Hora de inicio del descanso de comida.',
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: surfaceSoft,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                _horaSalidaAlm?.format(context) ?? '—',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            onTap: () =>
+                                _selectTime(context, field: 'salida_alm'),
+                          ),
+                          const Divider(height: 12),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Regreso de comer'),
+                            subtitle: const Text(
+                              'Hora en la que finaliza el descanso de comida.',
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: surfaceSoft,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                _horaRegresoAlm?.format(context) ?? '—',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            onTap: () =>
+                                _selectTime(context, field: 'regreso_alm'),
                           ),
                         ],
                       ),

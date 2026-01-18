@@ -994,3 +994,19 @@ USING (
 
 -- 4. Aseguramos permisos de ejecución
 GRANT EXECUTE ON FUNCTION public.check_noticia_empresa_segura(uuid) TO authenticated;
+ 
+-- ############################################################
+-- === MIGRACIÓN: columnas para manejo de almuerzo y jornadas ===
+-- Agrega columnas opcionales en tablas existentes para soportar
+-- horas de salida/regreso de almuerzo y jornadas en empresas
+-- ############################################################
+
+ALTER TABLE public.asistencias
+  ADD COLUMN IF NOT EXISTS hora_salida_almuerzo text,
+  ADD COLUMN IF NOT EXISTS hora_regreso_almuerzo text;
+
+ALTER TABLE public.horarios_departamento
+  ADD COLUMN IF NOT EXISTS jornada_entrada text,
+  ADD COLUMN IF NOT EXISTS jornada_salida_almuerzo text,
+  ADD COLUMN IF NOT EXISTS jornada_regreso_almuerzo text,
+  ADD COLUMN IF NOT EXISTS jornada_salida text;

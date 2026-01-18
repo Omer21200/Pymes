@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latlng;
 import '../theme.dart';
@@ -60,6 +61,7 @@ class _ProfileViewState extends State<ProfileView> {
   double? _deviceLng;
   final MapController _profileMapController = MapController();
   double _profileMapZoom = 15.0;
+  gmaps.GoogleMapController? _googleProfileMapController;
   late TextEditingController _emailController;
 
   @override
@@ -253,21 +255,48 @@ class _ProfileViewState extends State<ProfileView> {
               borderRadius: BorderRadius.circular(12),
               child: Stack(
                 children: [
-                  FlutterMap(
-                    mapController: _profileMapController,
-                    options: MapOptions(
-                      initialCenter: _calculateCenter(),
-                      initialZoom: _profileMapZoom,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.pymes.app',
+                  // Use GoogleMap for display when not editing (better tiles),
+                  // keep FlutterMap for editing (tappable coordinate selection).
+                  if (!_editing)
+                    gmaps.GoogleMap(
+                      initialCameraPosition: gmaps.CameraPosition(
+                        target: gmaps.LatLng(
+                          _calculateCenter().latitude,
+                          _calculateCenter().longitude,
+                        ),
+                        zoom: _profileMapZoom,
                       ),
-                      MarkerLayer(markers: _buildMarkers()),
-                    ],
-                  ),
+                      markers: _buildMarkers()
+                          .map(
+                            (m) => gmaps.Marker(
+                              markerId: gmaps.MarkerId(m.key.toString()),
+                              position: gmaps.LatLng(
+                                m.point.latitude,
+                                m.point.longitude,
+                              ),
+                            ),
+                          )
+                          .toSet(),
+                      zoomControlsEnabled: false,
+                      myLocationButtonEnabled: false,
+                      onMapCreated: (c) => _googleProfileMapController = c,
+                    )
+                  else
+                    FlutterMap(
+                      mapController: _profileMapController,
+                      options: MapOptions(
+                        initialCenter: _calculateCenter(),
+                        initialZoom: _profileMapZoom,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.pymes.app',
+                        ),
+                        MarkerLayer(markers: _buildMarkers()),
+                      ],
+                    ),
 
                   Positioned(
                     right: 8,
@@ -289,10 +318,24 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                             onPressed: () {
                               final center = _calculateCenter();
-                              _profileMapController.move(
-                                center,
-                                _profileMapZoom,
-                              );
+                              if (_editing) {
+                                _profileMapController.move(
+                                  center,
+                                  _profileMapZoom,
+                                );
+                              } else if (_googleProfileMapController != null) {
+                                _googleProfileMapController!.animateCamera(
+                                  gmaps.CameraUpdate.newCameraPosition(
+                                    gmaps.CameraPosition(
+                                      target: gmaps.LatLng(
+                                        center.latitude,
+                                        center.longitude,
+                                      ),
+                                      zoom: _profileMapZoom,
+                                    ),
+                                  ),
+                                );
+                              }
                             },
                           ),
                           const Divider(height: 1),
@@ -303,10 +346,16 @@ class _ProfileViewState extends State<ProfileView> {
                                 1,
                                 20,
                               );
-                              _profileMapController.move(
-                                _calculateCenter(),
-                                _profileMapZoom,
-                              );
+                              if (_editing) {
+                                _profileMapController.move(
+                                  _calculateCenter(),
+                                  _profileMapZoom,
+                                );
+                              } else if (_googleProfileMapController != null) {
+                                _googleProfileMapController!.animateCamera(
+                                  gmaps.CameraUpdate.zoomTo(_profileMapZoom),
+                                );
+                              }
                             },
                           ),
                           IconButton(
@@ -316,10 +365,16 @@ class _ProfileViewState extends State<ProfileView> {
                                 1,
                                 20,
                               );
-                              _profileMapController.move(
-                                _calculateCenter(),
-                                _profileMapZoom,
-                              );
+                              if (_editing) {
+                                _profileMapController.move(
+                                  _calculateCenter(),
+                                  _profileMapZoom,
+                                );
+                              } else if (_googleProfileMapController != null) {
+                                _googleProfileMapController!.animateCamera(
+                                  gmaps.CameraUpdate.zoomTo(_profileMapZoom),
+                                );
+                              }
                             },
                           ),
                         ],

@@ -197,6 +197,71 @@ class SupabaseService {
     return null;
   }
 
+  /// Search for address/place suggestions using Nominatim (OpenStreetMap).
+  /// Returns a list of maps with keys: 'display_name', 'lat', 'lon'.
+  Future<List<Map<String, dynamic>>> geocodeSearch(
+    String query, {
+    int limit = 5,
+  }) async {
+    try {
+      final q = query.trim();
+      if (q.isEmpty) return [];
+
+      final encoded = Uri.encodeComponent(q);
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=$encoded&format=json&limit=$limit&addressdetails=1&accept-language=es',
+      );
+      final resp = await http
+          .get(url, headers: {'User-Agent': 'pymes-app/1.0'})
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List<dynamic>;
+        final list = data
+            .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>))
+            .toList();
+
+        if (list.isEmpty) return [];
+
+        // Boost exact-country and country-type matches so searching "Ecuador"
+        // returns the country and not unrelated smaller places.
+        final qLower = q.toLowerCase();
+        list.sort((a, b) {
+          var scoreA = 0;
+          var scoreB = 0;
+
+          final aType = (a['type']?.toString() ?? '').toLowerCase();
+          final bType = (b['type']?.toString() ?? '').toLowerCase();
+          if (aType == 'country') scoreA += 200;
+          if (bType == 'country') scoreB += 200;
+
+          final aAddr = a['address'] as Map<String, dynamic>? ?? {};
+          final bAddr = b['address'] as Map<String, dynamic>? ?? {};
+          if ((aAddr['country']?.toString().toLowerCase() ?? '') == qLower)
+            scoreA += 100;
+          if ((bAddr['country']?.toString().toLowerCase() ?? '') == qLower)
+            scoreB += 100;
+
+          final aDisp = (a['display_name']?.toString().toLowerCase() ?? '');
+          final bDisp = (b['display_name']?.toString().toLowerCase() ?? '');
+          if (aDisp == qLower) scoreA += 80;
+          if (bDisp == qLower) scoreB += 80;
+
+          final impA = double.tryParse(a['importance']?.toString() ?? '') ?? 0;
+          final impB = double.tryParse(b['importance']?.toString() ?? '') ?? 0;
+          scoreA += (impA * 10).toInt();
+          scoreB += (impB * 10).toInt();
+
+          return scoreB - scoreA;
+        });
+
+        return list;
+      }
+    } catch (e) {
+      developer.log('Geocode search error: $e', name: 'SupabaseService');
+    }
+    return [];
+  }
+
   /// Convenience method to update empresa coordinates by id.
   Future<Map<String, dynamic>?> updateEmpresaCoordinates(
     String empresaId,
@@ -546,6 +611,8 @@ class SupabaseService {
     required String horaEntrada, // Formato HH:mm:ss
     required String horaSalida, // Formato HH:mm:ss
     required int tolerancia,
+    String? horaSalidaAlmuerzo,
+    String? horaRegresoAlmuerzo,
   }) async {
     final response = await client
         .from('horarios_departamento')
@@ -560,6 +627,9 @@ class SupabaseService {
           'domingo': domingo,
           'hora_entrada': horaEntrada,
           'hora_salida': horaSalida,
+          // Always include lunch fields in upsert so we can set them to NULL when needed.
+          'hora_salida_almuerzo': horaSalidaAlmuerzo,
+          'hora_regreso_almuerzo': horaRegresoAlmuerzo,
           'tolerancia_entrada_minutos': tolerancia,
           'updated_at': 'now()', // Actualiza el timestamp
         }, onConflict: 'departamento_id')
