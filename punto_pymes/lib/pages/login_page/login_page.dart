@@ -16,37 +16,10 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   String? _errorMessage;
-
-  /// Convierte errores técnicos en mensajes amigables para el usuario
-  String _parseErrorMessage(String errorMessage) {
-    final msg = errorMessage.toLowerCase();
-    
-    if (msg.contains('invalid_credentials') || msg.contains('invalid_grant')) {
-      return 'Correo o contraseña incorrectos.\nVerifica tus credenciales e intenta de nuevo.';
-    } else if (msg.contains('user_not_found')) {
-      return 'Esta cuenta no existe.\nVerifica el correo ingresado.';
-    } else if (msg.contains('user_not_confirmed')) {
-      return 'Tu cuenta no ha sido confirmada.\nRevisa tu correo para activarla.';
-    } else if (msg.contains('database error querying schema')) {
-      return 'Error en el servidor.\nIntenta de nuevo en unos momentos.';
-    } else if (msg.contains('this account does not have the required role')) {
-      return 'Tu cuenta no tiene permisos para acceder aquí.';
-    } else if (msg.contains('does not belong to the company selected')) {
-      return 'Esta cuenta no está registrada en la empresa seleccionada.';
-    } else if (msg.contains('super admin only')) {
-      return 'Solo Super Administradores pueden acceder a esta pantalla.';
-    } else if (msg.contains('network')) {
-      return 'Error de conexión.\nVerifica tu conexión a internet.';
-    } else if (msg.contains('timeout')) {
-      return 'La solicitud tardó demasiado.\nIntenta de nuevo.';
-    }
-    
-    return 'Ocurrió un error al iniciar sesión.\nIntenta de nuevo más tarde.';
-  }
 
   @override
   void dispose() {
@@ -80,14 +53,18 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.session == null) {
-        throw Exception('No se pudo iniciar sesión. Verifica tus credenciales.');
+        throw Exception(
+          'No se pudo iniciar sesión. Verifica tus credenciales.',
+        );
       }
 
       // Obtenemos el perfil para verificar el rol
       await SupabaseService.instance.refreshSession();
       final profile = await SupabaseService.instance.getMyProfile();
-      
-      if (profile == null) throw Exception('No se encontró el perfil del usuario.');
+
+      if (profile == null) {
+        throw Exception('No se encontró el perfil del usuario.');
+      }
 
       final rol = profile['rol'] as String?;
       final userEmpresaId = profile['empresa_id'] as String?;
@@ -100,14 +77,19 @@ class _LoginPageState extends State<LoginPage> {
           await SupabaseService.instance.signOut();
           throw Exception('Esta cuenta no es de Super Administrador.');
         }
-      } else { // Es un login de empresa
+      } else {
+        // Es un login de empresa
         if (rol == 'SUPER_ADMIN') {
           await SupabaseService.instance.signOut();
-          throw Exception('El Super Admin solo puede ingresar por la pantalla principal.');
+          throw Exception(
+            'El Super Admin solo puede ingresar por la pantalla principal.',
+          );
         }
         if (userEmpresaId != widget.empresa!['id']) {
           await SupabaseService.instance.signOut();
-          throw Exception('Esta cuenta no pertenece a la empresa seleccionada.');
+          throw Exception(
+            'Esta cuenta no pertenece a la empresa seleccionada.',
+          );
         }
       }
       // --- FIN DE VALIDACIÓN ---
@@ -117,34 +99,55 @@ class _LoginPageState extends State<LoginPage> {
       // Redirección según el rol verificado
       switch (rol) {
         case 'SUPER_ADMIN':
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const InicioSuperadmin()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const InicioSuperadmin()),
+          );
           break;
         case 'ADMIN_EMPRESA':
         case 'EMPLEADO':
-          final empleadoData = await SupabaseService.instance.getEmpleadoActual();
+          final empleadoData = await SupabaseService.instance
+              .getEmpleadoActual();
           if (!mounted) return;
-          
-          final cedula = (empleadoData?['empleado_raw'] as Map<String, dynamic>?)?['cedula'] as String?;
-          
+
+          final cedula =
+              (empleadoData?['empleado_raw']
+                      as Map<String, dynamic>?)?['cedula']
+                  as String?;
+
           if (cedula == null || cedula.isEmpty) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileCompletionPage()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileCompletionPage()),
+            );
           } else {
             if (rol == 'ADMIN_EMPRESA') {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminEmpresaPage()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminEmpresaPage()),
+              );
             } else {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const EmpleadoPage()),
+              );
             }
           }
           break;
         default:
           throw Exception('Rol no reconocido');
       }
-
     } catch (e) {
       if (!mounted) return;
-      final rawError = e.toString();
+      final msg = e.toString();
       setState(() {
-        _errorMessage = _parseErrorMessage(rawError);
+        if (msg.contains('invalid_grant')) {
+          _errorMessage = 'Credenciales incorrectas.';
+        } else if (msg.contains('Database error querying schema')) {
+          _errorMessage = 'Error de servidor. Intenta más tarde.';
+        } else {
+          _errorMessage = msg.replaceAll("Exception: ", "");
+        }
         _isLoading = false;
       });
     }
@@ -177,19 +180,27 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: Colors.grey[600]),
-          suffixIcon: isPassword 
-            ? IconButton(
-                icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-              ) 
-            : null,
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () =>
+                      setState(() => _isPasswordVisible = !_isPasswordVisible),
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
         ),
       ),
     );
@@ -205,13 +216,14 @@ class _LoginPageState extends State<LoginPage> {
     final String subtitle;
     final Widget logoWidget;
 
-      if (isSuperAdminLogin) {
+    if (isSuperAdminLogin) {
       title = 'Acceso Super Admin';
       subtitle = 'Ingresa tus credenciales maestras';
       logoWidget = Image.asset(
-        'assets/images/pymes.png', // Logo principal de la app
+        'assets/images/logo.png', // Logo principal de la app
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
       );
     } else {
       final empresaNombre = widget.empresa!['nombre'];
@@ -223,7 +235,8 @@ class _LoginPageState extends State<LoginPage> {
         logoWidget = Image.network(
           empresaFoto,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, size: 50, color: primaryColor),
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.business, size: 50, color: primaryColor),
         );
       } else {
         logoWidget = const Icon(Icons.business, size: 50, color: primaryColor);
@@ -239,11 +252,11 @@ class _LoginPageState extends State<LoginPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () {
-             if (Navigator.canPop(context)) {
-               Navigator.pop(context);
-             } else {
-               Navigator.pushReplacementNamed(context, '/access-selection');
-             }
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, '/access-selection');
+            }
           },
         ),
       ),
@@ -259,25 +272,24 @@ class _LoginPageState extends State<LoginPage> {
                   height: 100,
                   width: 100,
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(26), // Corrección de withOpacity
+                        color: Colors.black.withAlpha(26),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.zero,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     child: logoWidget,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // 2. TEXTOS DE BIENVENIDA (Dinámicos)
                 Text(
                   title,
@@ -296,72 +308,31 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // 3. MENSAJE DE ERROR (Profesional y amigable)
+                // 3. MENSAJE DE ERROR
                 if (_errorMessage != null)
                   Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade200, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withAlpha(20),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade100),
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.error_rounded,
-                            color: Colors.red.shade700,
-                            size: 22,
-                          ),
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red[900],
+                          size: 20,
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Opss, algo salió mal',
-                                style: TextStyle(
-                                  color: Colors.red.shade900,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _errorMessage!,
-                                style: TextStyle(
-                                  color: Colors.red.shade800,
-                                  fontSize: 13,
-                                  height: 1.5,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => setState(() => _errorMessage = null),
-                          child: Icon(
-                            Icons.close,
-                            color: Colors.red.shade700,
-                            size: 20,
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red[900],
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -375,7 +346,7 @@ class _LoginPageState extends State<LoginPage> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                 ),
-                
+
                 _buildCustomTextField(
                   controller: _passwordController,
                   label: 'Contraseña',
@@ -388,12 +359,13 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Acción para recuperar contraseña
-                    },
+                    onPressed: () {},
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
-                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -410,26 +382,32 @@ class _LoginPageState extends State<LoginPage> {
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 4,
-                      shadowColor: primaryColor.withAlpha(102), // Corrección de withOpacity
+                      shadowColor: primaryColor.withAlpha(
+                        102,
+                      ), // Corrección de withOpacity
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            height: 24, width: 24,
+                            height: 24,
+                            width: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white, 
-                              strokeWidth: 2.5
+                              color: Colors.white,
+                              strokeWidth: 2.5,
                             ),
                           )
                         : const Text(
                             'Ingresar',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
               ],
             ),

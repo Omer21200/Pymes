@@ -91,26 +91,46 @@ class _AsistenciaDetalleScreenState extends State<AsistenciaDetalleScreen> {
             if (fotoUrl != null && fotoUrl.isNotEmpty) ...[
               Container(
                 width: double.infinity,
-                height: 250,
+                height: 300,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: Colors.black,
                 ),
-                child: Image.network(
-                  fotoUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.image_not_supported, size: 48),
-                          const SizedBox(height: 8),
-                          Text('No se pudo cargar la foto',
-                              style: TextStyle(color: Colors.grey.shade600)),
-                        ],
-                      ),
-                    );
-                  },
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.network(
+                      fotoUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.image_not_supported, size: 48),
+                                const SizedBox(height: 8),
+                                Text('No se pudo cargar la foto',
+                                    style: TextStyle(color: Colors.grey.shade600)),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: Colors.black,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ],

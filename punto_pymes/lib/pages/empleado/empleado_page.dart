@@ -79,7 +79,19 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       String? uploadedUrl;
       try {
         final picker = ImagePicker();
+        // Lanzamos la cámara; si el usuario cancela, abortamos el registro
         final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 75);
+        if (photo == null) {
+          // Usuario canceló la toma de foto -> cancelar registro
+          uploadedUrl = null;
+          if (mounted) NotificationHelper.showWarningNotification(
+            context,
+            title: 'Registro cancelado',
+            message: 'No se tomó la foto. El registro fue cancelado.',
+          );
+          return;
+        }
+
         if (photo != null) {
           // Subir la foto al storage: bucket 'fotos' en carpeta empleados/asistencias
           final user = SupabaseService.instance.currentUser;
