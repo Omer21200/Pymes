@@ -236,10 +236,12 @@ class SupabaseService {
 
           final aAddr = a['address'] as Map<String, dynamic>? ?? {};
           final bAddr = b['address'] as Map<String, dynamic>? ?? {};
-          if ((aAddr['country']?.toString().toLowerCase() ?? '') == qLower)
+          if ((aAddr['country']?.toString().toLowerCase() ?? '') == qLower) {
             scoreA += 100;
-          if ((bAddr['country']?.toString().toLowerCase() ?? '') == qLower)
+          }
+          if ((bAddr['country']?.toString().toLowerCase() ?? '') == qLower) {
             scoreB += 100;
+          }
 
           final aDisp = (a['display_name']?.toString().toLowerCase() ?? '');
           final bDisp = (b['display_name']?.toString().toLowerCase() ?? '');

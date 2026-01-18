@@ -8,6 +8,7 @@ class SuperadminHeader extends StatelessWidget {
   final bool showBack;
   final VoidCallback? onBack;
   final List<Widget>? actions;
+  final Color? backgroundColor;
 
   const SuperadminHeader({
     super.key,
@@ -17,16 +18,18 @@ class SuperadminHeader extends StatelessWidget {
     this.showBack = false,
     this.onBack,
     this.actions,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).primaryColor;
+    final bg = backgroundColor ?? Theme.of(context).primaryColor;
+    final accent = Theme.of(context).primaryColor;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: primary,
+        color: bg,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(16),
           bottomRight: Radius.circular(16),
@@ -91,7 +94,7 @@ class SuperadminHeader extends StatelessWidget {
               ),
               child: IconButton(
                 onPressed: () => showLogoutConfirmation(context),
-                icon: Icon(Icons.exit_to_app, color: primary),
+                icon: Icon(Icons.exit_to_app, color: accent),
                 tooltip: 'Cerrar sesión',
               ),
             ),

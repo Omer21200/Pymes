@@ -23,6 +23,7 @@ class CompanyTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.06),
             blurRadius: 12,
             offset: const Offset(0, 6),
@@ -48,6 +49,7 @@ class CompanyTile extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
+                        // ignore: deprecated_member_use
                         color: AppColors.accentBlue.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -63,6 +65,7 @@ class CompanyTile extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
                     color: AppColors.accentBlue.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),

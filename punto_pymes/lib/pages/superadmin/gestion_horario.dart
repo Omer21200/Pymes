@@ -189,6 +189,7 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
             _horaRegresoAlm = null;
           });
           if (mounted) {
+            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -211,6 +212,7 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
             _horaRegresoAlm = null;
           });
           if (mounted) {
+            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -231,7 +233,7 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
       final tolerancia = int.tryParse(_toleranciaController.text) ?? 10;
 
       // Validate lunch/time conflicts before saving
-      final entradaMin = _timeOfDayToMinutes(_horaEntrada);
+      _timeOfDayToMinutes(_horaEntrada);
       final salidaMin = _timeOfDayToMinutes(_horaSalida);
       final salidaAlmMin = _horaSalidaAlm != null
           ? _timeOfDayToMinutes(_horaSalidaAlm!)
@@ -302,6 +304,7 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
         }
         if (regresoAlmMin > salidaMin) {
           final choice2 = await showDialog<int>(
+            // ignore: use_build_context_synchronously
             context: context,
             builder: (ctx) => AlertDialog(
               title: const Text('Conflicto de horario'),

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 // logout_helper removed: no onWillPop logic here anymore
 import 'widgets/superadmin_header.dart';
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
 
 class CreacionEmpresas extends StatefulWidget {
   const CreacionEmpresas({super.key});
@@ -281,6 +283,10 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
     final result = await showModalBottomSheet<LatLng>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         LatLng picked = initial;
         final markers = <Marker>{};
@@ -293,6 +299,8 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
 
         return StatefulBuilder(
           builder: (context, setStateModal) {
+            final TextEditingController modalSearchController =
+                TextEditingController();
             return SizedBox(
               height: MediaQuery.of(context).size.height * 0.75,
               child: Column(
@@ -306,6 +314,130 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                             'Selecciona la ubicación',
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            // Open simple search dialog
+                            final q = await showDialog<String?>(
+                              context: context,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  backgroundColor: AppColors.surface,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  title: const Text('Buscar ubicación'),
+                                  content: TextField(
+                                    controller: modalSearchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Escribe una dirección o lugar',
+                                      hintStyle: AppTextStyles.smallLabel
+                                          .copyWith(color: AppColors.mutedGray),
+                                      filled: true,
+                                      fillColor: AppColors.subtleBg,
+                                    ),
+                                    autofocus: true,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppColors.mutedGray,
+                                      ),
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('Cerrar'),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                      onPressed: () => Navigator.of(
+                                        ctx,
+                                      ).pop(modalSearchController.text.trim()),
+                                      child: const Text('Buscar'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (q == null || q.trim().isEmpty) return;
+                            // perform geocode search (Nominatim via SupabaseService)
+                            final List<Map<String, dynamic>> results =
+                                await SupabaseService.instance.geocodeSearch(
+                                  q,
+                                  limit: 6,
+                                );
+                            if (results.isEmpty) {
+                              if (mounted) {
+                                // ignore: use_build_context_synchronously
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se encontraron resultados',
+                                    ),
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                            // Show selection dialog
+                            final sel = await showDialog<Map<String, dynamic>?>(
+                              // ignore: use_build_context_synchronously
+                              context: context,
+                              builder: (ctx) {
+                                return SimpleDialog(
+                                  title: const Text('Resultados'),
+                                  children: results.map((r) {
+                                    final display =
+                                        r['display_name'] ??
+                                        r['description'] ??
+                                        '';
+                                    return SimpleDialogOption(
+                                      onPressed: () => Navigator.of(ctx).pop(r),
+                                      child: Text(display.toString()),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            );
+
+                            if (sel != null) {
+                              final lat =
+                                  double.tryParse(
+                                    sel['lat']?.toString() ?? '',
+                                  ) ??
+                                  double.tryParse(
+                                    sel['latitud']?.toString() ?? '',
+                                  );
+                              final lon =
+                                  double.tryParse(
+                                    sel['lon']?.toString() ?? '',
+                                  ) ??
+                                  double.tryParse(
+                                    sel['longitud']?.toString() ?? '',
+                                  );
+                              if (lat != null && lon != null) {
+                                setStateModal(() {
+                                  picked = LatLng(lat, lon);
+                                  markers.clear();
+                                  markers.add(
+                                    Marker(
+                                      markerId: const MarkerId('selected'),
+                                      position: picked,
+                                    ),
+                                  );
+                                });
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.search),
+                          tooltip: 'Buscar ubicación',
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -420,10 +552,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                           ),
                           IconButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            icon: Icon(
-                              Icons.close,
-                              color: Colors.grey.shade700,
-                            ),
+                            icon: Icon(Icons.close, color: AppColors.primary),
                           ),
                         ],
                       ),
@@ -438,6 +567,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 760),
                           child: Card(
+                            color: AppColors.surface,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -448,21 +578,19 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Row(
-                                    children: const [
+                                    children: [
                                       CircleAvatar(
-                                        backgroundColor: Color(0xFFFFECEF),
-                                        child: Icon(
+                                        backgroundColor: AppColors.surfaceSoft,
+                                        child: const Icon(
                                           Icons.apartment,
-                                          color: Color(0xFFD92344),
+                                          color: AppColors.accentBlue,
                                         ),
                                       ),
-                                      SizedBox(width: 12),
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
                                           'Información de la empresa',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                          style: AppTextStyles.sectionTitle,
                                         ),
                                       ),
                                     ],
@@ -475,7 +603,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                       height: 120,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
-                                        color: const Color(0xFFF3F3F3),
+                                        color: AppColors.surfaceSoft,
                                       ),
                                       child: Center(
                                         child: _isUploading
@@ -501,18 +629,20 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                             : Column(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(
+                                                  const Icon(
                                                     Icons.cloud_upload_outlined,
                                                     size: 28,
-                                                    color: Colors.grey.shade700,
+                                                    color: AppColors.mutedGray,
                                                   ),
                                                   const SizedBox(height: 8),
                                                   Text(
                                                     'Toca para subir el logo',
-                                                    style: TextStyle(
-                                                      color:
-                                                          Colors.grey.shade600,
-                                                    ),
+                                                    style: AppTextStyles
+                                                        .smallLabel
+                                                        .copyWith(
+                                                          color: AppColors
+                                                              .mutedGray,
+                                                        ),
                                                   ),
                                                 ],
                                               ),
@@ -587,8 +717,12 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                             'Seleccionar ubicación en mapa',
                                           ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFF1976D2,
+                                            backgroundColor:
+                                                AppColors.accentBlue,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                           ),
                                         ),
@@ -618,9 +752,8 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                           ? _createEmpresa
                                           : null,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFFD92344,
-                                        ),
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
                                             10,
@@ -644,6 +777,12 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                               style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600,
+                                                color: Color.fromARGB(
+                                                  255,
+                                                  255,
+                                                  255,
+                                                  255,
+                                                ),
                                               ),
                                             ),
                                     ),

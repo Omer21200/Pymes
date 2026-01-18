@@ -669,6 +669,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
+                                      // ignore: deprecated_member_use
                                       color: Colors.black.withOpacity(0.06),
                                       blurRadius: 8,
                                     ),
@@ -681,7 +682,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                   child: ListView.separated(
                                     shrinkWrap: true,
                                     itemCount: _mapSearchResults.length,
-                                    separatorBuilder: (_, __) =>
+                                    separatorBuilder: (_, _) =>
                                         const Divider(height: 1),
                                     itemBuilder: (ctx, i) {
                                       final item = _mapSearchResults[i];
@@ -1088,6 +1089,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                       decoration: BoxDecoration(
                                                         color: AppColors
                                                             .accentBlue
+                                                            // ignore: deprecated_member_use
                                                             .withOpacity(0.12),
                                                         borderRadius:
                                                             const BorderRadius.only(
