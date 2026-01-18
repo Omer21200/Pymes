@@ -19,7 +19,10 @@ class NotificationStats extends StatelessWidget {
         // Encabezado
         Text(
           'Resumen',
-          style: AppTextStyles.sectionTitle.copyWith(fontSize: 16, color: Colors.black87),
+          style: AppTextStyles.sectionTitle.copyWith(
+            fontSize: 16,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 14),
 
@@ -31,19 +34,19 @@ class NotificationStats extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.priority_high,
                 iconColor: AppColors.brandRedAlt,
-                  backgroundColor: AppColors.notificationBg,
+                backgroundColor: AppColors.notificationBg,
                 label: 'Nuevas',
                 value: noticiasNuevas,
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Estadística de Total
             Expanded(
               child: _StatCard(
                 icon: Icons.inbox,
                 iconColor: AppColors.mutedGray,
-                  backgroundColor: AppColors.subtleBg,
+                backgroundColor: AppColors.subtleBg,
                 label: 'Total',
                 value: totalNoticias,
               ),
@@ -84,6 +87,7 @@ class _StatCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
+                // ignore: deprecated_member_use
                 color: Colors.white.withOpacity(0.16),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -102,7 +106,10 @@ class _StatCard extends StatelessWidget {
           // Valor
           Text(
             value.toString(),
-            style: AppTextStyles.statsValue.copyWith(fontSize: 32, color: Colors.white),
+            style: AppTextStyles.statsValue.copyWith(
+              fontSize: 32,
+              color: Colors.white,
+            ),
           ),
         ],
       ),

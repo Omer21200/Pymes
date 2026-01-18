@@ -23,6 +23,7 @@ class HoraInternetEcuador extends StatefulWidget {
   const HoraInternetEcuador({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _HoraInternetEcuadorState createState() => _HoraInternetEcuadorState();
 
   /// Obtiene la hora actual de Ecuador del state del widget
@@ -62,20 +63,26 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
     });
 
     try {
-      final uri = Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil');
+      final uri = Uri.parse(
+        'https://worldtimeapi.org/api/timezone/America/Guayaquil',
+      );
       final httpClient = HttpClient();
       final request = await httpClient.getUrl(uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final response = await request.close().timeout(const Duration(seconds: 10));
+      final response = await request.close().timeout(
+        const Duration(seconds: 10),
+      );
 
       if (response.statusCode != 200) {
         throw HttpException('HTTP ${response.statusCode}');
       }
 
       final body = await response.transform(utf8.decoder).join();
-      final Map<String, dynamic> data = jsonDecode(body) as Map<String, dynamic>;
+      final Map<String, dynamic> data =
+          jsonDecode(body) as Map<String, dynamic>;
       final String datetimeStr = data['datetime'] as String;
-      final String timezone = (data['timezone'] as String?) ?? 'America/Guayaquil';
+      final String timezone =
+          (data['timezone'] as String?) ?? 'America/Guayaquil';
       final DateTime serverTime = DateTime.parse(datetimeStr).toUtc();
 
       setState(() {
@@ -139,10 +146,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFD92344),
-            Color(0xFFA81830),
-          ],
+          colors: [Color(0xFFD92344), Color(0xFFA81830)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -229,9 +233,12 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
               ),
             ] else if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 12,
+                ),
                 decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((0.15 * 255).round()),
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Colors.white.withAlpha((0.3 * 255).round()),
@@ -288,7 +295,6 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                         color: Colors.white.withAlpha((0.15 * 255).round()),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      
                     ),
                   ],
                 ),
@@ -304,7 +310,7 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
                   ),
                 ),
               ),
-            ]
+            ],
           ],
         ),
       ),

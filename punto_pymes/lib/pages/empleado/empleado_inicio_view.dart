@@ -5,7 +5,6 @@ import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
 import 'widgets/empleado_news_section.dart';
 import 'widgets/news_carousel.dart';
-import 'widgets/news_carousel.dart';
 
 class EmpleadoInicioView extends StatefulWidget {
   final ValueChanged<int>? onNavigateTab;
@@ -68,37 +67,14 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           const SizedBox(height: 32),
 
           // Encabezado de bienvenida
-          Text(
-            'Bienvenido',
-            style: AppTextStyles.headline,
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Tu espacio de empleado',
-            style: AppTextStyles.subtitle,
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Bienvenido',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: Colors.black87,
-                    letterSpacing: 0.3,
-                  ),
-                ),
+                Text('Bienvenido', style: AppTextStyles.headline),
                 const SizedBox(height: 4),
-                const Text(
-                  'Tu espacio de empleado',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+                Text('Tu espacio de empleado', style: AppTextStyles.subtitle),
               ],
             ),
           ),
@@ -122,9 +98,12 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
 
               return Column(
                 children: [
-                  NewsCarousel(noticias: noticias, onNewsPressed: () {
-                    // opción: navegar a la sección de noticias o abrir detalle
-                  }),
+                  NewsCarousel(
+                    noticias: noticias,
+                    onNewsPressed: () {
+                      // opción: navegar a la sección de noticias o abrir detalle
+                    },
+                  ),
                   const SizedBox(height: 16),
                 ],
               );
@@ -140,7 +119,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
-                    child: CircularProgressIndicator(),
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 }
 
@@ -154,42 +133,8 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                   );
                 }
 
-              final stats = snapshot.data ?? {};
-              
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: EmpleadoStatsCard(
-                      label: 'Asistencias',
-                      value: '${stats['dias_asistidos'] ?? 0}',
-                      icon: Icons.check_circle,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: EmpleadoStatsCard(
-                      label: 'A tiempo',
-                      value: '${stats['a_tiempo'] ?? 0}',
-                      icon: Icons.thumb_up,
-                      color: AppColors.success,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: EmpleadoStatsCard(
-                      label: 'Tardanzas',
-                      value: '${stats['tardanzas'] ?? 0}',
-                      icon: Icons.schedule,
-                      color: AppColors.warning,
-                    ),
-                  ),
-                ],
-              );
-            },
                 final stats = snapshot.data ?? {};
-                
+
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -198,7 +143,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                         label: 'Asistencias',
                         value: '${stats['dias_asistidos'] ?? 0}',
                         icon: Icons.check_circle,
-                        color: const Color(0xFFD92344),
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -207,7 +152,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                         label: 'A tiempo',
                         value: '${stats['a_tiempo'] ?? 0}',
                         icon: Icons.thumb_up,
-                        color: const Color(0xFF4CAF50),
+                        color: AppColors.success,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -216,7 +161,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                         label: 'Tardanzas',
                         value: '${stats['tardanzas'] ?? 0}',
                         icon: Icons.schedule,
-                        color: const Color(0xFFFFA500),
+                        color: AppColors.warning,
                       ),
                     ),
                   ],
@@ -233,21 +178,12 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           ),
           const SizedBox(height: 24),
 
-          
-
           // Divider
           const Divider(height: 1, color: AppColors.divider),
           const SizedBox(height: 20),
 
           // Noticias y anuncios
           EmpleadoNewsSection(noticiasFuture: _noticiasFuture),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: EmpleadoQuickAccess(
-              onRegistrarPressed: _navigateToRegistrar,
-              onReportesPressed: _navigateToReportes,
-            ),
-          ),
         ],
       ),
     );

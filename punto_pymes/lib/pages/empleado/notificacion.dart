@@ -26,7 +26,10 @@ class NotificacionPage extends StatelessWidget {
 class NotificacionView extends StatefulWidget {
   final EdgeInsetsGeometry padding;
 
-  const NotificacionView({super.key, this.padding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0)});
+  const NotificacionView({
+    super.key,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+  });
 
   @override
   State<NotificacionView> createState() => _NotificacionViewState();
@@ -75,7 +78,9 @@ class _NotificacionViewState extends State<NotificacionView> {
         // Preparar datos
         final noticias = snapshot.data ?? [];
         final totalNoticias = noticias.length;
-        final noticiasNuevas = noticias.where((n) => n['es_importante'] ?? false).length;
+        final noticiasNuevas = noticias
+            .where((n) => n['es_importante'] ?? false)
+            .length;
 
         // Estado: Sin datos
         if (noticias.isEmpty) {
@@ -85,11 +90,19 @@ class _NotificacionViewState extends State<NotificacionView> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inbox, color: AppColors.mutedGray.withOpacity(0.3), size: 64),
+                  Icon(
+                    Icons.inbox,
+                    // ignore: deprecated_member_use
+                    color: AppColors.mutedGray.withOpacity(0.3),
+                    size: 64,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No hay noticias disponibles',
-                    style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray, fontSize: 16),
+                    style: AppTextStyles.smallLabel.copyWith(
+                      color: AppColors.mutedGray,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
@@ -132,16 +145,10 @@ class _NotificacionViewState extends State<NotificacionView> {
                     final notification = noticias[index];
                     final titulo = notification['titulo'] ?? '';
                     final contenido = notification['contenido'] ?? '';
-                    final fechaPublicacion = notification['fecha_publicacion']?.toString() ?? '';
+                    final fechaPublicacion =
+                        notification['fecha_publicacion']?.toString() ?? '';
                     final esImportante = notification['es_importante'] ?? false;
                     final imagenUrl = notification['imagen_url']?.toString();
-                // Lista de notificaciones
-                ...noticias.map((notification) {
-                  final titulo = notification['titulo'] ?? '';
-                  final contenido = notification['contenido'] ?? '';
-                  final fechaPublicacion = notification['fecha_publicacion']?.toString() ?? '';
-                  final esImportante = notification['es_importante'] ?? false;
-                  final imagenUrl = notification['imagen_url']?.toString();
 
                     return NotificationCard(
                       titulo: titulo,
@@ -152,14 +159,6 @@ class _NotificacionViewState extends State<NotificacionView> {
                     );
                   },
                 ),
-                  return NotificationCard(
-                    titulo: titulo,
-                    contenido: contenido,
-                    fechaPublicacion: fechaPublicacion,
-                    esImportante: esImportante,
-                    imagenUrl: imagenUrl,
-                  );
-                }).toList(),
                 const SizedBox(height: 20),
               ],
             ),

@@ -1,0 +1,15 @@
+{
+  "name": "map-proxy",
+  "version": "1.0.0",
+  "description": "Simple proxy for Google Static Maps to avoid embedding API key in the client",
+  "main": "index.js",
+  "engines": { "node": "18" },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

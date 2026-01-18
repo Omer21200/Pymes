@@ -52,7 +52,8 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             }
             lat = null;
             lon = null;
-          } else if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+          } else if (permission == LocationPermission.always ||
+              permission == LocationPermission.whileInUse) {
             try {
               final pos = await Geolocator.getCurrentPosition(
                 locationSettings: const LocationSettings(
@@ -82,26 +83,40 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       String? uploadedUrl;
       try {
         final picker = ImagePicker();
-        final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 75);
-        if (photo != null) {
-          // Subir la foto al storage: bucket 'fotos' en carpeta empleados/asistencias
-          final user = SupabaseService.instance.currentUser;
-          final filename = 'empleados/asistencias/${user?.id ?? 'anon'}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-          try {
-            uploadedUrl = await SupabaseService.instance.uploadFile(
-              filePath: photo.path,
-              bucketName: 'fotos',
-              destinationPath: filename,
+        final XFile? photo = await picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 75,
+        );
+        if (photo == null) {
+          // User cancelled camera — abort the attendance registration
+          if (mounted) {
+            NotificationHelper.showWarningNotification(
+              context,
+              title: 'Registro cancelado',
+              message: 'No se tomó la foto. Registro cancelado.',
             );
-          } catch (upErr) {
-            uploadedUrl = null;
-            if (mounted) {
-              NotificationHelper.showErrorNotification(
-                context,
-                title: 'Error en la foto',
-                message: 'No se pudo subir. Continuando sin ella.',
-              );
-            }
+          }
+          return;
+        }
+
+        // Subir la foto al storage: bucket 'fotos' en carpeta empleados/asistencias
+        final user = SupabaseService.instance.currentUser;
+        final filename =
+            'empleados/asistencias/${user?.id ?? 'anon'}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        try {
+          uploadedUrl = await SupabaseService.instance.uploadFile(
+            filePath: photo.path,
+            bucketName: 'fotos',
+            destinationPath: filename,
+          );
+        } catch (upErr) {
+          uploadedUrl = null;
+          if (mounted) {
+            NotificationHelper.showErrorNotification(
+              context,
+              title: 'Error en la foto',
+              message: 'No se pudo subir. Continuando sin ella.',
+            );
           }
         }
       } catch (camErr) {
@@ -109,11 +124,15 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       }
 
       // 3) Registrar asistencia enviando lat/lon y fotoUrl si disponibles
-      final resp = await SupabaseService.instance.registrarAsistencia(latitud: lat, longitud: lon, fotoUrl: uploadedUrl);
+      final resp = await SupabaseService.instance.registrarAsistencia(
+        latitud: lat,
+        longitud: lon,
+        fotoUrl: uploadedUrl,
+      );
       if (mounted) {
         final horaEntrada = resp['hora_entrada'] ?? '';
         final horaSalida = resp['hora_salida'];
-        
+
         if (horaSalida != null) {
           NotificationHelper.showSuccessNotification(
             context,
@@ -127,14 +146,14 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             message: 'Tu entrada ha sido registrada a las $horaEntrada',
           );
         }
-        
+
         // Refrescar reportes después de registro exitoso
         (_sectionsKey.currentState as dynamic)?.refreshReportes();
       }
     } catch (e) {
       if (mounted) {
         final errorMessage = e.toString();
-        
+
         // Determinar si es un error de duplicado
         if (errorMessage.contains('registraste entrada y salida')) {
           NotificationHelper.showWarningNotification(
@@ -176,25 +195,36 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
                 FutureBuilder<Map<String, dynamic>?>(
                   future: SupabaseService.instance.getEmpleadoActual(),
                   builder: (context, snapshot) {
-                    final loading = snapshot.connectionState == ConnectionState.waiting;
+                    final loading =
+                        snapshot.connectionState == ConnectionState.waiting;
                     final data = snapshot.data;
-                    final nombre = data?['nombre_completo'] ?? (loading ? 'Cargando...' : 'Sin nombre');
+                    final nombre =
+                        data?['nombre_completo'] ??
+                        (loading ? 'Cargando...' : 'Sin nombre');
                     final rol = data?['rol'] ?? '';
                     final afiliacion = loading
                         ? 'Obteniendo datos'
                         : rol == 'EMPLEADO'
-                            ? 'Empleado'
-                            : (rol.isEmpty ? 'Rol desconocido' : rol);
-                    final profileRaw = data?['profile_raw'] as Map<String, dynamic>?;
+                        ? 'Empleado'
+                        : (rol.isEmpty ? 'Rol desconocido' : rol);
+                    final profileRaw =
+                        data?['profile_raw'] as Map<String, dynamic>?;
                     final avatar = profileRaw?['foto_url'] as String?;
                     return EmpleadoHeader(
                       name: nombre,
                       affiliation: afiliacion,
                       avatarUrl: avatar,
-                      onLogout: () => showLogoutConfirmation(context),
+                      onLogout: () => showLogoutConfirmation(
+                        context,
+                        afterRoute: '/access-selection',
+                      ),
                       onProfile: () async {
                         // Abrir la página de perfil y refrescar al volver si se guardó
-                        final res = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmpleadoProfilePage()));
+                        final res = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const EmpleadoProfilePage(),
+                          ),
+                        );
                         if (res == true) {
                           setState(() {});
                         }
@@ -208,13 +238,17 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
                     child: EmpleadoSections(
                       key: _sectionsKey,
                       tabIndex: _selectedTab,
-                      onNavigateTab: (tab) => setState(() => _selectedTab = tab),
+                      onNavigateTab: (tab) =>
+                          setState(() => _selectedTab = tab),
                       onRegistrarAsistencia: _handleRegister,
                     ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: EmpleadoNav(
                     currentIndex: _selectedTab,
                     onTabSelected: _handleTabChange,

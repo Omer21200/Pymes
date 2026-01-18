@@ -69,20 +69,57 @@ class SupabaseService {
   // ==================== HORA DE ECUADOR (LOJA) ====================
   /// Obtiene la hora actual de Ecuador desde worldtimeapi.org
   Future<DateTime> getEcuadorTime() async {
-    try {
-      final response = await http
-          .get(Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'))
-          .timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final datetimeStr = data['datetime'] as String;
-        final dt = DateTime.parse(datetimeStr).toUtc();
-        developer.log('✓ Hora de Ecuador (internet): ${dt.hour}:${dt.minute}:${dt.second}', name: 'SupabaseService');
-        return dt;
+    // Try multiple providers with simple retry/backoff; fallback to local time.
+    final uris = [
+      Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'),
+      Uri.parse(
+        'https://timeapi.io/api/Time/current/zone?timeZone=America/Guayaquil',
+      ),
+    ];
+
+    for (final uri in uris) {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final response = await http
+              .get(uri)
+              .timeout(const Duration(seconds: 6));
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            String? datetimeStr;
+            if (uri.host.contains('worldtimeapi')) {
+              datetimeStr = data['datetime'] as String?;
+            } else if (uri.host.contains('timeapi.io')) {
+              // timeapi.io returns 'dateTime' in ISO format
+              datetimeStr =
+                  data['dateTime'] as String? ?? data['date_time'] as String?;
+            }
+            if (datetimeStr != null && datetimeStr.isNotEmpty) {
+              try {
+                final dt = DateTime.parse(datetimeStr).toUtc();
+                developer.log(
+                  '✓ Hora de Ecuador (internet): ${dt.toIso8601String()}',
+                  name: 'SupabaseService',
+                );
+                return dt;
+              } catch (_) {
+                // ignore parse errors and try next provider/attempt
+              }
+            }
+          }
+        } catch (_) {
+          // ignore individual attempt errors to avoid noisy logs; backoff then retry
+          if (attempt < 2) {
+            await Future.delayed(Duration(milliseconds: 300 * (1 << attempt)));
+          }
+        }
       }
-    } catch (e) {
-      developer.log('⚠️ Error obteniendo hora de Ecuador: $e', name: 'SupabaseService');
     }
+
+    // All providers failed — return local time as fallback
+    developer.log(
+      '⚠️ No se pudo obtener hora remota, usando hora local',
+      name: 'SupabaseService',
+    );
     return DateTime.now();
   }
 
@@ -92,7 +129,7 @@ class SupabaseService {
     try {
       // Refrescar sesión antes de hacer la consulta
       await ensureSessionValid();
-      
+
       final response = await client
           .from('empresas')
           .select()
@@ -114,8 +151,11 @@ class SupabaseService {
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
         return list;
-        } catch (retryError) {
-        developer.log('❌ Error en getEmpresas (reintento): $retryError', name: 'SupabaseService');
+      } catch (retryError) {
+        developer.log(
+          '❌ Error en getEmpresas (reintento): $retryError',
+          name: 'SupabaseService',
+        );
         rethrow;
       }
     }
@@ -129,6 +169,46 @@ class SupabaseService {
         .eq('id', id)
         .maybeSingle();
     return response == null ? null : Map<String, dynamic>.from(response);
+  }
+
+  /// Geocode an address using Nominatim (OpenStreetMap).
+  /// Returns a map with keys 'lat' and 'lng' as doubles, or null if not found.
+  Future<Map<String, double>?> geocodeAddress(String address) async {
+    try {
+      final encoded = Uri.encodeComponent(address);
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=$encoded&format=json&limit=1',
+      );
+      final resp = await http
+          .get(url, headers: {'User-Agent': 'pymes-app/1.0'})
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List<dynamic>;
+        if (data.isNotEmpty) {
+          final first = data.first as Map<String, dynamic>;
+          final lat = double.tryParse(first['lat']?.toString() ?? '');
+          final lon = double.tryParse(first['lon']?.toString() ?? '');
+          if (lat != null && lon != null) return {'lat': lat, 'lng': lon};
+        }
+      }
+    } catch (e) {
+      developer.log('Geocode error: $e', name: 'SupabaseService');
+    }
+    return null;
+  }
+
+  /// Convenience method to update empresa coordinates by id.
+  Future<Map<String, dynamic>?> updateEmpresaCoordinates(
+    String empresaId,
+    double lat,
+    double lng,
+  ) async {
+    final res = await updateEmpresa(
+      empresaId: empresaId,
+      latitud: lat,
+      longitud: lng,
+    );
+    return res;
   }
 
   // ==================== HELPER PRIVADO: OBTENER EMPRESA ID SEGURO ====================
@@ -302,6 +382,10 @@ class SupabaseService {
     String? empresaFotoUrl,
     double? latitud,
     double? longitud,
+    String? jornadaEntrada,
+    String? jornadaSalidaAlmuerzo,
+    String? jornadaRegresoAlmuerzo,
+    String? jornadaSalida,
   }) async {
     final updates = <String, dynamic>{};
     if (nombre != null) updates['nombre'] = nombre;
@@ -312,6 +396,14 @@ class SupabaseService {
     if (empresaFotoUrl != null) updates['empresa_foto_url'] = empresaFotoUrl;
     if (latitud != null) updates['latitud'] = latitud;
     if (longitud != null) updates['longitud'] = longitud;
+    if (jornadaEntrada != null) updates['jornada_entrada'] = jornadaEntrada;
+    if (jornadaSalidaAlmuerzo != null) {
+      updates['jornada_salida_almuerzo'] = jornadaSalidaAlmuerzo;
+    }
+    if (jornadaRegresoAlmuerzo != null) {
+      updates['jornada_regreso_almuerzo'] = jornadaRegresoAlmuerzo;
+    }
+    if (jornadaSalida != null) updates['jornada_salida'] = jornadaSalida;
 
     final response = await client
         .from('empresas')
@@ -342,7 +434,10 @@ class SupabaseService {
     } catch (e) {
       // Manejar el error, por ejemplo, si el nombre ya existe para esa empresa
       // o si hay un problema de permisos.
-      developer.log('Error al crear el departamento: $e', name: 'SupabaseService');
+      developer.log(
+        'Error al crear el departamento: $e',
+        name: 'SupabaseService',
+      );
       throw Exception('No se pudo crear el departamento');
     }
   }
@@ -505,7 +600,10 @@ class SupabaseService {
       );
       return response as bool? ?? false;
     } catch (e) {
-      developer.log('Error marcando noticia como leída: $e', name: 'SupabaseService');
+      developer.log(
+        'Error marcando noticia como leída: $e',
+        name: 'SupabaseService',
+      );
       return false;
     }
   }
@@ -614,7 +712,10 @@ class SupabaseService {
             .replaceAll('%20', ' ');
         await deleteFile(bucketName: 'fotos', filePath: 'noticias/$path');
       } catch (e) {
-        developer.log('No se pudo eliminar la imagen del storage: $e', name: 'SupabaseService');
+        developer.log(
+          'No se pudo eliminar la imagen del storage: $e',
+          name: 'SupabaseService',
+        );
       }
     }
   }
@@ -738,14 +839,16 @@ class SupabaseService {
   }
 
   /// Sube una foto de perfil para el usuario actual y retorna la URL pública.
-  Future<String> uploadProfilePhoto({
-    required String filePath,
-  }) async {
+  Future<String> uploadProfilePhoto({required String filePath}) async {
     final user = currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final destination = 'profiles/${user.id}_avatar_$timestamp.jpg';
-    return await uploadFile(filePath: filePath, bucketName: 'fotos', destinationPath: destination);
+    return await uploadFile(
+      filePath: filePath,
+      bucketName: 'fotos',
+      destinationPath: destination,
+    );
   }
 
   /// Actualiza campos de la tabla `profiles` para el usuario actual.
@@ -763,7 +866,11 @@ class SupabaseService {
     if (fotoUrl != null) updates['foto_url'] = fotoUrl;
 
     if (updates.isEmpty) {
-      final profile = await client.from('profiles').select().eq('id', user.id).maybeSingle();
+      final profile = await client
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
       return profile == null ? null : Map<String, dynamic>.from(profile as Map);
     }
 
@@ -846,19 +953,21 @@ class SupabaseService {
         .select()
         .eq('user_id', user.id)
         .maybeSingle();
-    if (empleado == null)
+    if (empleado == null) {
       throw Exception(
         'Empleado no encontrado. Ejecuta el flujo de registro y confirmación primero.',
       );
+    }
     final empleadoId = empleado['id'] as String;
 
     // Obtener hora de Ecuador: primero desde EcuadorTimeManager (si está sincronizado)
     // Si no está disponible, hacer request a la API
-    DateTime now = EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
-    
+    DateTime now =
+        EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+
     // Convertir de UTC a hora de Ecuador (UTC-5, es decir, restar 5 horas)
     final ecuadorTime = now.toUtc().subtract(const Duration(hours: 5));
-    
+
     // Fecha de hoy (YYYY-MM-DD) usando hora de Ecuador
     final today = ecuadorTime.toIso8601String().split('T').first;
 
@@ -890,11 +999,55 @@ class SupabaseService {
       return Map<String, dynamic>.from(inserted as Map);
     }
 
-    // Si existe, manejar salida/evitar duplicados
+    // Si existe, manejar la secuencia de 4 marcas:
+    // 1) hora_entrada
+    // 2) hora_salida_almuerzo
+    // 3) hora_regreso_almuerzo
+    // 4) hora_salida
     final horaEntrada = existing['hora_entrada'];
-    final horaSalida = existing['hora_salida'];
-    if (horaEntrada != null && horaSalida == null) {
-      // Registrar salida
+    final horaSalidaAlm = existing['hora_salida_almuerzo'];
+    final horaRegresoAlm = existing['hora_regreso_almuerzo'];
+    final horaSalidaFinal = existing['hora_salida'];
+
+    if (horaEntrada != null && horaSalidaAlm == null) {
+      // Registrar salida al almuerzo
+      final updated = await client
+          .from('asistencias')
+          .update({
+            'hora_salida_almuerzo': horaNow,
+            if (latitud != null) 'latitud': latitud,
+            if (longitud != null) 'longitud': longitud,
+            if (fotoUrl != null) 'foto_url': fotoUrl,
+          })
+          .eq('id', existing['id'])
+          .select()
+          .maybeSingle();
+      return Map<String, dynamic>.from(updated as Map);
+    }
+
+    if (horaEntrada != null &&
+        horaSalidaAlm != null &&
+        horaRegresoAlm == null) {
+      // Registrar regreso del almuerzo
+      final updated = await client
+          .from('asistencias')
+          .update({
+            'hora_regreso_almuerzo': horaNow,
+            if (latitud != null) 'latitud': latitud,
+            if (longitud != null) 'longitud': longitud,
+            if (fotoUrl != null) 'foto_url': fotoUrl,
+          })
+          .eq('id', existing['id'])
+          .select()
+          .maybeSingle();
+      return Map<String, dynamic>.from(updated as Map);
+    }
+
+    if (horaEntrada != null &&
+        horaSalidaAlm != null &&
+        horaRegresoAlm != null &&
+        horaSalidaFinal == null) {
+      // Registrar salida final
       final updated = await client
           .from('asistencias')
           .update({
@@ -909,8 +1062,9 @@ class SupabaseService {
       return Map<String, dynamic>.from(updated as Map);
     }
 
-    // Ya registró entrada y salida
-    throw Exception('Ya registraste entrada y salida para hoy.');
+    // Si no hay hora_entrada aún, eso se maneja arriba en existing == null branch.
+    // Si ya registró las 4 marcas, lanzar excepción para evitar duplicados
+    throw Exception('Ya registraste todas las marcas para hoy.');
   }
 
   // registrar_empleado_confirmado DEPRECATED: se mantiene comentado por referencia.
@@ -949,7 +1103,10 @@ class SupabaseService {
       // Opcional: ordenar por hora entrada desc
       return lista.take(5).toList();
     } catch (e) {
-      developer.log('Error en getUltimosRegistros: $e', name: 'SupabaseService');
+      developer.log(
+        'Error en getUltimosRegistros: $e',
+        name: 'SupabaseService',
+      );
       return [];
     }
   }
@@ -977,7 +1134,7 @@ class SupabaseService {
       final response = await client
           .from('asistencias')
           .select(
-            'id, fecha, hora_entrada, hora_salida, foto_url, estado, observacion, latitud, longitud, created_at',
+            'id, fecha, hora_entrada, hora_salida, hora_salida_almuerzo, hora_regreso_almuerzo, foto_url, estado, observacion, latitud, longitud, created_at',
           )
           .eq('empleado_id', empleadoId)
           .order('fecha', ascending: false)
@@ -987,7 +1144,10 @@ class SupabaseService {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
     } catch (e) {
-      developer.log('Error en getHistorialAsistencias: $e', name: 'SupabaseService');
+      developer.log(
+        'Error en getHistorialAsistencias: $e',
+        name: 'SupabaseService',
+      );
       return [];
     }
   }
@@ -1017,7 +1177,9 @@ class SupabaseService {
 
       final asistencias = await client
           .from('asistencias')
-          .select('fecha, hora_entrada, hora_salida')
+          .select(
+            'fecha, hora_entrada, hora_salida, hora_salida_almuerzo, hora_regreso_almuerzo',
+          )
           .eq('empleado_id', empleadoId)
           .gte('fecha', primerDiaDelMes.toIso8601String().split('T')[0])
           .lte('fecha', ultimoDiaDelMes.toIso8601String().split('T')[0]);
@@ -1051,7 +1213,10 @@ class SupabaseService {
         'total_registros': asistencias.length,
       };
     } catch (e) {
-      developer.log('Error en getEmpleadoEstadisticas: $e', name: 'SupabaseService');
+      developer.log(
+        'Error en getEmpleadoEstadisticas: $e',
+        name: 'SupabaseService',
+      );
       return {
         'dias_asistidos': 0,
         'a_tiempo': 0,

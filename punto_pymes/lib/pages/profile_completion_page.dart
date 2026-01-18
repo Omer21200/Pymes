@@ -50,7 +50,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         return;
       }
 
-      final deps = await SupabaseService.instance.getDepartamentosPorEmpresa(empresaId);
+      final deps = await SupabaseService.instance.getDepartamentosPorEmpresa(
+        empresaId,
+      );
       setState(() {
         _departamentos = deps;
       });
@@ -59,24 +61,37 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         _error = 'Error cargando departamentos: ${e.toString()}';
       });
     } finally {
-      if (mounted) setState(() { _isLoadingDepartamentos = false; });
+      if (mounted) {
+        setState(() {
+          _isLoadingDepartamentos = false;
+        });
+      }
     }
   }
 
   Future<void> _submit() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     final cedula = _cedulaController.text.trim();
     final telefono = _telefonoController.text.trim();
     final direccion = _direccionController.text.trim();
 
     if (cedula.isEmpty) {
-      setState(() { _error = 'La cédula es obligatoria'; _isLoading = false; });
+      setState(() {
+        _error = 'La cédula es obligatoria';
+        _isLoading = false;
+      });
       return;
     }
 
     if (_selectedDepartamentoId == null) {
-      setState(() { _error = 'Selecciona el departamento al que perteneces'; _isLoading = false; });
+      setState(() {
+        _error = 'Selecciona el departamento al que perteneces';
+        _isLoading = false;
+      });
       return;
     }
 
@@ -90,20 +105,26 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
       // Es crucial verificar si el widget sigue "montado" después de una operación asíncrona.
       if (!mounted) return;
-      
+
       // Obtenemos el perfil actualizado para saber a dónde redirigir
       final profile = await SupabaseService.instance.getMyProfile();
       final rol = profile?['rol'] as String?;
-      
+
       // Volvemos a verificar antes de usar el BuildContext para la navegación.
       if (!mounted) return;
 
       switch (rol) {
         case 'ADMIN_EMPRESA':
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminEmpresaPage()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminEmpresaPage()),
+          );
           break;
         case 'EMPLEADO':
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const EmpleadoPage()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const EmpleadoPage()),
+          );
           break;
         default:
           // Fallback por si acaso, aunque no debería ocurrir
@@ -111,13 +132,18 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
           if (!mounted) return; // Verificamos una última vez.
           Navigator.pushReplacementNamed(context, '/access-selection');
       }
-
     } catch (e) {
       if (mounted) {
-        setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+        });
       }
     } finally {
-      if (mounted) setState(() { _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -130,13 +156,27 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const Text('Completa tu perfil para continuar', style: TextStyle(fontSize: 16)),
+              const Text(
+                'Completa tu perfil para continuar',
+                style: TextStyle(fontSize: 16),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: _cedulaController, decoration: const InputDecoration(labelText: 'Cédula / Documento')),
+              TextField(
+                controller: _cedulaController,
+                decoration: const InputDecoration(
+                  labelText: 'Cédula / Documento',
+                ),
+              ),
               const SizedBox(height: 8),
-              TextField(controller: _telefonoController, decoration: const InputDecoration(labelText: 'Teléfono')),
+              TextField(
+                controller: _telefonoController,
+                decoration: const InputDecoration(labelText: 'Teléfono'),
+              ),
               const SizedBox(height: 8),
-              TextField(controller: _direccionController, decoration: const InputDecoration(labelText: 'Dirección')),
+              TextField(
+                controller: _direccionController,
+                decoration: const InputDecoration(labelText: 'Dirección'),
+              ),
               const SizedBox(height: 12),
               // Selector de Departamento
               if (_isLoadingDepartamentos)
@@ -146,23 +186,39 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                 )
               else
                 DropdownButtonFormField<String>(
-                  value: _selectedDepartamentoId,
+                  initialValue: _selectedDepartamentoId,
                   items: _departamentos.map((d) {
                     final id = d['id']?.toString();
                     final nombre = d['nombre']?.toString() ?? d['nombre'];
-                    return DropdownMenuItem<String>(value: id, child: Text(nombre ?? ''));
+                    return DropdownMenuItem<String>(
+                      value: id,
+                      child: Text(nombre ?? ''),
+                    );
                   }).toList(),
-                  onChanged: (val) => setState(() => _selectedDepartamentoId = val),
+                  onChanged: (val) =>
+                      setState(() => _selectedDepartamentoId = val),
                   decoration: const InputDecoration(labelText: 'Departamento'),
                 ),
               const SizedBox(height: 16),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+              if (_error != null)
+                Text(_error!, style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
-                  child: _isLoading ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Text('Guardar y continuar'),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Guardar y continuar'),
                 ),
               ),
             ],

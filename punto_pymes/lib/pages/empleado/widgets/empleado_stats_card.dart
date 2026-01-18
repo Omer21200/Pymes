@@ -44,6 +44,7 @@ class EmpleadoStatsCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
+                  // ignore: deprecated_member_use
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(9),
                 ),
@@ -55,7 +56,11 @@ class EmpleadoStatsCard extends StatelessWidget {
           // Valor grande en blanco
           Text(
             value,
-            style: AppTextStyles.statsValue.copyWith(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+            style: AppTextStyles.statsValue.copyWith(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),

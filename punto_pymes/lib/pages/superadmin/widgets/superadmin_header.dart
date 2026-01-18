@@ -32,7 +32,11 @@ class SuperadminHeader extends StatelessWidget {
           bottomRight: Radius.circular(16),
         ),
         boxShadow: [
-          BoxShadow(color: const Color.fromRGBO(0, 0, 0, 0.06), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -70,7 +74,7 @@ class SuperadminHeader extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -81,7 +85,10 @@ class SuperadminHeader extends StatelessWidget {
           else if (showLogout)
             Container(
               margin: const EdgeInsets.only(left: 8),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: IconButton(
                 onPressed: () => showLogoutConfirmation(context),
                 icon: Icon(Icons.exit_to_app, color: primary),

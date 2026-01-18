@@ -26,8 +26,6 @@ class EmpleadoHeader extends StatelessWidget {
         .join()
         .toUpperCase();
 
-    final topPadding = MediaQuery.of(context).padding.top + 20;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: AppDecorations.headerGradient.copyWith(
@@ -47,7 +45,7 @@ class EmpleadoHeader extends StatelessWidget {
             child: Container(
               width: AppSizes.avatar,
               height: AppSizes.avatar,
-                decoration: AppDecorations.avatarContainer.copyWith(
+              decoration: AppDecorations.avatarContainer.copyWith(
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha((0.15 * 255).round()),
@@ -102,14 +100,20 @@ class EmpleadoHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.2 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     affiliation,
-                    style: AppTextStyles.smallLabel.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+                    style: AppTextStyles.smallLabel.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -125,7 +129,7 @@ class EmpleadoHeader extends StatelessWidget {
             child: InkWell(
               onTap: onLogout,
               borderRadius: BorderRadius.circular(12),
-                child: Container(
+              child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha((0.15 * 255).round()),
@@ -135,11 +139,7 @@ class EmpleadoHeader extends StatelessWidget {
                     width: 1.5,
                   ),
                 ),
-                child: const Icon(
-                  Icons.logout,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                child: const Icon(Icons.logout, color: Colors.white, size: 22),
               ),
             ),
           ),

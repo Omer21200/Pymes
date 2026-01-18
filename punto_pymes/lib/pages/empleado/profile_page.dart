@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../service/supabase_service.dart';
 import '../../theme.dart';
+import '../../widgets/profile_view.dart';
 
 class EmpleadoProfilePage extends StatefulWidget {
   const EmpleadoProfilePage({super.key});
@@ -21,6 +22,12 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   String? _email;
   String? _fotoUrl;
   File? _selectedImageFile;
+  double? _companyLat;
+  double? _companyLng;
+  String? _companyName;
+  double? _userLat;
+  double? _userLng;
+  String? _userRole;
   bool _isLoading = false;
   String? _error;
 
@@ -44,6 +51,24 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
     try {
       final data = await SupabaseService.instance.getEmpleadoActual();
       if (data == null) return;
+      // Fetch empresa details if available
+      String? empresaId = data['empresa_id']?.toString();
+      Map<String, dynamic>? empresaData;
+      if (empresaId != null) {
+        try {
+          empresaData = await SupabaseService.instance.getEmpresaById(
+            empresaId,
+          );
+          // store empresaId and direccion for later geocoding
+          if (empresaData != null) {
+            _empresaId = empresaId;
+            _empresaDireccion = empresaData['direccion']?.toString();
+          }
+        } catch (_) {
+          empresaData = null;
+        }
+      }
+
       setState(() {
         _nombresController.text = data['nombres'] ?? '';
         _apellidosController.text = data['apellidos'] ?? '';
@@ -54,16 +79,82 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
         _email = data['correo']?.toString();
         final profileRaw = data['profile_raw'] as Map<String, dynamic>?;
         _fotoUrl = profileRaw?['foto_url'] as String?;
+        _userRole = profileRaw?['rol'] as String?;
+        _companyName = empresaData?['nombre'] as String?;
+        final lat = empresaData?['latitud'];
+        final lng = empresaData?['longitud'];
+        if (lat is num && lng is num) {
+          _companyLat = lat.toDouble();
+          _companyLng = lng.toDouble();
+        } else {
+          _companyLat = null;
+          _companyLng = null;
+        }
       });
+
+      // Attempt to geocode the user's own address (if present) so we can show a personal map
+      final userAddress = _direccionController.text.trim();
+      if (userAddress.isNotEmpty) {
+        try {
+          final userCoords = await SupabaseService.instance.geocodeAddress(
+            userAddress,
+          );
+          if (mounted && userCoords != null) {
+            setState(() {
+              _userLat = userCoords['lat'];
+              _userLng = userCoords['lng'];
+            });
+          }
+        } catch (_) {
+          // ignore geocoding failures for user address
+        }
+      }
     } catch (e) {
       setState(() => _error = 'Error cargando perfil: $e');
+    }
+  }
+
+  String? _empresaId;
+  String? _empresaDireccion;
+
+  // Removed unused _fetchExactCoordinates() — coordinate fetching
+  // is handled elsewhere (admin flow). Kept save logic in place.
+
+  Future<void> _saveCompanyCoordinates() async {
+    if (_empresaId == null || _companyLat == null || _companyLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay coordenadas para guardar')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await SupabaseService.instance.updateEmpresaCoordinates(
+        _empresaId!,
+        _companyLat!,
+        _companyLng!,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Coordenadas guardadas')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error guardando coordenadas: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     try {
-      final XFile? picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+      final XFile? picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        imageQuality: 85,
+      );
       if (picked == null) return;
       setState(() => _selectedImageFile = File(picked.path));
     } catch (e) {
@@ -72,232 +163,113 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   }
 
   Future<void> _save() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       String? uploadedUrl;
       if (_selectedImageFile != null) {
-        uploadedUrl = await SupabaseService.instance.uploadProfilePhoto(filePath: _selectedImageFile!.path);
+        uploadedUrl = await SupabaseService.instance.uploadProfilePhoto(
+          filePath: _selectedImageFile!.path,
+        );
         // Actualizar profiles foto_url
         await SupabaseService.instance.updateMyProfile(fotoUrl: uploadedUrl);
       }
 
       // Actualizar nombres/apellidos en profiles
       await SupabaseService.instance.updateMyProfile(
-        nombres: _nombresController.text.trim().isEmpty ? null : _nombresController.text.trim(),
-        apellidos: _apellidosController.text.trim().isEmpty ? null : _apellidosController.text.trim(),
+        nombres: _nombresController.text.trim().isEmpty
+            ? null
+            : _nombresController.text.trim(),
+        apellidos: _apellidosController.text.trim().isEmpty
+            ? null
+            : _apellidosController.text.trim(),
       );
 
       // Actualizar campos en empleados
       await SupabaseService.instance.updateEmpleadoProfile(
-        cedula: _cedulaController.text.trim().isEmpty ? null : _cedulaController.text.trim(),
-        telefono: _telefonoController.text.trim().isEmpty ? null : _telefonoController.text.trim(),
-        direccion: _direccionController.text.trim().isEmpty ? null : _direccionController.text.trim(),
+        cedula: _cedulaController.text.trim().isEmpty
+            ? null
+            : _cedulaController.text.trim(),
+        telefono: _telefonoController.text.trim().isEmpty
+            ? null
+            : _telefonoController.text.trim(),
+        direccion: _direccionController.text.trim().isEmpty
+            ? null
+            : _direccionController.text.trim(),
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
+      setState(() {
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Widget _buildAvatar() {
-    final radius = AppSizes.avatar;
-    // Avatar con badge de cámara en la esquina inferior derecha
-    Widget avatarImage;
-    if (_selectedImageFile != null) {
-      avatarImage = CircleAvatar(radius: radius, backgroundImage: FileImage(_selectedImageFile!));
-    } else if (_fotoUrl != null && _fotoUrl!.isNotEmpty) {
-      avatarImage = CircleAvatar(radius: radius, backgroundImage: NetworkImage(_fotoUrl!));
-    } else {
-      avatarImage = CircleAvatar(radius: radius, child: const Icon(Icons.person, size: 48));
-    }
-
-    return Container(
-      width: radius * 2,
-      height: radius * 2,
-      decoration: AppDecorations.avatarContainer,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Center(child: avatarImage),
-          Positioned(
-            right: -6,
-            bottom: -6,
-            child: GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 6, offset: const Offset(0, 2))],
-                ),
-                child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi Perfil'), backgroundColor: AppColors.primary),
+      appBar: AppBar(
+        title: const Text('Mi Perfil'),
+        backgroundColor: AppColors.primary,
+      ),
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: _buildAvatar()),
-            const SizedBox(height: 16),
-
-            // Form card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Nombres
-                    TextField(
-                      controller: _nombresController,
-                      textCapitalization: TextCapitalization.words,
-                      keyboardType: TextInputType.name,
-                      decoration: InputDecoration(
-                        labelText: 'Nombres',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.person),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Apellidos
-                    TextField(
-                      controller: _apellidosController,
-                      textCapitalization: TextCapitalization.words,
-                      keyboardType: TextInputType.name,
-                      decoration: InputDecoration(
-                        labelText: 'Apellidos',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.person),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Correo (solo lectura)
-                    TextFormField(
-                      initialValue: _email ?? '',
-                      enabled: false,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Correo electrónico',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.email),
-                        filled: true,
-                        fillColor: AppColors.lightGray,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Cédula (marcada como no editable para claridad)
-                    TextField(
-                      controller: _cedulaController,
-                      readOnly: true,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Cédula / Documento',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.credit_card),
-                        filled: true,
-                        fillColor: AppColors.lightGray,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Teléfono
-                    TextField(
-                      controller: _telefonoController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Teléfono',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.phone),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Dirección
-                    TextField(
-                      controller: _direccionController,
-                      keyboardType: TextInputType.streetAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Dirección',
-                        labelStyle: AppTextStyles.smallLabel,
-                        prefixIcon: const Icon(Icons.location_on),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                      ),
-                      style: AppTextStyles.smallLabel,
-                    ),
-                  ],
-                ),
-              ),
+            ProfileView(
+              nombresController: _nombresController,
+              apellidosController: _apellidosController,
+              cedulaController: _cedulaController,
+              telefonoController: _telefonoController,
+              direccionController: _direccionController,
+              email: _email,
+              fotoUrl: _fotoUrl,
+              selectedImageFile: _selectedImageFile,
+              onPickImage: _pickImage,
+              onSave: _save,
+              isLoading: _isLoading,
+              errorMessage: _error,
+              companyLat: _companyLat,
+              companyLng: _companyLng,
+              companyName: _companyName,
+              companyAddress: _empresaDireccion,
+              userLat: _userLat,
+              userLng: _userLng,
+              userAddress: _direccionController.text,
             ),
-            const SizedBox(height: 20),
-            const SizedBox(height: 16),
-            if (_error != null) Text(_error!, style: AppTextStyles.smallLabel.copyWith(color: AppColors.dangerRed)),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                ),
-                child: _isLoading
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                    : const Text('Guardar cambios', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  if (_empresaId != null && _userRole == 'ADMIN_EMPRESA')
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: (_isLoading || _companyLat == null)
+                            ? null
+                            : _saveCompanyCoordinates,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Guardar coordenadas'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/bottom_nav.dart';
 import 'empresas_list.dart';
@@ -31,7 +32,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
   Future<void> _loadData() async {
     try {
       final empresas = await SupabaseService.instance.getEmpresas();
-      
+
       // Contar admins de empresas
       final profiles = await SupabaseService.instance.client
           .from('profiles')
@@ -40,11 +41,13 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
       // Cargar admins recientes con empresa
       final adminsRecientes = await SupabaseService.instance.client
           .from('profiles')
-          .select('id,nombres,apellidos,rol,created_at,empresa_id,empresas(nombre)')
+          .select(
+            'id,nombres,apellidos,rol,created_at,empresa_id,empresas(nombre)',
+          )
           .eq('rol', 'ADMIN_EMPRESA')
           .order('created_at', ascending: false)
           .limit(5);
-      
+
       setState(() {
         _empresas = empresas;
         _totalAdmins = profiles.length;
@@ -54,9 +57,9 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar datos: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar datos: $e')));
       }
     }
   }
@@ -71,7 +74,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
 
   List<Widget> _buildActividadReciente() {
     final actividades = <Widget>[];
-    
+
     // 1) Admins recientes
     for (var admin in _adminsRecientes) {
       final createdAt = admin['created_at'];
@@ -81,41 +84,77 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
           final date = DateTime.parse(createdAt);
           final diff = DateTime.now().difference(date);
           if (diff.inDays > 0) {
-            timeAgo = 'Hace ${diff.inDays} ${diff.inDays == 1 ? 'día' : 'días'}';
+            timeAgo =
+                'Hace ${diff.inDays} ${diff.inDays == 1 ? 'día' : 'días'}';
           } else if (diff.inHours > 0) {
-            timeAgo = 'Hace ${diff.inHours} ${diff.inHours == 1 ? 'hora' : 'horas'}';
+            timeAgo =
+                'Hace ${diff.inHours} ${diff.inHours == 1 ? 'hora' : 'horas'}';
           } else if (diff.inMinutes > 0) {
-            timeAgo = 'Hace ${diff.inMinutes} ${diff.inMinutes == 1 ? 'minuto' : 'minutos'}';
+            timeAgo =
+                'Hace ${diff.inMinutes} ${diff.inMinutes == 1 ? 'minuto' : 'minutos'}';
           } else {
             timeAgo = 'Hace unos momentos';
           }
         } catch (_) {}
       }
 
-      final empresaNombre = admin['empresas'] != null ? admin['empresas']['nombre'] : 'Sin empresa';
-      final fullName = '${admin['nombres'] ?? ''} ${admin['apellidos'] ?? ''}'.trim();
+      final empresaNombre = admin['empresas'] != null
+          ? admin['empresas']['nombre']
+          : 'Sin empresa';
+      final fullName = '${admin['nombres'] ?? ''} ${admin['apellidos'] ?? ''}'
+          .trim();
 
       actividades.add(
         Card(
+          color: AppColors.surface,
           margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 1,
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFFFFECEF),
-              child: const Icon(Icons.person_add_alt, color: Color(0xFFD92344), size: 20),
-            ),
-            title: Text(
-              'Nuevo administrador creado:',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-            ),
-            subtitle: Text(
-              '$fullName • $empresaNombre',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            trailing: Text(
-              timeAgo,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.surfaceSoft,
+                  child: const Icon(
+                    Icons.person_add_alt,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nuevo administrador creado:',
+                        style: AppTextStyles.smallLabel.copyWith(
+                          color: AppColors.mutedGray,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$fullName • $empresaNombre',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  timeAgo,
+                  style: AppTextStyles.smallLabel.copyWith(
+                    color: AppColors.mutedGray,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -134,17 +173,20 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     for (var empresa in empresasOrdenadas.take(3)) {
       final createdAt = empresa['created_at'];
       String timeAgo = 'Reciente';
-      
+
       if (createdAt != null) {
         try {
           final date = DateTime.parse(createdAt);
           final diff = DateTime.now().difference(date);
           if (diff.inDays > 0) {
-            timeAgo = 'Hace ${diff.inDays} ${diff.inDays == 1 ? 'día' : 'días'}';
+            timeAgo =
+                'Hace ${diff.inDays} ${diff.inDays == 1 ? 'día' : 'días'}';
           } else if (diff.inHours > 0) {
-            timeAgo = 'Hace ${diff.inHours} ${diff.inHours == 1 ? 'hora' : 'horas'}';
+            timeAgo =
+                'Hace ${diff.inHours} ${diff.inHours == 1 ? 'hora' : 'horas'}';
           } else if (diff.inMinutes > 0) {
-            timeAgo = 'Hace ${diff.inMinutes} ${diff.inMinutes == 1 ? 'minuto' : 'minutos'}';
+            timeAgo =
+                'Hace ${diff.inMinutes} ${diff.inMinutes == 1 ? 'minuto' : 'minutos'}';
           } else {
             timeAgo = 'Hace unos momentos';
           }
@@ -152,52 +194,88 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
           // Mantener "Reciente" si hay error
         }
       }
-      
+
       actividades.add(
         Card(
+          color: AppColors.surface,
           margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 1,
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFFE3F2FD),
-              child: const Icon(Icons.apartment, color: Color(0xFF1976D2), size: 20),
-            ),
-            title: Text(
-              'Nueva empresa registrada:',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-            ),
-            subtitle: Text(
-              empresa['nombre'] ?? 'Sin nombre',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            trailing: Text(
-              timeAgo,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.surfaceSoft,
+                  child: Icon(
+                    Icons.apartment,
+                    color: AppColors.accentBlue,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nueva empresa registrada:',
+                        style: AppTextStyles.smallLabel.copyWith(
+                          color: AppColors.mutedGray,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        empresa['nombre'] ?? 'Sin nombre',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  timeAgo,
+                  style: AppTextStyles.smallLabel.copyWith(
+                    color: AppColors.mutedGray,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
-    
+
     if (actividades.isEmpty) {
       actividades.add(
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: AppColors.surface,
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 1,
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
             child: Center(
               child: Text(
                 'No hay actividad reciente',
-                style: TextStyle(color: Colors.grey.shade600),
+                style: AppTextStyles.smallLabel.copyWith(
+                  color: AppColors.mutedGray,
+                ),
               ),
             ),
           ),
         ),
       );
     }
-    
+
     return actividades;
   }
 
@@ -216,9 +294,15 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Resumen del Sistema', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Resumen del Sistema',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 6),
-                const Text('Vista general de NEXUS', style: TextStyle(color: Colors.black54)),
+                const Text(
+                  'Vista general de NEXUS',
+                  style: TextStyle(color: Colors.black54),
+                ),
                 const SizedBox(height: 12),
 
                 if (_isLoading)
@@ -226,59 +310,88 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
                 else
                   Row(
                     children: [
-                      SummaryCard(title: 'Empresas', value: '${_empresas.length}', icon: Icons.apartment),
+                      SummaryCard(
+                        title: 'Empresas',
+                        value: '${_empresas.length}',
+                        icon: Icons.apartment,
+                      ),
                       const SizedBox(width: 12),
-                      SummaryCard(title: 'Admins', value: '$_totalAdmins', icon: Icons.group),
+                      SummaryCard(
+                        title: 'Admins',
+                        value: '$_totalAdmins',
+                        icon: Icons.group,
+                      ),
                     ],
                   ),
 
                 const SizedBox(height: 18),
-                
+
                 // Lista de empresas
-                const Text('Empresas Registradas', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Empresas Registradas',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
-                
+
                 if (_empresas.isEmpty && !_isLoading)
                   Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 2,
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.business_outlined, size: 48, color: Colors.grey.shade400),
+                            Icon(
+                              Icons.business_outlined,
+                              size: 48,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 12),
-                            Text('No hay empresas registradas', style: TextStyle(color: Colors.grey.shade600)),
+                            Text(
+                              'No hay empresas registradas',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   )
                 else
-                  ..._empresas.take(3).map((empresa) => CompanyTile(
-                        empresa: empresa,
-                        onTap: () {
-                          final id = empresa['id'] as String?;
-                          if (id != null) {
-                            Navigator.of(context)
-                                .push(MaterialPageRoute(
-                                  builder: (_) => EmpresaDetallePage(
-                                    empresaId: id,
-                                    initialEmpresa: empresa,
-                                  ),
-                                ))
-                                .then((_) => _loadData());
-                          }
-                        },
-                      )),
+                  ..._empresas
+                      .take(3)
+                      .map(
+                        (empresa) => CompanyTile(
+                          empresa: empresa,
+                          onTap: () {
+                            final id = empresa['id'] as String?;
+                            if (id != null) {
+                              Navigator.of(context)
+                                  .push(
+                                    MaterialPageRoute(
+                                      builder: (_) => EmpresaDetallePage(
+                                        empresaId: id,
+                                        initialEmpresa: empresa,
+                                      ),
+                                    ),
+                                  )
+                                  .then((_) => _loadData());
+                            }
+                          },
+                        ),
+                      ),
 
                 const SizedBox(height: 18),
-                
+
                 // Actividad Reciente
-                const Text('Actividad Reciente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Actividad Reciente',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
-                
+
                 ..._buildActividadReciente(),
               ],
             ),
@@ -314,7 +427,12 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
               bottom: 16,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Center(child: SuperadminBottomNav(currentIndex: _currentIndex, onTap: _onNavTap)),
+                child: Center(
+                  child: SuperadminBottomNav(
+                    currentIndex: _currentIndex,
+                    onTap: _onNavTap,
+                  ),
+                ),
               ),
             ),
           ],

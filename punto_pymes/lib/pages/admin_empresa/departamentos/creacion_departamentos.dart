@@ -25,12 +25,13 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
 
   Future<void> _createDepartamento() async {
     if (_nombreController.text.trim().isEmpty) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('El nombre del departamento es obligatorio'),
           ),
         );
+      }
       return;
     }
 

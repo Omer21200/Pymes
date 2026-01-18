@@ -46,9 +46,9 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
     } catch (e) {
       setState(() => _isLoadingEmpresas = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar empresas: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar empresas: $e')));
       }
     }
   }
@@ -78,7 +78,11 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
         apellidos: _apellidosController.text.trim(),
       );
 
-      if (!ok) throw Exception('No se pudo crear la solicitud de admin. Verifica permisos o el código.');
+      if (!ok) {
+        throw Exception(
+          'No se pudo crear la solicitud de admin. Verifica permisos o el código.',
+        );
+      }
 
       // Limpiar formulario
       _nombresController.clear();
@@ -93,7 +97,9 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Solicitud de administrador creada. El invitado deberá confirmar su correo.'),
+            content: Text(
+              'Solicitud de administrador creada. El invitado deberá confirmar su correo.',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -102,9 +108,9 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
     } catch (e) {
       setState(() => _isCreating = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al crear admin: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al crear admin: $e')));
       }
     }
   }
@@ -128,21 +134,34 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                       Row(
                         children: [
                           const Expanded(
-                              child: Text('Gestión de Administradores',
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+                            child: Text(
+                              'Gestión de Administradores',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                           IconButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            icon: Icon(Icons.close, color: Colors.grey.shade700),
+                            icon: Icon(
+                              Icons.close,
+                              color: Colors.grey.shade700,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      const Text('Crea y administra los admins de cada empresa',
-                          style: TextStyle(color: Colors.black54)),
+                      const Text(
+                        'Crea y administra los admins de cada empresa',
+                        style: TextStyle(color: Colors.black54),
+                      ),
                       const SizedBox(height: 12),
 
                       Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -154,15 +173,30 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                        color: const Color(0xFFFFECEF), borderRadius: BorderRadius.circular(8)),
-                                    child: const Icon(Icons.person_add, color: Color(0xFFD92344)),
+                                      color: const Color(0xFFFFECEF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person_add,
+                                      color: Color(0xFFD92344),
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Expanded(child: Text('Nuevo Administrador', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  const Expanded(
+                                    child: Text(
+                                      'Nuevo Administrador',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              const Text('Crea credenciales para un admin de empresa', style: TextStyle(color: Colors.black54)),
+                              const Text(
+                                'Crea credenciales para un admin de empresa',
+                                style: TextStyle(color: Colors.black54),
+                              ),
                               const SizedBox(height: 12),
 
                               TextField(
@@ -174,7 +208,10 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                   prefixIcon: const Icon(Icons.person_outline),
                                   filled: true,
                                   fillColor: const Color(0xFFF3F3F3),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
                                 ),
                                 onChanged: (_) => setState(() {}),
                               ),
@@ -189,7 +226,10 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                   prefixIcon: const Icon(Icons.person_outline),
                                   filled: true,
                                   fillColor: const Color(0xFFF3F3F3),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
                                 ),
                                 onChanged: (_) => setState(() {}),
                               ),
@@ -204,7 +244,10 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                   prefixIcon: const Icon(Icons.email_outlined),
                                   filled: true,
                                   fillColor: const Color(0xFFF3F3F3),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                                 onChanged: (_) => setState(() {}),
@@ -213,28 +256,47 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
 
                               // Empresa selector
                               _isLoadingEmpresas
-                                  ? const Center(child: CircularProgressIndicator())
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
                                   : DropdownButtonFormField<String>(
                                       initialValue: _selectedCompanyId,
                                       onChanged: _isCreating
                                           ? null
                                           : (v) async {
-                                              setState(() => _selectedCompanyId = v);
+                                              setState(
+                                                () => _selectedCompanyId = v,
+                                              );
                                             },
                                       items: _empresas
-                                          .map((empresa) => DropdownMenuItem<String>(
-                                                value: empresa['id'],
-                                                child: Text(empresa['nombre'] ?? 'Sin nombre'),
-                                              ))
+                                          .map(
+                                            (empresa) =>
+                                                DropdownMenuItem<String>(
+                                                  value: empresa['id'],
+                                                  child: Text(
+                                                    empresa['nombre'] ??
+                                                        'Sin nombre',
+                                                  ),
+                                                ),
+                                          )
                                           .toList(),
                                       decoration: InputDecoration(
                                         labelText: 'Empresa',
-                                        prefixIcon: const Icon(Icons.apartment_outlined),
+                                        prefixIcon: const Icon(
+                                          Icons.apartment_outlined,
+                                        ),
                                         filled: true,
                                         fillColor: const Color(0xFFF3F3F3),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
                                       ),
-                                      hint: const Text('Selecciona una empresa'),
+                                      hint: const Text(
+                                        'Selecciona una empresa',
+                                      ),
                                     ),
                               const SizedBox(height: 8),
 
@@ -248,10 +310,17 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                       decoration: InputDecoration(
                                         labelText: 'Código de Admin',
                                         hintText: 'ADMIN-1234',
-                                        prefixIcon: const Icon(Icons.vpn_key_outlined),
+                                        prefixIcon: const Icon(
+                                          Icons.vpn_key_outlined,
+                                        ),
                                         filled: true,
                                         fillColor: const Color(0xFFF3F3F3),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -260,14 +329,30 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                     onPressed: _isCreating
                                         ? null
                                         : () {
-                                            final code = 'ADM-${DateTime.now().millisecondsSinceEpoch % 100000}';
+                                            final code =
+                                                'ADM-${DateTime.now().millisecondsSinceEpoch % 100000}';
                                             _codigoAdminController.text = code;
                                             if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Código generado')));
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Código generado',
+                                                  ),
+                                                ),
+                                              );
                                             }
                                             setState(() {});
                                           },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: Colors.black87,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
                                     child: const Text('Generar'),
                                   ),
                                 ],
@@ -277,19 +362,33 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                               SizedBox(
                                 height: 44,
                                 child: ElevatedButton.icon(
-                                  onPressed: (_canCreate && !_isCreating) ? _createAdmin : null,
+                                  onPressed: (_canCreate && !_isCreating)
+                                      ? _createAdmin
+                                      : null,
                                   icon: _isCreating
                                       ? const SizedBox(
                                           width: 16,
                                           height: 16,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : const Icon(Icons.save),
-                                  label: Text(_isCreating ? 'Creando...' : 'Crear Administrador'),
-                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD92344), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                  label: Text(
+                                    _isCreating
+                                        ? 'Creando...'
+                                        : 'Crear Administrador',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFD92344),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

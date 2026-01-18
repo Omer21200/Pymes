@@ -303,6 +303,7 @@ class _DepartamentosAdminListPageState
           if (!mounted) return;
           final empresaId = empleado?['empresa_id']?.toString();
           if (empresaId == null) {
+            // ignore: use_build_context_synchronously
             final messenger = ScaffoldMessenger.of(context);
             messenger.showSnackBar(
               const SnackBar(
@@ -313,6 +314,7 @@ class _DepartamentosAdminListPageState
             return;
           }
 
+          // ignore: use_build_context_synchronously
           final result = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
               builder: (_) => CreacionDepartamentos(empresaId: empresaId),

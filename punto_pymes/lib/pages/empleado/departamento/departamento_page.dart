@@ -29,7 +29,9 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
 
     try {
       final empleado = await SupabaseService.instance.getEmpleadoActual();
-      final deptoId = empleado?['empleado_raw']?['departamento_id'] as String? ?? empleado?['profile_raw']?['departamento_id'] as String?;
+      final deptoId =
+          empleado?['empleado_raw']?['departamento_id'] as String? ??
+          empleado?['profile_raw']?['departamento_id'] as String?;
       if (deptoId == null) {
         setState(() {
           _error = 'No perteneces a ningún departamento.';
@@ -39,11 +41,17 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
       }
 
       final depto = await SupabaseService.instance.getDepartamentoById(deptoId);
-      final horario = await SupabaseService.instance.getHorarioPorDepartamento(deptoId);
+      final horario = await SupabaseService.instance.getHorarioPorDepartamento(
+        deptoId,
+      );
 
       setState(() {
-        _departamento = depto == null ? null : Map<String, dynamic>.from(depto as Map);
-        _horario = horario == null ? null : Map<String, dynamic>.from(horario as Map);
+        _departamento = depto == null
+            ? null
+            : Map<String, dynamic>.from(depto as Map);
+        _horario = horario == null
+            ? null
+            : Map<String, dynamic>.from(horario as Map);
         _loading = false;
       });
     } catch (e) {
@@ -56,25 +64,29 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
 
   Widget _buildHorario() {
     if (_horario == null) {
-      return Text('No hay horarios definidos para este departamento.', style: AppTextStyles.smallLabel);
+      return Text(
+        'No hay horarios definidos para este departamento.',
+        style: AppTextStyles.smallLabel,
+      );
     }
 
     final horaEntradaRaw = _horario!['hora_entrada'] as String? ?? '';
     final horaSalidaRaw = _horario!['hora_salida'] as String? ?? '';
 
-    String _formatHora(String raw) {
+    String formatHora(String raw) {
       try {
         final d = DateTime.parse(raw);
         return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
       } catch (_) {
-        if (raw.contains(':')) return raw.split(':').sublist(0,2).join(':');
+        if (raw.contains(':')) return raw.split(':').sublist(0, 2).join(':');
         return raw.isEmpty ? '--:--' : raw;
       }
     }
 
-    final horaEntrada = _formatHora(horaEntradaRaw);
-    final horaSalida = _formatHora(horaSalidaRaw);
-    final tolerancia = _horario!['tolerancia_entrada_minutos']?.toString() ?? '-';
+    final horaEntrada = formatHora(horaEntradaRaw);
+    final horaSalida = formatHora(horaSalidaRaw);
+    final tolerancia =
+        _horario!['tolerancia_entrada_minutos']?.toString() ?? '-';
 
     final dias = <String>[];
     if ((_horario!['lunes'] ?? false) == true) dias.add('Lun');
@@ -95,9 +107,19 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
             children: [
               Icon(Icons.access_time, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Horario', style: AppTextStyles.smallLabel.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Horario',
+                style: AppTextStyles.smallLabel.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const Spacer(),
-              Text('$horaEntrada - $horaSalida', style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray)),
+              Text(
+                '$horaEntrada - $horaSalida',
+                style: AppTextStyles.smallLabel.copyWith(
+                  color: AppColors.mutedGray,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -112,11 +134,24 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
                         spacing: 8,
                         runSpacing: 6,
                         children: dias
-                            .map((d) => Chip(
-                                  label: Text(d, style: AppTextStyles.smallLabel.copyWith(color: Colors.white)),
-                                  backgroundColor: AppColors.primary.withOpacity(0.95),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                ))
+                            .map(
+                              (d) => Chip(
+                                label: Text(
+                                  d,
+                                  style: AppTextStyles.smallLabel.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                // ignore: deprecated_member_use
+                                backgroundColor: AppColors.primary.withOpacity(
+                                  0.95,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 0,
+                                ),
+                              ),
+                            )
                             .toList(),
                       ),
               ),
@@ -127,8 +162,18 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
             children: [
               Icon(Icons.timer, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Tolerancia: ', style: AppTextStyles.smallLabel.copyWith(fontWeight: FontWeight.w600)),
-              Text('$tolerancia minutos', style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray)),
+              Text(
+                'Tolerancia: ',
+                style: AppTextStyles.smallLabel.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '$tolerancia minutos',
+                style: AppTextStyles.smallLabel.copyWith(
+                  color: AppColors.mutedGray,
+                ),
+              ),
             ],
           ),
         ],
@@ -143,7 +188,14 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
     }
 
     if (_error != null) {
-      return Center(child: Text(_error!, style: AppTextStyles.smallLabel.copyWith(color: AppColors.brandRedAlt)));
+      return Center(
+        child: Text(
+          _error!,
+          style: AppTextStyles.smallLabel.copyWith(
+            color: AppColors.brandRedAlt,
+          ),
+        ),
+      );
     }
 
     return SingleChildScrollView(
@@ -164,12 +216,16 @@ class _DepartamentoPageState extends State<DepartamentoPage> {
           ),
           const SizedBox(height: 8),
 
-          if ((_departamento?['descripcion'] as String?)?.isNotEmpty ?? false) ...[
+          if ((_departamento?['descripcion'] as String?)?.isNotEmpty ??
+              false) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: AppDecorations.card,
-              child: Text(_departamento!['descripcion'], style: AppTextStyles.smallLabel),
+              child: Text(
+                _departamento!['descripcion'],
+                style: AppTextStyles.smallLabel,
+              ),
             ),
             const SizedBox(height: 12),
           ],

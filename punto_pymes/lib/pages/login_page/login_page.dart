@@ -21,33 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
   String? _errorMessage;
 
-  /// Convierte errores técnicos en mensajes amigables para el usuario
-  String _parseErrorMessage(String errorMessage) {
-    final msg = errorMessage.toLowerCase();
-    
-    if (msg.contains('invalid_credentials') || msg.contains('invalid_grant')) {
-      return 'Correo o contraseña incorrectos.\nVerifica tus credenciales e intenta de nuevo.';
-    } else if (msg.contains('user_not_found')) {
-      return 'Esta cuenta no existe.\nVerifica el correo ingresado.';
-    } else if (msg.contains('user_not_confirmed')) {
-      return 'Tu cuenta no ha sido confirmada.\nRevisa tu correo para activarla.';
-    } else if (msg.contains('database error querying schema')) {
-      return 'Error en el servidor.\nIntenta de nuevo en unos momentos.';
-    } else if (msg.contains('this account does not have the required role')) {
-      return 'Tu cuenta no tiene permisos para acceder aquí.';
-    } else if (msg.contains('does not belong to the company selected')) {
-      return 'Esta cuenta no está registrada en la empresa seleccionada.';
-    } else if (msg.contains('super admin only')) {
-      return 'Solo Super Administradores pueden acceder a esta pantalla.';
-    } else if (msg.contains('network')) {
-      return 'Error de conexión.\nVerifica tu conexión a internet.';
-    } else if (msg.contains('timeout')) {
-      return 'La solicitud tardó demasiado.\nIntenta de nuevo.';
-    }
-    
-    return 'Ocurrió un error al iniciar sesión.\nIntenta de nuevo más tarde.';
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -89,8 +62,9 @@ class _LoginPageState extends State<LoginPage> {
       await SupabaseService.instance.refreshSession();
       final profile = await SupabaseService.instance.getMyProfile();
 
-      if (profile == null)
+      if (profile == null) {
         throw Exception('No se encontró el perfil del usuario.');
+      }
 
       final rol = profile['rol'] as String?;
       final userEmpresaId = profile['empresa_id'] as String?;
@@ -165,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      final rawError = e.toString();
+      final msg = e.toString();
       setState(() {
         if (msg.contains('invalid_grant')) {
           _errorMessage = 'Credenciales incorrectas.';
@@ -246,7 +220,7 @@ class _LoginPageState extends State<LoginPage> {
       title = 'Acceso Super Admin';
       subtitle = 'Ingresa tus credenciales maestras';
       logoWidget = Image.asset(
-        'assets/images/pymes.png', // Logo principal de la app
+        'assets/images/logo.png', // Logo principal de la app
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) =>
             const Icon(Icons.shield_outlined, size: 50, color: primaryColor),
@@ -298,21 +272,18 @@ class _LoginPageState extends State<LoginPage> {
                   height: 100,
                   width: 100,
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(
-                          26,
-                        ), // Corrección de withOpacity
+                        color: Colors.black.withAlpha(26),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.zero,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     child: logoWidget,
                   ),
                 ),
@@ -337,25 +308,17 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // 3. MENSAJE DE ERROR (Profesional y amigable)
+                // 3. MENSAJE DE ERROR
                 if (_errorMessage != null)
                   Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade200, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withAlpha(20),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade100),
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.error_outline,
@@ -396,46 +359,7 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () async {
-                      final email = _emailController.text.trim();
-
-                      if (email.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Ingresa tu correo para recuperar tu contraseña.',
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      try {
-                        await SupabaseService.instance.client.auth
-                            .resetPasswordForEmail(email);
-
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Te hemos enviado un enlace para restablecer tu contraseña.',
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'No se pudo enviar el correo de recuperación: $e',
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: () {},
                     child: const Text(
                       '¿Olvidaste tu contraseña?',
                       style: TextStyle(

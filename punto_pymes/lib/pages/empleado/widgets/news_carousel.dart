@@ -5,17 +5,14 @@ class NewsCarousel extends StatefulWidget {
   final List<Map<String, dynamic>> noticias;
   final VoidCallback? onNewsPressed;
 
-  const NewsCarousel({
-    super.key,
-    required this.noticias,
-    this.onNewsPressed,
-  });
+  const NewsCarousel({super.key, required this.noticias, this.onNewsPressed});
 
   @override
   State<NewsCarousel> createState() => _NewsCarouselState();
 }
 
-class _NewsCarouselState extends State<NewsCarousel> with SingleTickerProviderStateMixin {
+class _NewsCarouselState extends State<NewsCarousel>
+    with SingleTickerProviderStateMixin {
   late PageController _pageController;
   int _currentPage = 0;
   late AnimationController _animationController;
@@ -24,10 +21,7 @@ class _NewsCarouselState extends State<NewsCarousel> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(
-      viewportFraction: 0.92,
-      initialPage: 0,
-    );
+    _pageController = PageController(viewportFraction: 0.92, initialPage: 0);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -102,8 +96,12 @@ class _NewsCarouselState extends State<NewsCarousel> with SingleTickerProviderSt
             const Spacer(),
             if (widget.noticias.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
+                  // ignore: deprecated_member_use
                   color: const Color(0xFFD92344).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -172,16 +170,14 @@ class _NewsCard extends StatefulWidget {
   final Map<String, dynamic> noticia;
   final VoidCallback? onPressed;
 
-  const _NewsCard({
-    required this.noticia,
-    this.onPressed,
-  });
+  const _NewsCard({required this.noticia, this.onPressed});
 
   @override
   State<_NewsCard> createState() => _NewsCardState();
 }
 
-class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixin {
+class _NewsCardState extends State<_NewsCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -192,9 +188,10 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -221,6 +218,7 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
+                // ignore: deprecated_member_use
                 color: Colors.black.withOpacity(0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
@@ -236,7 +234,8 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                 SizedBox(
                   width: 150,
                   height: double.infinity,
-                  child: (widget.noticia['imagen_url'] != null &&
+                  child:
+                      (widget.noticia['imagen_url'] != null &&
                           widget.noticia['imagen_url'].toString().isNotEmpty)
                       ? Image.network(
                           widget.noticia['imagen_url'],
@@ -256,7 +255,9 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                             if (progress == null) return child;
                             return Container(
                               color: Colors.grey.shade100,
-                              child: const Center(child: CircularProgressIndicator()),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                             );
                           },
                         )
@@ -282,7 +283,8 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                           children: [
                             Expanded(
                               child: Text(
-                                (widget.noticia['titulo'] ?? 'Sin título').toString(),
+                                (widget.noticia['titulo'] ?? 'Sin título')
+                                    .toString(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -295,9 +297,16 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                             ),
                             if (widget.noticia['es_importante'] == true)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFD92344).withOpacity(0.12),
+                                  // ignore: deprecated_member_use
+                                  color: const Color(
+                                    0xFFD92344,
+                                    // ignore: deprecated_member_use
+                                  ).withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(
@@ -313,7 +322,8 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          (widget.noticia['contenido'] ?? 'Sin descripción').toString(),
+                          (widget.noticia['contenido'] ?? 'Sin descripción')
+                              .toString(),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -325,7 +335,11 @@ class _NewsCardState extends State<_NewsCard> with SingleTickerProviderStateMixi
                         const SizedBox(height: 12),
                         Row(
                           children: const [
-                            Icon(Icons.chevron_right, size: 18, color: Color(0xFFD92344)),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: Color(0xFFD92344),
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Leer más',

@@ -7,7 +7,6 @@ class NotificationCard extends StatelessWidget {
   final String fechaPublicacion;
   final bool esImportante;
   final String? imagenUrl;
-  final String? imagenUrl;
 
   const NotificationCard({
     super.key,
@@ -15,7 +14,6 @@ class NotificationCard extends StatelessWidget {
     required this.contenido,
     required this.fechaPublicacion,
     this.esImportante = false,
-    this.imagenUrl,
     this.imagenUrl,
   });
 
@@ -30,8 +28,12 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = esImportante ? AppColors.brandRedAlt : AppColors.accentBlueAdmin;
-    final backgroundColor = esImportante ? AppColors.notificationBg : AppColors.subtleBg;
+    final accentColor = esImportante
+        ? AppColors.brandRedAlt
+        : AppColors.accentBlueAdmin;
+    final backgroundColor = esImportante
+        ? AppColors.notificationBg
+        : AppColors.subtleBg;
     final borderColor = accentColor.withAlpha((0.15 * 255).round());
 
     return Container(
@@ -41,29 +43,25 @@ class NotificationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor, width: 1),
         boxShadow: [
-                                      BoxShadow(
-                                        color: accentColor.withAlpha((0.06 * 255).round()),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 2),
-                                      ),
+          BoxShadow(
+            color: accentColor.withAlpha((0.06 * 255).round()),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Banda de acento a la izquierda
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(14),
-                  bottomLeft: Radius.circular(14),
-                ),
+          Container(
+            width: 4,
+            height: 110,
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                bottomLeft: Radius.circular(14),
               ),
             ),
           ),
@@ -87,13 +85,19 @@ class NotificationCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stack) => Container(
                         color: AppColors.surfaceSoft,
-                        child: Icon(Icons.image_not_supported, color: AppColors.mutedGray, size: 40),
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: AppColors.mutedGray,
+                          size: 40,
+                        ),
                       ),
                       loadingBuilder: (context, child, progress) {
                         if (progress == null) return child;
                         return Container(
                           color: AppColors.surfaceSoft,
-                          child: const Center(child: CircularProgressIndicator()),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
                         );
                       },
                     ),
@@ -110,7 +114,11 @@ class NotificationCard extends StatelessWidget {
                       bottomLeft: Radius.circular(14),
                     ),
                   ),
-                  child: Icon(Icons.newspaper, color: AppColors.mutedGray, size: 40),
+                  child: Icon(
+                    Icons.newspaper,
+                    color: AppColors.mutedGray,
+                    size: 40,
+                  ),
                 ),
 
               // Contenido textual
@@ -125,12 +133,16 @@ class NotificationCard extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                              color: accentColor.withAlpha((0.12 * 255).round()),
+                            decoration: BoxDecoration(
+                              color: accentColor.withAlpha(
+                                (0.12 * 255).round(),
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Icon(
-                              esImportante ? Icons.priority_high : Icons.notifications_active,
+                              esImportante
+                                  ? Icons.priority_high
+                                  : Icons.notifications_active,
                               color: accentColor,
                               size: 18,
                             ),
@@ -139,21 +151,31 @@ class NotificationCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               titulo,
-                              style: AppTextStyles.sectionTitle.copyWith(fontSize: 15, color: Colors.black87),
+                              style: AppTextStyles.sectionTitle.copyWith(
+                                fontSize: 15,
+                                color: Colors.black87,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: accentColor.withAlpha((0.95 * 255).round()),
+                              color: accentColor.withAlpha(
+                                (0.95 * 255).round(),
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               esImportante ? 'Importante' : 'Nueva',
-                              style: AppTextStyles.smallLabel.copyWith(color: Colors.white),
+                              style: AppTextStyles.smallLabel.copyWith(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
@@ -163,7 +185,11 @@ class NotificationCard extends StatelessWidget {
                       // Contenido
                       Text(
                         contenido,
-                        style: AppTextStyles.smallLabel.copyWith(fontSize: 13, height: 1.45, color: Colors.black87),
+                        style: AppTextStyles.smallLabel.copyWith(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: Colors.black87,
+                        ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -172,18 +198,33 @@ class NotificationCard extends StatelessWidget {
                       // Footer con fecha y acción
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 14, color: AppColors.mutedGray),
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: AppColors.mutedGray,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             _formatearFecha(fechaPublicacion),
-                            style: AppTextStyles.smallLabel.copyWith(color: AppColors.mutedGray),
+                            style: AppTextStyles.smallLabel.copyWith(
+                              color: AppColors.mutedGray,
+                            ),
                           ),
                           const Spacer(),
                           Row(
                             children: [
-                              Text('Leer más', style: AppTextStyles.smallLabel.copyWith(color: accentColor)),
+                              Text(
+                                'Leer más',
+                                style: AppTextStyles.smallLabel.copyWith(
+                                  color: accentColor,
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              Icon(Icons.chevron_right, size: 16, color: accentColor),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: accentColor,
+                              ),
                             ],
                           ),
                         ],

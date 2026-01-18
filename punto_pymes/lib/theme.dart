@@ -93,16 +93,36 @@ class AppDecorations {
     color: AppColors.surface,
     borderRadius: BorderRadius.circular(14),
     boxShadow: [
-      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+      // ignore: deprecated_member_use
+      BoxShadow(
+        // ignore: deprecated_member_use
+        color: Colors.black.withOpacity(0.04),
+        blurRadius: 8,
+        offset: const Offset(0, 2),
+      ),
     ],
   );
 
   /// Builds a gradient and box shadow for stat cards that match admin dashboard.
   static BoxDecoration statCardDecoration(Color color) => BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color.withOpacity(0.8), color]),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 6))],
-      );
+    // ignore: deprecated_member_use
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      // ignore: deprecated_member_use
+      colors: [color.withOpacity(0.8), color],
+    ),
+    borderRadius: BorderRadius.circular(20),
+    // ignore: deprecated_member_use
+    boxShadow: [
+      BoxShadow(
+        // ignore: deprecated_member_use
+        color: color.withOpacity(0.25),
+        blurRadius: 12,
+        offset: const Offset(0, 6),
+      ),
+    ],
+  );
 
   static BoxDecoration avatarContainer = const BoxDecoration(
     shape: BoxShape.circle,
@@ -117,7 +137,10 @@ final ThemeData lightmode = ThemeData(
   colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
   scaffoldBackgroundColor: AppColors.background,
   dividerColor: AppColors.divider,
-  appBarTheme: const AppBarTheme(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: AppColors.primary,
+    foregroundColor: Colors.white,
+  ),
 );
 
 final ThemeData darkmode = ThemeData(
