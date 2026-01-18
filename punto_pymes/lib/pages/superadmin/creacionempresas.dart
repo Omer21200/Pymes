@@ -280,6 +280,46 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
       initial = LatLng(lat, lng);
     }
 
+    // Prepare modal-scoped search state so results persist across setStateModal
+    final TextEditingController modalSearchController = TextEditingController();
+    List<Map<String, dynamic>> modalResults = [];
+    Timer? modalDebounce;
+    bool modalSearching = false;
+
+    Future<void> doModalSearch(
+      String q,
+      void Function(void Function()) setStateModal,
+    ) async {
+      modalDebounce?.cancel();
+      modalDebounce = Timer(const Duration(milliseconds: 350), () async {
+        if (q.trim().isEmpty) {
+          setStateModal(() {
+            modalResults = [];
+            modalSearching = false;
+          });
+          return;
+        }
+        setStateModal(() {
+          modalSearching = true;
+          modalResults = [];
+        });
+        try {
+          final res = await SupabaseService.instance.geocodeSearch(q, limit: 6);
+          setStateModal(() {
+            modalResults = res;
+          });
+        } catch (_) {
+          setStateModal(() {
+            modalResults = [];
+          });
+        } finally {
+          setStateModal(() {
+            modalSearching = false;
+          });
+        }
+      });
+    }
+
     final result = await showModalBottomSheet<LatLng>(
       context: context,
       isScrollControlled: true,
@@ -299,8 +339,6 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
 
         return StatefulBuilder(
           builder: (context, setStateModal) {
-            final TextEditingController modalSearchController =
-                TextEditingController();
             return SizedBox(
               height: MediaQuery.of(context).size.height * 0.75,
               child: Column(
@@ -315,130 +353,6 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () async {
-                            // Open simple search dialog
-                            final q = await showDialog<String?>(
-                              context: context,
-                              builder: (ctx) {
-                                return AlertDialog(
-                                  backgroundColor: AppColors.surface,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  title: const Text('Buscar ubicación'),
-                                  content: TextField(
-                                    controller: modalSearchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Escribe una dirección o lugar',
-                                      hintStyle: AppTextStyles.smallLabel
-                                          .copyWith(color: AppColors.mutedGray),
-                                      filled: true,
-                                      fillColor: AppColors.subtleBg,
-                                    ),
-                                    autofocus: true,
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppColors.mutedGray,
-                                      ),
-                                      onPressed: () => Navigator.of(ctx).pop(),
-                                      child: const Text('Cerrar'),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: () => Navigator.of(
-                                        ctx,
-                                      ).pop(modalSearchController.text.trim()),
-                                      child: const Text('Buscar'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-
-                            if (q == null || q.trim().isEmpty) return;
-                            // perform geocode search (Nominatim via SupabaseService)
-                            final List<Map<String, dynamic>> results =
-                                await SupabaseService.instance.geocodeSearch(
-                                  q,
-                                  limit: 6,
-                                );
-                            if (results.isEmpty) {
-                              if (mounted) {
-                                // ignore: use_build_context_synchronously
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'No se encontraron resultados',
-                                    ),
-                                  ),
-                                );
-                              }
-                              return;
-                            }
-                            // Show selection dialog
-                            final sel = await showDialog<Map<String, dynamic>?>(
-                              // ignore: use_build_context_synchronously
-                              context: context,
-                              builder: (ctx) {
-                                return SimpleDialog(
-                                  title: const Text('Resultados'),
-                                  children: results.map((r) {
-                                    final display =
-                                        r['display_name'] ??
-                                        r['description'] ??
-                                        '';
-                                    return SimpleDialogOption(
-                                      onPressed: () => Navigator.of(ctx).pop(r),
-                                      child: Text(display.toString()),
-                                    );
-                                  }).toList(),
-                                );
-                              },
-                            );
-
-                            if (sel != null) {
-                              final lat =
-                                  double.tryParse(
-                                    sel['lat']?.toString() ?? '',
-                                  ) ??
-                                  double.tryParse(
-                                    sel['latitud']?.toString() ?? '',
-                                  );
-                              final lon =
-                                  double.tryParse(
-                                    sel['lon']?.toString() ?? '',
-                                  ) ??
-                                  double.tryParse(
-                                    sel['longitud']?.toString() ?? '',
-                                  );
-                              if (lat != null && lon != null) {
-                                setStateModal(() {
-                                  picked = LatLng(lat, lon);
-                                  markers.clear();
-                                  markers.add(
-                                    Marker(
-                                      markerId: const MarkerId('selected'),
-                                      position: picked,
-                                    ),
-                                  );
-                                });
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.search),
-                          tooltip: 'Buscar ubicación',
-                        ),
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cerrar'),
@@ -446,42 +360,235 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: initial,
-                          zoom: 15,
+
+                  // Search field
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: modalSearchController,
+                          decoration: InputDecoration(
+                            hintText: 'Buscar dirección o lugar',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            suffixIcon: modalSearchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      modalSearchController.clear();
+                                      setStateModal(() => modalResults = []);
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          onChanged: (v) => doModalSearch(v, setStateModal),
+                          onSubmitted: (v) async {
+                            await doModalSearch(v, setStateModal);
+                          },
                         ),
-                        onTap: (pos) {
-                          setStateModal(() {
-                            picked = pos;
-                            markers.clear();
-                            markers.add(
-                              Marker(
-                                markerId: const MarkerId('selected'),
-                                position: picked,
-                              ),
-                            );
-                          });
-                        },
-                        markers: markers,
-                        // Performance: avoid extra heavy gestures and buttons
-                        myLocationButtonEnabled: false,
-                        zoomControlsEnabled: true,
-                        rotateGesturesEnabled: false,
-                        tiltGesturesEnabled: false,
-                        compassEnabled: false,
-                        mapToolbarEnabled: false,
-                        onMapCreated: (c) => _mapController = c,
-                        gestureRecognizers:
-                            <Factory<OneSequenceGestureRecognizer>>{
-                              Factory<OneSequenceGestureRecognizer>(
-                                () => EagerGestureRecognizer(),
-                              ),
+
+                        // Results list
+                        if (modalResults.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            constraints: BoxConstraints(
+                              maxHeight:
+                                  MediaQuery.of(context).size.height * 0.25,
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: modalResults.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (ctx, i) {
+                                final r = modalResults[i];
+                                final display =
+                                    r['display_name'] ?? r['description'] ?? '';
+                                return ListTile(
+                                  title: Text(display.toString()),
+                                  onTap: () async {
+                                    final lat =
+                                        double.tryParse(
+                                          r['lat']?.toString() ?? '',
+                                        ) ??
+                                        double.tryParse(
+                                          r['latitud']?.toString() ?? '',
+                                        );
+                                    final lon =
+                                        double.tryParse(
+                                          r['lon']?.toString() ?? '',
+                                        ) ??
+                                        double.tryParse(
+                                          r['longitud']?.toString() ?? '',
+                                        );
+                                    if (lat != null && lon != null) {
+                                      setStateModal(() {
+                                        picked = LatLng(lat, lon);
+                                        markers.clear();
+                                        markers.add(
+                                          Marker(
+                                            markerId: const MarkerId(
+                                              'selected',
+                                            ),
+                                            position: picked,
+                                          ),
+                                        );
+                                        modalResults = [];
+                                        modalSearchController.text = display
+                                            .toString();
+                                      });
+                                      try {
+                                        await _mapController?.animateCamera(
+                                          CameraUpdate.newLatLngZoom(
+                                            LatLng(lat, lon),
+                                            15,
+                                          ),
+                                        );
+                                      } catch (_) {}
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: initial,
+                              zoom: 15,
+                            ),
+                            onTap: (pos) {
+                              setStateModal(() {
+                                picked = pos;
+                                markers.clear();
+                                markers.add(
+                                  Marker(
+                                    markerId: const MarkerId('selected'),
+                                    position: picked,
+                                  ),
+                                );
+                              });
                             },
-                      ),
+                            markers: markers,
+                            myLocationButtonEnabled: false,
+                            zoomControlsEnabled: false,
+                            rotateGesturesEnabled: false,
+                            tiltGesturesEnabled: false,
+                            compassEnabled: false,
+                            mapToolbarEnabled: false,
+                            onMapCreated: (c) => _mapController = c,
+                            gestureRecognizers:
+                                <Factory<OneSequenceGestureRecognizer>>{
+                                  Factory<OneSequenceGestureRecognizer>(
+                                    () => EagerGestureRecognizer(),
+                                  ),
+                                },
+                          ),
+                        ),
+
+                        // Zoom controls (top-right)
+                        Positioned(
+                          right: 12,
+                          top: 12,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Material(
+                                color: Colors.white,
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  padding: const EdgeInsets.all(6),
+                                  icon: const Icon(Icons.add, size: 20),
+                                  onPressed: () async {
+                                    try {
+                                      await _mapController?.animateCamera(
+                                        CameraUpdate.zoomIn(),
+                                      );
+                                    } catch (_) {}
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Material(
+                                color: Colors.white,
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  padding: const EdgeInsets.all(6),
+                                  icon: const Icon(Icons.remove, size: 20),
+                                  onPressed: () async {
+                                    try {
+                                      await _mapController?.animateCamera(
+                                        CameraUpdate.zoomOut(),
+                                      );
+                                    } catch (_) {}
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Center-on-picked control (bottom-right over map)
+                        Positioned(
+                          right: 12,
+                          bottom: 12 + 56, // above the confirm row
+                          child: Material(
+                            color: Colors.white,
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: IconButton(
+                              padding: const EdgeInsets.all(8),
+                              icon: const Icon(Icons.my_location, size: 20),
+                              onPressed: () async {
+                                try {
+                                  await _mapController?.animateCamera(
+                                    CameraUpdate.newLatLngZoom(picked, 17),
+                                  );
+                                } catch (_) {}
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Padding(
@@ -682,31 +789,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                     enabled: !_isCreating,
                                     keyboardType: TextInputType.emailAddress,
                                   ),
-                                  const SizedBox(height: 8),
-                                  _buildTextField(
-                                    controller: _latitudController,
-                                    label: 'Latitud',
-                                    enabled: !_isCreating,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                          signed: true,
-                                        ),
-                                    helperText: 'Rango: -90 a 90',
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildTextField(
-                                    controller: _longitudController,
-                                    label: 'Longitud',
-                                    enabled: !_isCreating,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                          signed: true,
-                                        ),
-                                    helperText: 'Rango: -180 a 180',
-                                  ),
-                                  const SizedBox(height: 8),
+                                  // Lat/Lng inputs hidden — coordinates set via map picker
                                   Row(
                                     children: [
                                       Expanded(

@@ -59,34 +59,57 @@ class _AdminsListState extends State<AdminsList> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Administradores',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Lista completa de administradores registrados',
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final created = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CreacionAdmis(),
-                          ),
-                        );
-                        if (created == true) await _loadAdmins();
-                      },
-                      icon: const Icon(Icons.person_add),
-                      label: const Text('Crear Administrador'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD92344),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Administradores',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              ),
+                            ),
+                            SizedBox(height: 1),
+                            Text(
+                              'Lista completa de administradores registrados',
+                              style: TextStyle(color: Colors.black54),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final created = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CreacionAdmis(),
+                            ),
+                          );
+                          if (created == true) await _loadAdmins();
+                        },
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Crear Administrador'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD92344),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          elevation: 6,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
 
@@ -111,7 +134,14 @@ class _AdminsListState extends State<AdminsList> {
                               const SizedBox(height: 12),
                               Text(
                                 'No hay administradores registrados',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style: TextStyle(
+                                  color: const Color.fromARGB(
+                                    255,
+                                    255,
+                                    255,
+                                    255,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
