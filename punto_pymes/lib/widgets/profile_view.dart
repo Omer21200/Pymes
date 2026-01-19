@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart' as latlng;
 import '../theme.dart';
 
 class ProfileView extends StatefulWidget {
@@ -21,6 +22,7 @@ class ProfileView extends StatefulWidget {
   final String? errorMessage;
   final double? companyLat;
   final double? companyLng;
+  final double? companyRadiusMeters;
   final String? companyName;
   final String? companyAddress;
   final double? userLat;
@@ -43,6 +45,7 @@ class ProfileView extends StatefulWidget {
     this.errorMessage,
     this.companyLat,
     this.companyLng,
+    this.companyRadiusMeters,
     this.companyName,
     this.companyAddress,
     this.userLat,
@@ -59,9 +62,9 @@ class _ProfileViewState extends State<ProfileView> {
   late Map<String, String> _backup;
   double? _deviceLat;
   double? _deviceLng;
-  final MapController _profileMapController = MapController();
+  gmaps.GoogleMapController? _googleMapController;
   double _profileMapZoom = 15.0;
-  gmaps.GoogleMapController? _googleProfileMapController;
+
   late TextEditingController _emailController;
 
   @override
@@ -255,48 +258,31 @@ class _ProfileViewState extends State<ProfileView> {
               borderRadius: BorderRadius.circular(12),
               child: Stack(
                 children: [
-                  // Use GoogleMap for display when not editing (better tiles),
-                  // keep FlutterMap for editing (tappable coordinate selection).
-                  if (!_editing)
-                    gmaps.GoogleMap(
-                      initialCameraPosition: gmaps.CameraPosition(
-                        target: gmaps.LatLng(
-                          _calculateCenter().latitude,
-                          _calculateCenter().longitude,
-                        ),
-                        zoom: _profileMapZoom,
-                      ),
-                      markers: _buildMarkers()
-                          .map(
-                            (m) => gmaps.Marker(
-                              markerId: gmaps.MarkerId(m.key.toString()),
-                              position: gmaps.LatLng(
-                                m.point.latitude,
-                                m.point.longitude,
-                              ),
-                            ),
-                          )
-                          .toSet(),
-                      zoomControlsEnabled: false,
-                      myLocationButtonEnabled: false,
-                      onMapCreated: (c) => _googleProfileMapController = c,
-                    )
-                  else
-                    FlutterMap(
-                      mapController: _profileMapController,
-                      options: MapOptions(
-                        initialCenter: _calculateCenter(),
-                        initialZoom: _profileMapZoom,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.pymes.app',
-                        ),
-                        MarkerLayer(markers: _buildMarkers()),
-                      ],
+                  // Google Map display
+                  gmaps.GoogleMap(
+                    initialCameraPosition: gmaps.CameraPosition(
+                      target:
+                          _normalizeLatLng(
+                            widget.companyLat ?? widget.userLat ?? _deviceLat,
+                            widget.companyLng ?? widget.userLng ?? _deviceLng,
+                          ) ??
+                          const gmaps.LatLng(0, 0),
+                      zoom: _profileMapZoom,
                     ),
+                    markers: _buildGmapsMarkers(),
+                    circles: _buildGmapsCircles(),
+                    onMapCreated: (ctrl) => _googleMapController = ctrl,
+                    myLocationEnabled:
+                        (widget.userLat != null || _deviceLat != null),
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                      Factory<OneSequenceGestureRecognizer>(
+                        () => EagerGestureRecognizer(),
+                      ),
+                    },
+                  ),
 
                   Positioned(
                     right: 8,
@@ -318,21 +304,14 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                             onPressed: () {
                               final center = _calculateCenter();
-                              if (_editing) {
-                                _profileMapController.move(
-                                  center,
-                                  _profileMapZoom,
-                                );
-                              } else if (_googleProfileMapController != null) {
-                                _googleProfileMapController!.animateCamera(
-                                  gmaps.CameraUpdate.newCameraPosition(
-                                    gmaps.CameraPosition(
-                                      target: gmaps.LatLng(
-                                        center.latitude,
-                                        center.longitude,
-                                      ),
-                                      zoom: _profileMapZoom,
+                              if (_googleMapController != null) {
+                                _googleMapController!.animateCamera(
+                                  gmaps.CameraUpdate.newLatLngZoom(
+                                    gmaps.LatLng(
+                                      center.latitude,
+                                      center.longitude,
                                     ),
+                                    _profileMapZoom,
                                   ),
                                 );
                               }
@@ -346,14 +325,13 @@ class _ProfileViewState extends State<ProfileView> {
                                 1,
                                 20,
                               );
-                              if (_editing) {
-                                _profileMapController.move(
-                                  _calculateCenter(),
-                                  _profileMapZoom,
-                                );
-                              } else if (_googleProfileMapController != null) {
-                                _googleProfileMapController!.animateCamera(
-                                  gmaps.CameraUpdate.zoomTo(_profileMapZoom),
+                              final c = _calculateCenter();
+                              if (_googleMapController != null) {
+                                _googleMapController!.animateCamera(
+                                  gmaps.CameraUpdate.newLatLngZoom(
+                                    gmaps.LatLng(c.latitude, c.longitude),
+                                    _profileMapZoom,
+                                  ),
                                 );
                               }
                             },
@@ -365,14 +343,13 @@ class _ProfileViewState extends State<ProfileView> {
                                 1,
                                 20,
                               );
-                              if (_editing) {
-                                _profileMapController.move(
-                                  _calculateCenter(),
-                                  _profileMapZoom,
-                                );
-                              } else if (_googleProfileMapController != null) {
-                                _googleProfileMapController!.animateCamera(
-                                  gmaps.CameraUpdate.zoomTo(_profileMapZoom),
+                              final c = _calculateCenter();
+                              if (_googleMapController != null) {
+                                _googleMapController!.animateCamera(
+                                  gmaps.CameraUpdate.newLatLngZoom(
+                                    gmaps.LatLng(c.latitude, c.longitude),
+                                    _profileMapZoom,
+                                  ),
                                 );
                               }
                             },
@@ -393,6 +370,9 @@ class _ProfileViewState extends State<ProfileView> {
               Expanded(
                 child: TextButton(
                   onPressed: widget.isLoading ? null : _cancelEdit,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.dangerRed,
+                  ),
                   child: const Text('Cancelar'),
                 ),
               ),
@@ -404,6 +384,7 @@ class _ProfileViewState extends State<ProfileView> {
                     onPressed: widget.isLoading ? null : _saveChanges,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
                       shape: const StadiumBorder(),
                     ),
                     child: widget.isLoading
@@ -419,7 +400,10 @@ class _ProfileViewState extends State<ProfileView> {
                           )
                         : const Text(
                             'Guardar',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
@@ -433,11 +417,15 @@ class _ProfileViewState extends State<ProfileView> {
               onPressed: _enterEdit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 shape: const StadiumBorder(),
               ),
               child: const Text(
                 'Editar',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -497,7 +485,7 @@ class _ProfileViewState extends State<ProfileView> {
       onTap: widget.onPickImage,
       child: CircleAvatar(
         radius: radius,
-        backgroundColor: AppColors.surfaceSoft,
+        backgroundColor: const Color.fromARGB(255, 211, 211, 213),
         backgroundImage: img,
         child: img == null
             ? Text(
@@ -534,65 +522,78 @@ class _ProfileViewState extends State<ProfileView> {
 
   // intentionally left blank: map opening handled externally if needed
 
-  latlng.LatLng _calculateCenter() {
-    final pts = <latlng.LatLng>[];
-    if (widget.companyLat != null && widget.companyLng != null) {
-      pts.add(latlng.LatLng(widget.companyLat!, widget.companyLng!));
-    }
-    if (widget.userLat != null && widget.userLng != null) {
-      pts.add(latlng.LatLng(widget.userLat!, widget.userLng!));
-    }
-    if (_deviceLat != null && _deviceLng != null) {
-      pts.add(latlng.LatLng(_deviceLat!, _deviceLng!));
-    }
-    if (pts.isEmpty) return latlng.LatLng(0, 0);
+  gmaps.LatLng _calculateCenter() {
+    final pts = <gmaps.LatLng>[];
+    final c = _normalizeLatLng(widget.companyLat, widget.companyLng);
+    if (c != null) pts.add(c);
+    final u = _normalizeLatLng(widget.userLat, widget.userLng);
+    if (u != null) pts.add(u);
+    final d = _normalizeLatLng(_deviceLat, _deviceLng);
+    if (d != null) pts.add(d);
+    if (pts.isEmpty) return const gmaps.LatLng(0, 0);
     double latSum = 0, lngSum = 0;
     for (final p in pts) {
       latSum += p.latitude;
       lngSum += p.longitude;
     }
-    return latlng.LatLng(latSum / pts.length, lngSum / pts.length);
+    return gmaps.LatLng(latSum / pts.length, lngSum / pts.length);
   }
 
-  List<Marker> _buildMarkers() {
-    final markers = <Marker>[];
-    if (widget.companyLat != null && widget.companyLng != null) {
+  Set<gmaps.Marker> _buildGmapsMarkers() {
+    final Set<gmaps.Marker> markers = {};
+    final company = _normalizeLatLng(widget.companyLat, widget.companyLng);
+    if (company != null) {
       markers.add(
-        Marker(
-          width: 40,
-          height: 40,
-          point: latlng.LatLng(widget.companyLat!, widget.companyLng!),
-          child: const Icon(Icons.location_on, color: Colors.red, size: 36),
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('company'),
+          position: company,
         ),
       );
     }
-    if (widget.userLat != null && widget.userLng != null) {
+    final user = _normalizeLatLng(widget.userLat, widget.userLng);
+    if (user != null) {
       markers.add(
-        Marker(
-          width: 28,
-          height: 28,
-          point: latlng.LatLng(widget.userLat!, widget.userLng!),
-          child: const Icon(Icons.my_location, color: Colors.blue, size: 28),
-        ),
+        gmaps.Marker(markerId: const gmaps.MarkerId('user'), position: user),
       );
     }
-    if (_deviceLat != null && _deviceLng != null) {
+    // Only add a device marker if there's no saved user location to avoid duplicates
+    final device = _normalizeLatLng(_deviceLat, _deviceLng);
+    if (device != null && user == null) {
       markers.add(
-        Marker(
-          width: 22,
-          height: 22,
-          point: latlng.LatLng(_deviceLat!, _deviceLng!),
-          child: Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blue,
-            ),
-            width: 14,
-            height: 14,
-          ),
+        gmaps.Marker(
+          markerId: const gmaps.MarkerId('device'),
+          position: device,
         ),
       );
     }
     return markers;
+  }
+
+  Set<gmaps.Circle> _buildGmapsCircles() {
+    final Set<gmaps.Circle> circles = {};
+    final companyCenter = _normalizeLatLng(
+      widget.companyLat,
+      widget.companyLng,
+    );
+    if (companyCenter != null && widget.companyRadiusMeters != null) {
+      circles.add(
+        gmaps.Circle(
+          circleId: const gmaps.CircleId('company_radius'),
+          center: companyCenter,
+          radius: widget.companyRadiusMeters!,
+          fillColor: const Color.fromRGBO(217, 35, 68, 0.35),
+          strokeColor: const Color.fromRGBO(217, 35, 68, 1.0),
+          strokeWidth: 4,
+        ),
+      );
+    }
+    return circles;
+  }
+
+  gmaps.LatLng? _normalizeLatLng(double? lat, double? lng) {
+    if (lat == null || lng == null) return null;
+    // if lat looks like a longitude (abs>90) and lng looks like a latitude, swap
+    if (lat.abs() > 90 && lng.abs() <= 90) return gmaps.LatLng(lng, lat);
+    return gmaps.LatLng(lat, lng);
   }
 }

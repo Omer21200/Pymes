@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'widgets/company_tile.dart';
 import 'widgets/superadmin_header.dart';
+import '../../theme.dart';
 import 'empresa_detalle.dart';
 import 'creacionempresas.dart';
 import '../../service/supabase_service.dart';
@@ -210,7 +211,7 @@ class _EmpresasListState extends State<EmpresasList> {
                         icon: const Icon(Icons.add_business),
                         label: const Text('Crear Empresa'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD92344),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           elevation: 8,
                           padding: const EdgeInsets.symmetric(
@@ -237,6 +238,7 @@ class _EmpresasListState extends State<EmpresasList> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
+                                // ignore: deprecated_member_use
                                 color: Colors.black.withOpacity(0.04),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
@@ -301,6 +303,7 @@ class _EmpresasListState extends State<EmpresasList> {
                     const Center(child: CircularProgressIndicator())
                   else if (_empresas.isEmpty)
                     Card(
+                      color: AppColors.surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

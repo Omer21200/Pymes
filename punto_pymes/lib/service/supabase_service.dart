@@ -1139,6 +1139,65 @@ class SupabaseService {
     throw Exception('Ya registraste todas las marcas para hoy.');
   }
 
+  /// Reporta una violación de geofence (empleado fuera del radio permitido).
+  /// Inserta una fila en la tabla `attendance_violations` (si existe).
+  Future<void> reportAttendanceViolation({
+    required String empleadoId,
+    required String empresaId,
+    double? latitud,
+    double? longitud,
+    required double distanceMeters,
+  }) async {
+    try {
+      // Insert violation and request the inserted row so we can get its id
+      final inserted = await client
+          .from('attendance_violations')
+          .insert({
+            'empleado_id': empleadoId,
+            'empresa_id': empresaId,
+            'latitud': latitud,
+            'longitud': longitud,
+            'distance_m': distanceMeters,
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .select()
+          .maybeSingle();
+
+      final violationId = inserted == null
+          ? null
+          : (inserted['id']?.toString());
+
+      // Best-effort: update today's asistencias row to point to this violation or set flag
+      try {
+        // Compute Ecuador date (reuse existing helpers)
+        DateTime now =
+            EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+        final ecuadorTime = now.toUtc().subtract(const Duration(hours: 5));
+        final today = ecuadorTime.toIso8601String().split('T').first;
+
+        final updates = <String, dynamic>{'violation_reported': true};
+        if (violationId != null) updates['last_violation_id'] = violationId;
+
+        await client
+            .from('asistencias')
+            .update(updates)
+            .eq('empleado_id', empleadoId)
+            .eq('fecha', today);
+      } catch (u) {
+        developer.log(
+          'No pudo actualizar asistencias con la violación: $u',
+          name: 'SupabaseService',
+        );
+      }
+    } catch (e) {
+      developer.log(
+        'Error reporting attendance violation: $e',
+        name: 'SupabaseService',
+      );
+      // Do not throw: failure to report should not block the client flow.
+    }
+  }
+
   // registrar_empleado_confirmado DEPRECATED: se mantiene comentado por referencia.
   // Preferir flujo: 1) `registerEmployeeRequest` (RPC) ANTES de 2) `signUpEmail`.
   // El trigger `handle_user_confirmed` creará el profile/empleado al confirmar.
@@ -1166,7 +1225,75 @@ class SupabaseService {
       );
 
       // Si RPC retorna null o vacío, manejamos
-      if (response == null) return [];
+      if (response == null ||
+          (response is List && (response as List).isEmpty)) {
+        // Fallback: consultar directamente la tabla `asistencias` y enriquecer con empleado/departamento
+        try {
+          final empresaId = await _getEmpresaIdSeguro();
+          final today = DateTime.now().toIso8601String().split('T').first;
+          final asistencias = await client
+              .from('asistencias')
+              .select()
+              .eq('empresa_id', empresaId)
+              .eq('fecha', today)
+              .order('hora_entrada', ascending: false)
+              .limit(5);
+
+          if (asistencias == null) return [];
+          final asistenciasList = asistencias as List<dynamic>;
+          if (asistenciasList.isEmpty) return [];
+
+          final List<Map<String, dynamic>> lista = [];
+          for (final a in asistencias) {
+            final Map<String, dynamic> row = Map<String, dynamic>.from(
+              a as Map,
+            );
+            final empleadoId = row['empleado_id']?.toString();
+            String empleadoNombre = 'N/A';
+            String departamentoNombre = 'Sin departamento';
+            if (empleadoId != null) {
+              final empleado = await client
+                  .from('empleados')
+                  .select('nombres,apellidos,departamento_id')
+                  .eq('id', empleadoId)
+                  .maybeSingle();
+              if (empleado != null) {
+                final noms = (empleado['nombres'] ?? '') as String;
+                final apes = (empleado['apellidos'] ?? '') as String;
+                empleadoNombre = [
+                  noms,
+                  apes,
+                ].where((s) => s.toString().isNotEmpty).join(' ').trim();
+                final depId = empleado['departamento_id']?.toString();
+                if (depId != null) {
+                  final dep = await client
+                      .from('departamentos')
+                      .select('nombre')
+                      .eq('id', depId)
+                      .maybeSingle();
+                  if (dep != null)
+                    departamentoNombre =
+                        dep['nombre']?.toString() ?? departamentoNombre;
+                }
+              }
+            }
+
+            lista.add({
+              'empleado_nombre': empleadoNombre,
+              'hora_entrada': row['hora_entrada']?.toString(),
+              'estado_entrada': row['estado_entrada']?.toString(),
+              'departamento': departamentoNombre,
+            });
+          }
+          return lista;
+        } catch (fallbackErr) {
+          developer.log(
+            'Fallback getUltimosRegistros error: $fallbackErr',
+            name: 'SupabaseService',
+          );
+          return [];
+        }
+      }
 
       // Ordenamos en Dart si el RPC no lo hizo
       final lista = (response as List)

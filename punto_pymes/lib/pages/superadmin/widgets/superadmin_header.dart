@@ -93,7 +93,10 @@ class SuperadminHeader extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: IconButton(
-                onPressed: () => showLogoutConfirmation(context),
+                onPressed: () => showLogoutConfirmation(
+                  context,
+                  afterRoute: '/access-selection',
+                ),
                 icon: Icon(Icons.exit_to_app, color: accent),
                 tooltip: 'Cerrar sesión',
               ),

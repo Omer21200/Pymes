@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AdminDetallePage extends StatefulWidget {
   final Map<String, dynamic> admin;
@@ -66,15 +68,14 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
   }
 
   String? _resolveField(List<String> keys) {
-    bool _nonEmpty(dynamic x) {
-      if (x == null) return false;
+    bool nonEmpty(dynamic x) {
       if (x is String) return x.trim().isNotEmpty;
       if (x is num) return true;
       if (x is Map || x is List) return true;
-      return x.toString().trim().isNotEmpty;
+      return false;
     }
 
-    String _toStr(dynamic x) {
+    String toStr(dynamic x) {
       if (x == null) return '';
       if (x is String) return x.trim();
       return x.toString();
@@ -83,7 +84,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
     for (final k in keys) {
       // 1) direct on admin
       final v = widget.admin[k];
-      if (_nonEmpty(v)) return _toStr(v);
+      if (nonEmpty(v)) return toStr(v);
 
       // 2) common nested objects
       final nestedCandidates = ['user', 'profile', 'data'];
@@ -91,14 +92,14 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
         final node = widget.admin[n];
         if (node is Map && node.containsKey(k)) {
           final nv = node[k];
-          if (_nonEmpty(nv)) return _toStr(nv);
+          if (nonEmpty(nv)) return toStr(nv);
         }
       }
 
       // 3) check empresa object
       if (_empresa != null && _empresa!.containsKey(k)) {
         final ev = _empresa![k];
-        if (_nonEmpty(ev)) return _toStr(ev);
+        if (nonEmpty(ev)) return toStr(ev);
       }
     }
 
@@ -151,13 +152,16 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
   }
 
   Widget _mapContainer() {
-    if (_loading)
+    if (_loading) {
       return const SizedBox(
         height: 200,
         child: Center(child: CircularProgressIndicator()),
       );
+    }
+
     if (_lat == null || _lng == null) {
       return Card(
+        color: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 1,
         child: Padding(
@@ -168,7 +172,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
     }
 
     return Container(
-      height: 260,
+      height: 260.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -195,8 +199,8 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
               onMapCreated: (ctrl) => _mapController = ctrl,
             ),
             Positioned(
-              right: 12,
-              top: 12,
+              right: 12.w,
+              top: 12.w,
               child: Column(
                 children: [
                   GestureDetector(
@@ -205,11 +209,11 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                       _centerMap();
                     },
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 40.w,
+                      height: 40.w,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.08),
@@ -217,21 +221,25 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.add, color: Color(0xFFD92344)),
+                      child: Icon(
+                        Icons.add,
+                        color: const Color(0xFFD92344),
+                        size: 18.w,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   GestureDetector(
                     onTap: () {
                       _zoom = (_zoom - 1).clamp(2.0, 20.0);
                       _centerMap();
                     },
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 40.w,
+                      height: 40.w,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.08),
@@ -239,18 +247,22 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.remove, color: Color(0xFFD92344)),
+                      child: Icon(
+                        Icons.remove,
+                        color: const Color(0xFFD92344),
+                        size: 18.w,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   GestureDetector(
                     onTap: _centerMap,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 40.w,
+                      height: 40.w,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.08),
@@ -258,9 +270,10 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.my_location,
-                        color: Color(0xFFD92344),
+                        color: const Color(0xFFD92344),
+                        size: 18.w,
                       ),
                     ),
                   ),
@@ -278,10 +291,10 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
     final fullName =
         '${widget.admin['nombres'] ?? ''} ${widget.admin['apellidos'] ?? ''}'
             .trim();
-    final rol = widget.admin['rol'] ?? '';
-    final empresaNombre =
-        _empresa?['nombre'] ??
-        (widget.admin['empresas']?['nombre'] ?? 'Sin empresa');
+    final empresaNombre = widget.admin['empresas'] != null
+        ? (widget.admin['empresas']['nombre']?.toString() ?? '')
+        : '';
+    final rol = widget.admin['rol'] ?? widget.admin['role'] ?? '';
     final emailVal = _resolveField([
       'email',
       'correo',
@@ -309,7 +322,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(fullName.isEmpty ? 'Detalle' : fullName),
-        backgroundColor: const Color(0xFFD92344),
+        backgroundColor: AppColors.primary,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -317,99 +330,104 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFECEF),
+              Card(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Row(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor: const Color(0xFFFFECEF),
-                        child: const Icon(
-                          Icons.person,
-                          color: Color(0xFFD92344),
-                          size: 34,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              fullName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      // Header row
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor: AppColors.surfaceSoft,
+                            child: const Icon(
+                              Icons.person,
+                              color: Color(0xFFD92344),
+                              size: 34,
                             ),
-                            const SizedBox(height: 6),
-                            Row(
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (empresaNombre.isNotEmpty)
-                                  Chip(
-                                    label: Text(empresaNombre),
-                                    backgroundColor: Colors.white,
+                                Text(
+                                  fullName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                const SizedBox(width: 8),
-                                Chip(
-                                  label: Text(rol.toString()),
-                                  backgroundColor: Colors.white,
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8.0,
+                                  runSpacing: 6.0,
+                                  children: [
+                                    if (empresaNombre.isNotEmpty)
+                                      Chip(
+                                        label: Text(empresaNombre),
+                                        backgroundColor: AppColors.surface,
+                                      ),
+                                    Chip(
+                                      label: Text(rol.toString()),
+                                      backgroundColor: AppColors.surface,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 16),
+
+                      // Info cards row
+                      Row(
+                        children: [
+                          _infoCard(Icons.email, 'Email', emailVal),
+                          const SizedBox(width: 8),
+                          _infoCard(Icons.phone, 'Teléfono', phoneVal),
+                          const SizedBox(width: 8),
+                          _infoCard(Icons.calendar_today, 'Creado', createdVal),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      if (address != null)
+                        Container(
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            address.toString(),
+                            style: const TextStyle(color: Colors.black87),
+                          ),
+                        ),
+
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Ubicación asociada',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Map at the end
+                      _mapContainer(),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // Info cards
-              Row(
-                children: [
-                  _infoCard(Icons.email, 'Email', emailVal),
-                  const SizedBox(width: 8),
-                  _infoCard(Icons.phone, 'Teléfono', phoneVal),
-                  const SizedBox(width: 8),
-                  _infoCard(Icons.calendar_today, 'Creado', createdVal),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-              if (address != null)
-                Card(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(
-                      address.toString(),
-                      style: const TextStyle(color: Colors.black87),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 18),
-              const Text(
-                'Ubicación asociada',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-
-              // Map at the end
-              _mapContainer(),
 
               const SizedBox(height: 24),
             ],

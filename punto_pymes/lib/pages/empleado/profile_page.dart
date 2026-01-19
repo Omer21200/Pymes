@@ -24,6 +24,7 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   File? _selectedImageFile;
   double? _companyLat;
   double? _companyLng;
+  double? _companyRadius;
   String? _companyName;
   double? _userLat;
   double? _userLng;
@@ -83,6 +84,25 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
         _companyName = empresaData?['nombre'] as String?;
         final lat = empresaData?['latitud'];
         final lng = empresaData?['longitud'];
+        double? companyRadius;
+        final radiusCandidates = [
+          'allowed_radius_m',
+          'radius_m',
+          'radio',
+          'geofence_radius',
+          'rango',
+          'radius',
+        ];
+        for (final k in radiusCandidates) {
+          final rv = empresaData?[k];
+          if (rv != null) {
+            final parsed = rv is num ? rv.toDouble() : double.tryParse('$rv');
+            if (parsed != null && parsed > 0) {
+              companyRadius = parsed;
+              break;
+            }
+          }
+        }
         if (lat is num && lng is num) {
           _companyLat = lat.toDouble();
           _companyLng = lng.toDouble();
@@ -90,6 +110,7 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
           _companyLat = null;
           _companyLng = null;
         }
+        _companyRadius = companyRadius;
       });
 
       // Attempt to geocode the user's own address (if present) so we can show a personal map
@@ -242,6 +263,7 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
               errorMessage: _error,
               companyLat: _companyLat,
               companyLng: _companyLng,
+              companyRadiusMeters: _companyRadius,
               companyName: _companyName,
               companyAddress: _empresaDireccion,
               userLat: _userLat,

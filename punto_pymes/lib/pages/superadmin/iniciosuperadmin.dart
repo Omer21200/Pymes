@@ -335,6 +335,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
 
                 if (_empresas.isEmpty && !_isLoading)
                   Card(
+                    color: AppColors.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -360,28 +361,37 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
                     ),
                   )
                 else
-                  ..._empresas
-                      .take(3)
-                      .map(
-                        (empresa) => CompanyTile(
-                          empresa: empresa,
-                          onTap: () {
-                            final id = empresa['id'] as String?;
-                            if (id != null) {
-                              Navigator.of(context)
-                                  .push(
-                                    MaterialPageRoute(
-                                      builder: (_) => EmpresaDetallePage(
-                                        empresaId: id,
-                                        initialEmpresa: empresa,
+                  ...(() {
+                    final empresasOrdenadas = [..._empresas];
+                    empresasOrdenadas.sort((a, b) {
+                      final ca = a['created_at'];
+                      final cb = b['created_at'];
+                      if (ca == null || cb == null) return 0;
+                      return DateTime.parse(cb).compareTo(DateTime.parse(ca));
+                    });
+                    return empresasOrdenadas
+                        .take(4)
+                        .map(
+                          (empresa) => CompanyTile(
+                            empresa: empresa,
+                            onTap: () {
+                              final id = empresa['id'] as String?;
+                              if (id != null) {
+                                Navigator.of(context)
+                                    .push(
+                                      MaterialPageRoute(
+                                        builder: (_) => EmpresaDetallePage(
+                                          empresaId: id,
+                                          initialEmpresa: empresa,
+                                        ),
                                       ),
-                                    ),
-                                  )
-                                  .then((_) => _loadData());
-                            }
-                          },
-                        ),
-                      ),
+                                    )
+                                    .then((_) => _loadData());
+                              }
+                            },
+                          ),
+                        );
+                  }()),
 
                 const SizedBox(height: 18),
 

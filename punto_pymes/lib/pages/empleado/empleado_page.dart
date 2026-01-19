@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -124,6 +126,85 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
       }
 
       // 3) Registrar asistencia enviando lat/lon y fotoUrl si disponibles
+      // Geofence check: if we have device coords and company coords, verify distance
+      try {
+        if (lat != null && lon != null) {
+          final me = await SupabaseService.instance.getEmpleadoActual();
+          final empresaId = me?['empresa_id']?.toString();
+          if (empresaId != null && empresaId.isNotEmpty) {
+            final empresa = await SupabaseService.instance.getEmpresaById(
+              empresaId,
+            );
+            final eLatV = empresa?['latitud'];
+            final eLngV = empresa?['longitud'];
+            double? eLat = (eLatV is num)
+                ? eLatV.toDouble()
+                : double.tryParse('$eLatV');
+            double? eLng = (eLngV is num)
+                ? eLngV.toDouble()
+                : double.tryParse('$eLngV');
+
+            if (eLat != null && eLng != null) {
+              // Determine radius (meters) from empresa if present or default to 50m
+              double radiusMeters = 50.0;
+              final radiusCandidates = [
+                'allowed_radius_m',
+                'radius_m',
+                'radio',
+                'geofence_radius',
+                'rango',
+                'radius',
+              ];
+              for (final k in radiusCandidates) {
+                final rv = empresa?[k];
+                if (rv != null) {
+                  final parsed = rv is num
+                      ? rv.toDouble()
+                      : double.tryParse('$rv');
+                  if (parsed != null && parsed > 0) {
+                    radiusMeters = parsed;
+                    break;
+                  }
+                }
+              }
+
+              double distanceMeters = _distanceBetweenMeters(
+                lat,
+                lon,
+                eLat,
+                eLng,
+              );
+              if (distanceMeters > radiusMeters) {
+                // Report violation and abort registration
+                final empleadoRaw =
+                    me?['empleado_raw'] as Map<String, dynamic>?;
+                final empleadoId = empleadoRaw?['id']?.toString();
+                if (empleadoId != null) {
+                  await SupabaseService.instance.reportAttendanceViolation(
+                    empleadoId: empleadoId,
+                    empresaId: empresaId,
+                    latitud: lat,
+                    longitud: lon,
+                    distanceMeters: distanceMeters,
+                  );
+                }
+                if (mounted) {
+                  NotificationHelper.showWarningNotification(
+                    context,
+                    title: 'Fuera de rango',
+                    message:
+                        'No puedes registrar asistencia: estás fuera del radio permitido (${distanceMeters.toStringAsFixed(0)} m).',
+                  );
+                }
+                return;
+              }
+            }
+          }
+        }
+      } catch (ge) {
+        // If geofence check fails for any reason, continue with normal flow
+      }
+
       final resp = await SupabaseService.instance.registrarAsistencia(
         latitud: lat,
         longitud: lon,
@@ -176,6 +257,26 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
         }
       }
     }
+  }
+
+  double _distanceBetweenMeters(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const earthRadius = 6371000; // meters
+    double toRad(double deg) => deg * (math.pi / 180);
+    final dLat = toRad(lat2 - lat1);
+    final dLon = toRad(lon2 - lon1);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(toRad(lat1)) *
+            math.cos(toRad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
   }
 
   void _handleTabChange(int index) {

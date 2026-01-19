@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'service/theme_provider.dart';
 import 'theme.dart';
 import 'pages/splash_screen.dart';
@@ -14,10 +15,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_ES', null);
   await SupabaseService.instance.init();
-  runApp(ChangeNotifierProvider(
-    create: (context) => ThemeProvider(),
-    child: const MyApp(),
-  ));
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -27,18 +30,24 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: lightmode,
-      darkTheme: darkmode,
-      themeMode: themeProvider.themeMode,
-      home: const SplashScreen(),
-      routes: {
-        '/access-selection': (_) => const AccessSelectionPage(),
-        '/login': (_) => const LoginPage(),
-        '/register': (_) => const RegisterPage(),
-        '/empleado': (_) => const EmpleadoPage(),
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      builder: (context, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Flutter Demo',
+          theme: lightmode,
+          darkTheme: darkmode,
+          themeMode: themeProvider.themeMode,
+          home: const SplashScreen(),
+          routes: {
+            '/access-selection': (_) => const AccessSelectionPage(),
+            '/login': (_) => const LoginPage(),
+            '/register': (_) => const RegisterPage(),
+            '/empleado': (_) => const EmpleadoPage(),
+          },
+        );
       },
     );
   }

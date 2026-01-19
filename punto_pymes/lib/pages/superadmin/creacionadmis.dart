@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'widgets/superadmin_header.dart';
 import '../../service/supabase_service.dart';
 
@@ -124,9 +126,9 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
             const SuperadminHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 120, top: 8),
+                padding: EdgeInsets.only(bottom: 120.h, top: 8.h),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -159,6 +161,7 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                       const SizedBox(height: 12),
 
                       Card(
+                        color: AppColors.surface,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -173,12 +176,12 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFECEF),
+                                      color: AppColors.surfaceSoft,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.person_add,
-                                      color: Color(0xFFD92344),
+                                      color: AppColors.accentBlue,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -199,15 +202,15 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                               ),
                               const SizedBox(height: 12),
 
+                              // Nombres
                               TextField(
                                 controller: _nombresController,
                                 enabled: !_isCreating,
                                 decoration: InputDecoration(
                                   labelText: 'Nombres',
-                                  hintText: 'Ej: Carlos',
-                                  prefixIcon: const Icon(Icons.person_outline),
+                                  prefixIcon: const Icon(Icons.person),
                                   filled: true,
-                                  fillColor: const Color(0xFFF3F3F3),
+                                  fillColor: AppColors.surfaceSoft,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
@@ -217,15 +220,15 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                               ),
                               const SizedBox(height: 8),
 
+                              // Apellidos
                               TextField(
                                 controller: _apellidosController,
                                 enabled: !_isCreating,
                                 decoration: InputDecoration(
                                   labelText: 'Apellidos',
-                                  hintText: 'Ej: Méndez García',
                                   prefixIcon: const Icon(Icons.person_outline),
                                   filled: true,
-                                  fillColor: const Color(0xFFF3F3F3),
+                                  fillColor: AppColors.surfaceSoft,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
@@ -235,72 +238,59 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                               ),
                               const SizedBox(height: 8),
 
+                              // Email
                               TextField(
                                 controller: _emailController,
                                 enabled: !_isCreating,
+                                keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
                                   labelText: 'Email',
-                                  hintText: 'admin@empresa.com',
                                   prefixIcon: const Icon(Icons.email_outlined),
                                   filled: true,
-                                  fillColor: const Color(0xFFF3F3F3),
+                                  fillColor: AppColors.surfaceSoft,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
                                   ),
                                 ),
-                                keyboardType: TextInputType.emailAddress,
                                 onChanged: (_) => setState(() {}),
                               ),
                               const SizedBox(height: 8),
 
                               // Empresa selector
-                              _isLoadingEmpresas
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
+                              DropdownButtonFormField<String>(
+                                value: _selectedCompanyId,
+                                onChanged: _isCreating
+                                    ? null
+                                    : (v) async {
+                                        setState(() => _selectedCompanyId = v);
+                                      },
+                                items: _empresas
+                                    .map(
+                                      (empresa) => DropdownMenuItem<String>(
+                                        value: empresa['id'],
+                                        child: Text(
+                                          empresa['nombre'] ?? 'Sin nombre',
+                                        ),
+                                      ),
                                     )
-                                  : DropdownButtonFormField<String>(
-                                      initialValue: _selectedCompanyId,
-                                      onChanged: _isCreating
-                                          ? null
-                                          : (v) async {
-                                              setState(
-                                                () => _selectedCompanyId = v,
-                                              );
-                                            },
-                                      items: _empresas
-                                          .map(
-                                            (empresa) =>
-                                                DropdownMenuItem<String>(
-                                                  value: empresa['id'],
-                                                  child: Text(
-                                                    empresa['nombre'] ??
-                                                        'Sin nombre',
-                                                  ),
-                                                ),
-                                          )
-                                          .toList(),
-                                      decoration: InputDecoration(
-                                        labelText: 'Empresa',
-                                        prefixIcon: const Icon(
-                                          Icons.apartment_outlined,
-                                        ),
-                                        filled: true,
-                                        fillColor: const Color(0xFFF3F3F3),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                      hint: const Text(
-                                        'Selecciona una empresa',
-                                      ),
-                                    ),
+                                    .toList(),
+                                decoration: InputDecoration(
+                                  labelText: 'Empresa',
+                                  prefixIcon: const Icon(
+                                    Icons.apartment_outlined,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.surfaceSoft,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 8),
 
-                              // Código de admin (pre-registro). El Super Admin puede generar uno.
+                              // Código de admin (pre-registro)
                               Row(
                                 children: [
                                   Expanded(
@@ -314,7 +304,7 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                           Icons.vpn_key_outlined,
                                         ),
                                         filled: true,
-                                        fillColor: const Color(0xFFF3F3F3),
+                                        fillColor: AppColors.surfaceSoft,
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             8,
@@ -346,8 +336,8 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                             setState(() {});
                                           },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: Colors.black87,
+                                      backgroundColor: AppColors.accentBlue,
+                                      foregroundColor: Colors.white,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -384,7 +374,7 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                         : 'Crear Administrador',
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFD92344),
+                                    backgroundColor: AppColors.accentBlue,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),

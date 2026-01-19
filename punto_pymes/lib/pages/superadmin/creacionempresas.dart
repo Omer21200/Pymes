@@ -1,15 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'dart:async';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 // logout_helper removed: no onWillPop logic here anymore
 import 'widgets/superadmin_header.dart';
 import '../../service/supabase_service.dart';
 import '../../theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CreacionEmpresas extends StatefulWidget {
   const CreacionEmpresas({super.key});
@@ -35,8 +38,8 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
   // Mapa - selección de ubicación
-  LatLng? _selectedLocation;
-  GoogleMapController? _mapController;
+  gmaps.LatLng? _selectedLocation;
+  gmaps.GoogleMapController? _modalGoogleMapController;
 
   @override
   void dispose() {
@@ -268,23 +271,48 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
   }
 
   Future<void> _openMapPicker() async {
-    // Inicio: si hay coordenadas en el form, úsalas; si no, centro en Ecuador
-    LatLng initial = const LatLng(-2.8895, -79.0086);
+    // Inicio: preferir ubicación seleccionada; si no, intentar ubicación del dispositivo;
+    // si no hay permisos/disponible, usar campos de lat/lng; por defecto Ecuador.
+    gmaps.LatLng initial = const gmaps.LatLng(-2.8895, -79.0086);
     if (_selectedLocation != null) {
       initial = _selectedLocation!;
-    } else if (_latitudController.text.isNotEmpty &&
-        _longitudController.text.isNotEmpty) {
-      final lat = double.tryParse(_latitudController.text) ?? initial.latitude;
-      final lng =
-          double.tryParse(_longitudController.text) ?? initial.longitude;
-      initial = LatLng(lat, lng);
+    } else {
+      try {
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission == LocationPermission.always ||
+              permission == LocationPermission.whileInUse) {
+            final pos = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+              ),
+            );
+            initial = gmaps.LatLng(pos.latitude, pos.longitude);
+          }
+        }
+      } catch (_) {}
+
+      // If still default and form fields are filled, use them
+      if (initial.latitude == -2.8895 && initial.longitude == -79.0086) {
+        if (_latitudController.text.isNotEmpty &&
+            _longitudController.text.isNotEmpty) {
+          final lat =
+              double.tryParse(_latitudController.text) ?? initial.latitude;
+          final lng =
+              double.tryParse(_longitudController.text) ?? initial.longitude;
+          initial = gmaps.LatLng(lat, lng);
+        }
+      }
     }
 
     // Prepare modal-scoped search state so results persist across setStateModal
     final TextEditingController modalSearchController = TextEditingController();
     List<Map<String, dynamic>> modalResults = [];
     Timer? modalDebounce;
-    bool modalSearching = false;
 
     Future<void> doModalSearch(
       String q,
@@ -295,12 +323,10 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         if (q.trim().isEmpty) {
           setStateModal(() {
             modalResults = [];
-            modalSearching = false;
           });
           return;
         }
         setStateModal(() {
-          modalSearching = true;
           modalResults = [];
         });
         try {
@@ -313,14 +339,12 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
             modalResults = [];
           });
         } finally {
-          setStateModal(() {
-            modalSearching = false;
-          });
+          setStateModal(() {});
         }
       });
     }
 
-    final result = await showModalBottomSheet<LatLng>(
+    final result = await showModalBottomSheet<gmaps.LatLng>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
@@ -328,23 +352,50 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        LatLng picked = initial;
-        final markers = <Marker>{};
-        if (_selectedLocation != null) {
-          picked = _selectedLocation!;
-          markers.add(
-            Marker(markerId: const MarkerId('selected'), position: picked),
-          );
-        }
+        gmaps.LatLng picked = initial;
+        double modalZoom = 15.0;
+        final Set<gmaps.Marker> markers = {};
 
         return StatefulBuilder(
           builder: (context, setStateModal) {
+            // Ensure initial draggable marker if a location was previously selected
+            if (markers.isEmpty && _selectedLocation != null) {
+              picked = _selectedLocation!;
+              markers.add(
+                gmaps.Marker(
+                  markerId: gmaps.MarkerId(
+                    '${picked.latitude}_${picked.longitude}',
+                  ),
+                  position: gmaps.LatLng(picked.latitude, picked.longitude),
+                  draggable: true,
+                  onDragEnd: (newPos) {
+                    setStateModal(() {
+                      picked = gmaps.LatLng(newPos.latitude, newPos.longitude);
+                      markers.clear();
+                      markers.add(
+                        gmaps.Marker(
+                          markerId: gmaps.MarkerId(
+                            '${newPos.latitude}_${newPos.longitude}',
+                          ),
+                          position: gmaps.LatLng(
+                            newPos.latitude,
+                            newPos.longitude,
+                          ),
+                          draggable: true,
+                        ),
+                      );
+                    });
+                  },
+                ),
+              );
+            }
+
             return SizedBox(
               height: MediaQuery.of(context).size.height * 0.75,
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.w),
                     child: Row(
                       children: [
                         const Expanded(
@@ -363,9 +414,9 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
 
                   // Search field
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 6,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
                     ),
                     child: Column(
                       children: [
@@ -409,6 +460,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
+                                  // ignore: deprecated_member_use
                                   color: Colors.black.withOpacity(0.05),
                                   blurRadius: 6,
                                 ),
@@ -421,7 +473,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                             child: ListView.separated(
                               shrinkWrap: true,
                               itemCount: modalResults.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const Divider(height: 1),
                               itemBuilder: (ctx, i) {
                                 final r = modalResults[i];
@@ -446,14 +498,36 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                         );
                                     if (lat != null && lon != null) {
                                       setStateModal(() {
-                                        picked = LatLng(lat, lon);
+                                        picked = gmaps.LatLng(lat, lon);
                                         markers.clear();
                                         markers.add(
-                                          Marker(
-                                            markerId: const MarkerId(
-                                              'selected',
+                                          gmaps.Marker(
+                                            markerId: gmaps.MarkerId(
+                                              '${lat}_${lon}',
                                             ),
-                                            position: picked,
+                                            position: gmaps.LatLng(lat, lon),
+                                            draggable: true,
+                                            onDragEnd: (newPos) {
+                                              setStateModal(() {
+                                                picked = gmaps.LatLng(
+                                                  newPos.latitude,
+                                                  newPos.longitude,
+                                                );
+                                                markers.clear();
+                                                markers.add(
+                                                  gmaps.Marker(
+                                                    markerId: gmaps.MarkerId(
+                                                      '${newPos.latitude}_${newPos.longitude}',
+                                                    ),
+                                                    position: gmaps.LatLng(
+                                                      newPos.latitude,
+                                                      newPos.longitude,
+                                                    ),
+                                                    draggable: true,
+                                                  ),
+                                                );
+                                              });
+                                            },
                                           ),
                                         );
                                         modalResults = [];
@@ -461,12 +535,16 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                             .toString();
                                       });
                                       try {
-                                        await _mapController?.animateCamera(
-                                          CameraUpdate.newLatLngZoom(
-                                            LatLng(lat, lon),
-                                            15,
-                                          ),
-                                        );
+                                        if (_modalGoogleMapController != null) {
+                                          _modalGoogleMapController!
+                                              .animateCamera(
+                                                gmaps
+                                                    .CameraUpdate.newLatLngZoom(
+                                                  gmaps.LatLng(lat, lon),
+                                                  modalZoom,
+                                                ),
+                                              );
+                                        }
                                       } catch (_) {}
                                     }
                                   },
@@ -483,37 +561,73 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: initial,
-                              zoom: 15,
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: double.infinity,
+                            child: gmaps.GoogleMap(
+                              initialCameraPosition: gmaps.CameraPosition(
+                                target: gmaps.LatLng(
+                                  initial.latitude,
+                                  initial.longitude,
+                                ),
+                                zoom: modalZoom,
+                              ),
+                              onMapCreated: (ctrl) {
+                                _modalGoogleMapController = ctrl;
+                              },
+                              onTap: (pos) {
+                                setStateModal(() {
+                                  picked = gmaps.LatLng(
+                                    pos.latitude,
+                                    pos.longitude,
+                                  );
+                                  markers.clear();
+                                  markers.add(
+                                    gmaps.Marker(
+                                      markerId: gmaps.MarkerId(
+                                        '${pos.latitude}_${pos.longitude}',
+                                      ),
+                                      position: gmaps.LatLng(
+                                        pos.latitude,
+                                        pos.longitude,
+                                      ),
+                                      draggable: true,
+                                      onDragEnd: (newPos) {
+                                        setStateModal(() {
+                                          picked = gmaps.LatLng(
+                                            newPos.latitude,
+                                            newPos.longitude,
+                                          );
+                                          markers.clear();
+                                          markers.add(
+                                            gmaps.Marker(
+                                              markerId: gmaps.MarkerId(
+                                                '${newPos.latitude}_${newPos.longitude}',
+                                              ),
+                                              position: gmaps.LatLng(
+                                                newPos.latitude,
+                                                newPos.longitude,
+                                              ),
+                                              draggable: true,
+                                            ),
+                                          );
+                                        });
+                                      },
+                                    ),
+                                  );
+                                });
+                              },
+                              markers: markers,
+                              zoomControlsEnabled: false,
+                              myLocationButtonEnabled: false,
+                              mapToolbarEnabled: false,
+                              gestureRecognizers:
+                                  <Factory<OneSequenceGestureRecognizer>>{
+                                    Factory<OneSequenceGestureRecognizer>(
+                                      () => EagerGestureRecognizer(),
+                                    ),
+                                  },
                             ),
-                            onTap: (pos) {
-                              setStateModal(() {
-                                picked = pos;
-                                markers.clear();
-                                markers.add(
-                                  Marker(
-                                    markerId: const MarkerId('selected'),
-                                    position: picked,
-                                  ),
-                                );
-                              });
-                            },
-                            markers: markers,
-                            myLocationButtonEnabled: false,
-                            zoomControlsEnabled: false,
-                            rotateGesturesEnabled: false,
-                            tiltGesturesEnabled: false,
-                            compassEnabled: false,
-                            mapToolbarEnabled: false,
-                            onMapCreated: (c) => _mapController = c,
-                            gestureRecognizers:
-                                <Factory<OneSequenceGestureRecognizer>>{
-                                  Factory<OneSequenceGestureRecognizer>(
-                                    () => EagerGestureRecognizer(),
-                                  ),
-                                },
                           ),
                         ),
 
@@ -535,9 +649,20 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                   icon: const Icon(Icons.add, size: 20),
                                   onPressed: () async {
                                     try {
-                                      await _mapController?.animateCamera(
-                                        CameraUpdate.zoomIn(),
-                                      );
+                                      modalZoom = (modalZoom + 1).clamp(1, 20);
+                                      if (_modalGoogleMapController != null) {
+                                        _modalGoogleMapController!
+                                            .animateCamera(
+                                              gmaps.CameraUpdate.newLatLngZoom(
+                                                gmaps.LatLng(
+                                                  picked.latitude,
+                                                  picked.longitude,
+                                                ),
+                                                modalZoom,
+                                              ),
+                                            );
+                                      }
+                                      setStateModal(() {});
                                     } catch (_) {}
                                   },
                                 ),
@@ -554,9 +679,20 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                   icon: const Icon(Icons.remove, size: 20),
                                   onPressed: () async {
                                     try {
-                                      await _mapController?.animateCamera(
-                                        CameraUpdate.zoomOut(),
-                                      );
+                                      modalZoom = (modalZoom - 1).clamp(1, 20);
+                                      if (_modalGoogleMapController != null) {
+                                        _modalGoogleMapController!
+                                            .animateCamera(
+                                              gmaps.CameraUpdate.newLatLngZoom(
+                                                gmaps.LatLng(
+                                                  picked.latitude,
+                                                  picked.longitude,
+                                                ),
+                                                modalZoom,
+                                              ),
+                                            );
+                                      }
+                                      setStateModal(() {});
                                     } catch (_) {}
                                   },
                                 ),
@@ -580,9 +716,19 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                               icon: const Icon(Icons.my_location, size: 20),
                               onPressed: () async {
                                 try {
-                                  await _mapController?.animateCamera(
-                                    CameraUpdate.newLatLngZoom(picked, 17),
-                                  );
+                                  modalZoom = 17;
+                                  if (_modalGoogleMapController != null) {
+                                    _modalGoogleMapController!.animateCamera(
+                                      gmaps.CameraUpdate.newLatLngZoom(
+                                        gmaps.LatLng(
+                                          picked.latitude,
+                                          picked.longitude,
+                                        ),
+                                        modalZoom,
+                                      ),
+                                    );
+                                  }
+                                  setStateModal(() {});
                                 } catch (_) {}
                               },
                             ),
@@ -592,7 +738,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.w),
                     child: Row(
                       children: [
                         Expanded(
@@ -602,6 +748,13 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                         ),
                         ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(picked),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24.r),
+                            ),
+                          ),
                           child: const Text('Confirmar'),
                         ),
                       ],
@@ -621,11 +774,8 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         _latitudController.text = result.latitude.toString();
         _longitudController.text = result.longitude.toString();
       });
-      // Dispose temporary map controller to free resources and avoid retained platform view
-      try {
-        _mapController?.dispose();
-      } catch (_) {}
-      _mapController = null;
+      // clear modal controller ref
+      _modalGoogleMapController = null;
     }
   }
 

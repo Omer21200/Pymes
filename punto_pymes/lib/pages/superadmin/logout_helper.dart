@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+import '../../theme.dart';
 
 /// Muestra un diálogo de confirmación para cerrar sesión.
 /// Si el usuario confirma, navega a la ruta '/login' y limpia la pila.
@@ -11,15 +12,33 @@ Future<bool> showLogoutConfirmation(
   final choice = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Cerrar sesión'),
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        'Cerrar sesión',
+        // use brandRed to better match header/background red
+        style: const TextStyle(color: AppColors.brandRed),
+      ),
       content: const Text('¿Seguro que quieres cerrar sesión?'),
+      actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
+          style: TextButton.styleFrom(foregroundColor: AppColors.brandRed),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.brandRed,
+            foregroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(24)),
+            ),
+            elevation: 8,
+            shadowColor: AppColors.brandRed.withOpacity(0.4),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
           child: const Text('Cerrar sesión'),
         ),
       ],
