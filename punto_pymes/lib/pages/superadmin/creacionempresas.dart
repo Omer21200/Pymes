@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:path/path.dart' as p;
 // logout_helper removed: no onWillPop logic here anymore
 import 'widgets/superadmin_header.dart';
 import '../../service/supabase_service.dart';
@@ -143,6 +144,37 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
     return 'EMP-${base.substring(0, base.length > 4 ? 4 : base.length)}$symbols$random';
   }
 
+  // Remove accents and invalid filename chars, replace spaces with underscores
+  String _sanitizeFileName(String input) {
+    if (input.isEmpty) return 'file';
+    final Map<String, String> map = {
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'ñ': 'n',
+      'Ñ': 'N',
+      'ü': 'u',
+      'Ü': 'U',
+    };
+    var s = input;
+    map.forEach((k, v) => s = s.replaceAll(k, v));
+    // replace any non-word characters with underscore
+    s = s.replaceAll(RegExp(r"[^A-Za-z0-9\-_]"), '_');
+    // collapse multiple underscores
+    s = s.replaceAll(RegExp(r'_+'), '_');
+    // trim underscores
+    s = s.replaceAll(RegExp(r'^_+|_+\$'), '');
+    if (s.isEmpty) return 'file';
+    return s;
+  }
+
   Future<void> _createEmpresa() async {
     if (_nombreController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,8 +199,15 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
 
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final safeName = _nombreController.text.trim().replaceAll(' ', '_');
-      final fileName = 'empresa_${timestamp}_$safeName.jpg';
+      final rawName = _nombreController.text.trim();
+      final safeName = _sanitizeFileName(rawName);
+      // Preserve original file extension if available (allow .png, .jpg, .jpeg, etc.)
+      String ext = '.jpg';
+      try {
+        final srcExt = p.extension(_logoFilePath ?? '').toLowerCase();
+        if (srcExt.isNotEmpty) ext = srcExt;
+      } catch (_) {}
+      final fileName = 'empresa_${timestamp}_$safeName$ext';
       finalFilePath = 'empresas/$fileName';
 
       // Subir directamente a la ruta final para evitar errores de move

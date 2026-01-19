@@ -116,36 +116,38 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
   }
 
   Widget _infoCard(IconData icon, String label, String? value) {
-    return Expanded(
-      child: Card(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 1,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 16, color: const Color(0xFFD92344)),
-                  const SizedBox(width: 8),
-                  Text(
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: const Color(0xFFD92344)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
                     label,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value ?? 'No registrado',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value ?? 'No registrado',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
-            ],
-          ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
@@ -389,15 +391,43 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
 
                       const SizedBox(height: 16),
 
-                      // Info cards row
-                      Row(
-                        children: [
-                          _infoCard(Icons.email, 'Email', emailVal),
-                          const SizedBox(width: 8),
-                          _infoCard(Icons.phone, 'Teléfono', phoneVal),
-                          const SizedBox(width: 8),
-                          _infoCard(Icons.calendar_today, 'Creado', createdVal),
-                        ],
+                      // Info cards row: responsive — wrap to next line on narrow screens
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final spacing = 8.0;
+                          final cardWidth =
+                              (constraints.maxWidth - spacing * 2) / 3;
+                          return Wrap(
+                            spacing: spacing,
+                            runSpacing: 8.0,
+                            children: [
+                              SizedBox(
+                                width: cardWidth,
+                                child: _infoCard(
+                                  Icons.email,
+                                  'Email',
+                                  emailVal,
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _infoCard(
+                                  Icons.phone,
+                                  'Teléfono',
+                                  phoneVal,
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _infoCard(
+                                  Icons.calendar_today,
+                                  'Creado',
+                                  createdVal,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 16),

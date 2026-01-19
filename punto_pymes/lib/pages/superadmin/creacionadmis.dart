@@ -374,7 +374,8 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
                                         : 'Crear Administrador',
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.accentBlue,
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),

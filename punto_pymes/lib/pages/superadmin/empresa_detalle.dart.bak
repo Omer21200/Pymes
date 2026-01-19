@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:intl/intl.dart';
 import '../../service/supabase_service.dart';
@@ -173,19 +171,6 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                       target: temp,
                                                       zoom: 14,
                                                     ),
-                                                gestureRecognizers:
-                                                    <
-                                                      Factory<
-                                                        OneSequenceGestureRecognizer
-                                                      >
-                                                    >{
-                                                      Factory<
-                                                        OneSequenceGestureRecognizer
-                                                      >(
-                                                        () =>
-                                                            EagerGestureRecognizer(),
-                                                      ),
-                                                    },
                                                 markers: {
                                                   gmaps.Marker(
                                                     markerId:
@@ -341,60 +326,6 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     telefonoCtrl.dispose();
     correoCtrl.dispose();
     direccionCtrl.dispose();
-  }
-
-  Future<void> _openEditNameDialog() async {
-    if (_empresa == null) return;
-    final nombreCtrl = TextEditingController(
-      text: _empresa?['nombre']?.toString() ?? '',
-    );
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Editar nombre'),
-          content: TextField(
-            controller: nombreCtrl,
-            decoration: const InputDecoration(labelText: 'Nombre'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => navigator.pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final newName = nombreCtrl.text.trim();
-                try {
-                  final updated = await SupabaseService.instance.updateEmpresa(
-                    empresaId: widget.empresaId,
-                    nombre: newName.isNotEmpty ? newName : null,
-                  );
-                  if (!mounted) return;
-                  if (updated != null) {
-                    setState(() {
-                      _empresa = updated;
-                    });
-                  }
-                  navigator.pop();
-                } catch (e) {
-                  if (!mounted) return;
-                  messenger.showSnackBar(
-                    SnackBar(content: Text('Error al guardar: $e')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    nombreCtrl.dispose();
   }
 
   void _startEditing() {
@@ -647,25 +578,6 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     );
   }
 
-  Widget _circleMapButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    String? tooltip,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        shape: const CircleBorder(),
-        padding: const EdgeInsets.all(8),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.primary,
-        elevation: 2,
-        minimumSize: const Size(40, 40),
-      ),
-      child: Icon(icon, size: 20),
-    );
-  }
-
   String _formatCreated(Object? created) {
     if (created == null) return '—';
     try {
@@ -709,23 +621,12 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _empresa?['nombre']?.toString() ?? 'Empresa',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _openEditNameDialog,
-                          icon: const Icon(Icons.edit),
-                          tooltip: 'Editar nombre',
-                        ),
-                      ],
+                    Text(
+                      _empresa?['nombre']?.toString() ?? 'Empresa',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -836,149 +737,75 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                       : (_lat != null && _lng != null))
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
-                                      child: Stack(
-                                        children: [
-                                          SizedBox.expand(
-                                            child: gmaps.GoogleMap(
-                                              initialCameraPosition:
-                                                  gmaps.CameraPosition(
-                                                    target: gmaps.LatLng(
-                                                      _editing
-                                                          ? (_editLat ??
-                                                                -2.8895)
-                                                          : (_lat ?? -2.8895),
-                                                      _editing
-                                                          ? (_editLng ??
-                                                                -79.0086)
-                                                          : (_lng ?? -79.0086),
-                                                    ),
-                                                    zoom: _zoom,
-                                                  ),
-                                              gestureRecognizers:
-                                                  <
-                                                    Factory<
-                                                      OneSequenceGestureRecognizer
-                                                    >
-                                                  >{
-                                                    Factory<
-                                                      OneSequenceGestureRecognizer
-                                                    >(
-                                                      () =>
-                                                          EagerGestureRecognizer(),
-                                                    ),
-                                                  },
-                                              markers: {
-                                                gmaps.Marker(
-                                                  markerId:
-                                                      const gmaps.MarkerId(
-                                                        'company',
+                                      child: gmaps.GoogleMap(
+                                        initialCameraPosition:
+                                            gmaps.CameraPosition(
+                                              target: gmaps.LatLng(
+                                                _editing
+                                                    ? (_editLat ?? -2.8895)
+                                                    : (_lat ?? -2.8895),
+                                                _editing
+                                                    ? (_editLng ?? -79.0086)
+                                                    : (_lng ?? -79.0086),
+                                              ),
+                                              zoom: _zoom,
+                                            ),
+                                        markers: {
+                                          gmaps.Marker(
+                                            markerId: const gmaps.MarkerId(
+                                              'company',
+                                            ),
+                                            position: gmaps.LatLng(
+                                              _editing
+                                                  ? (_editLat ?? -2.8895)
+                                                  : (_lat ?? -2.8895),
+                                              _editing
+                                                  ? (_editLng ?? -79.0086)
+                                                  : (_lng ?? -79.0086),
+                                            ),
+                                            draggable: _editing,
+                                            onDragEnd: _editing
+                                                ? (p) => setState(() {
+                                                    _editLat = p.latitude;
+                                                    _editLng = p.longitude;
+                                                  })
+                                                : null,
+                                          ),
+                                        },
+                                        circles: _editing
+                                            ? {}
+                                            : {
+                                                gmaps.Circle(
+                                                  circleId:
+                                                      const gmaps.CircleId(
+                                                        'company_radius',
                                                       ),
-                                                  position: gmaps.LatLng(
-                                                    _editing
-                                                        ? (_editLat ?? -2.8895)
-                                                        : (_lat ?? -2.8895),
-                                                    _editing
-                                                        ? (_editLng ?? -79.0086)
-                                                        : (_lng ?? -79.0086),
+                                                  center: gmaps.LatLng(
+                                                    _lat ?? 0,
+                                                    _lng ?? 0,
                                                   ),
-                                                  draggable: true,
-                                                  onDragEnd: (p) => setState(
-                                                    () {
-                                                      if (_editing) {
-                                                        _editLat = p.latitude;
-                                                        _editLng = p.longitude;
-                                                      } else {
-                                                        _lat = p.latitude;
-                                                        _lng = p.longitude;
-                                                      }
-                                                    },
-                                                  ),
+                                                  radius:
+                                                      _determineCompanyRadiusMeters(),
+                                                  fillColor:
+                                                      const Color.fromRGBO(
+                                                        33,
+                                                        150,
+                                                        243,
+                                                        0.12,
+                                                      ),
+                                                  strokeColor: Colors.blue,
+                                                  strokeWidth: 2,
                                                 ),
                                               },
-                                              circles: _editing
-                                                  ? {}
-                                                  : {
-                                                      gmaps.Circle(
-                                                        circleId:
-                                                            const gmaps.CircleId(
-                                                              'company_radius',
-                                                            ),
-                                                        center: gmaps.LatLng(
-                                                          _lat ?? 0,
-                                                          _lng ?? 0,
-                                                        ),
-                                                        radius:
-                                                            _determineCompanyRadiusMeters(),
-                                                        fillColor:
-                                                            const Color.fromRGBO(
-                                                              33,
-                                                              150,
-                                                              243,
-                                                              0.12,
-                                                            ),
-                                                        strokeColor:
-                                                            Colors.blue,
-                                                        strokeWidth: 2,
-                                                      ),
-                                                    },
-                                              onMapCreated: (c) =>
-                                                  _mapController = c,
-                                              onTap: (pos) => setState(() {
-                                                if (_editing) {
-                                                  _editLat = pos.latitude;
-                                                  _editLng = pos.longitude;
-                                                } else {
-                                                  _lat = pos.latitude;
-                                                  _lng = pos.longitude;
-                                                }
-                                              }),
-                                              myLocationButtonEnabled: false,
-                                              zoomControlsEnabled: false,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            right: 8,
-                                            top: 8,
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                _circleMapButton(
-                                                  icon: Icons.my_location,
-                                                  onPressed: _centerMap,
-                                                  tooltip: 'Centrar',
-                                                ),
-                                                const SizedBox(height: 8),
-                                                _circleMapButton(
-                                                  icon: Icons.add,
-                                                  onPressed: () async {
-                                                    try {
-                                                      await _mapController
-                                                          ?.animateCamera(
-                                                            gmaps
-                                                                .CameraUpdate.zoomIn(),
-                                                          );
-                                                    } catch (_) {}
-                                                  },
-                                                  tooltip: 'Aumentar zoom',
-                                                ),
-                                                const SizedBox(height: 8),
-                                                _circleMapButton(
-                                                  icon: Icons.remove,
-                                                  onPressed: () async {
-                                                    try {
-                                                      await _mapController
-                                                          ?.animateCamera(
-                                                            gmaps
-                                                                .CameraUpdate.zoomOut(),
-                                                          );
-                                                    } catch (_) {}
-                                                  },
-                                                  tooltip: 'Disminuir zoom',
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                        onMapCreated: (c) => _mapController = c,
+                                        onTap: _editing
+                                            ? (pos) => setState(() {
+                                                _editLat = pos.latitude;
+                                                _editLng = pos.longitude;
+                                              })
+                                            : null,
+                                        myLocationButtonEnabled: false,
+                                        zoomControlsEnabled: false,
                                       ),
                                     )
                                   : Center(
@@ -993,8 +820,18 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                             ),
                             const SizedBox(height: 12),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                const Spacer(),
+                                ElevatedButton.icon(
+                                  onPressed: _centerMap,
+                                  icon: const Icon(Icons.my_location),
+                                  label: const Text('Centrar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 if (!_editing) ...[
                                   ElevatedButton.icon(
                                     onPressed: _startEditing,
