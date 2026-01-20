@@ -328,6 +328,60 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     direccionCtrl.dispose();
   }
 
+  Future<void> _openEditNameDialog() async {
+    if (_empresa == null) return;
+    final nombreCtrl = TextEditingController(
+      text: _empresa?['nombre']?.toString() ?? '',
+    );
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Editar nombre'),
+          content: TextField(
+            controller: nombreCtrl,
+            decoration: const InputDecoration(labelText: 'Nombre'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => navigator.pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newName = nombreCtrl.text.trim();
+                try {
+                  final updated = await SupabaseService.instance.updateEmpresa(
+                    empresaId: widget.empresaId,
+                    nombre: newName.isNotEmpty ? newName : null,
+                  );
+                  if (!mounted) return;
+                  if (updated != null) {
+                    setState(() {
+                      _empresa = updated;
+                    });
+                  }
+                  navigator.pop();
+                } catch (e) {
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Error al guardar: $e')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nombreCtrl.dispose();
+  }
+
   void _startEditing() {
     if (_empresa == null) return;
     setState(() {
@@ -621,12 +675,23 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      _empresa?['nombre']?.toString() ?? 'Empresa',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _empresa?['nombre']?.toString() ?? 'Empresa',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _openEditNameDialog,
+                          icon: const Icon(Icons.edit),
+                          tooltip: 'Editar nombre',
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
 
