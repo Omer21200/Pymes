@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:intl/intl.dart';
 import '../../service/supabase_service.dart';
 import '../../theme.dart';
+import 'creacion_departamentos.dart';
 
 class EmpresaDetallePage extends StatefulWidget {
   final String empresaId;
@@ -731,6 +732,38 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
 
                     // Prominent access code card — shown first and visually distinct
                     _accessCodeCard(),
+                    const SizedBox(height: 8),
+                    // Superadmin: quick action to create a departamento for this empresa
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final res = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => CreacionDepartamentos(
+                                  empresaId: widget.empresaId,
+                                ),
+                              ),
+                            );
+                            if (res == true) {
+                              await _fetch();
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Departamento creado'),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.add_business),
+                          label: const Text('Crear departamento'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(height: 8),
                     Card(

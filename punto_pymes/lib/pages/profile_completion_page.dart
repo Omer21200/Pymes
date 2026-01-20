@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../service/supabase_service.dart';
+import '../theme.dart';
+import '../widgets/department_selector_card.dart';
 import 'admin_empresa/admin_empresa_page.dart';
 import 'empleado/empleado_page.dart';
 
@@ -161,64 +163,126 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                 style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _cedulaController,
-                decoration: const InputDecoration(
-                  labelText: 'Cédula / Documento',
+
+              // Card wrapper for fields + departamento selector + submit
+              Container(
+                decoration: BoxDecoration(
+                  // card should be white
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.divider, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _telefonoController,
-                decoration: const InputDecoration(labelText: 'Teléfono'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _direccionController,
-                decoration: const InputDecoration(labelText: 'Dirección'),
-              ),
-              const SizedBox(height: 12),
-              // Selector de Departamento
-              if (_isLoadingDepartamentos)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  child: CircularProgressIndicator(),
-                )
-              else
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedDepartamentoId,
-                  items: _departamentos.map((d) {
-                    final id = d['id']?.toString();
-                    final nombre = d['nombre']?.toString() ?? d['nombre'];
-                    return DropdownMenuItem<String>(
-                      value: id,
-                      child: Text(nombre ?? ''),
-                    );
-                  }).toList(),
-                  onChanged: (val) =>
-                      setState(() => _selectedDepartamentoId = val),
-                  decoration: const InputDecoration(labelText: 'Departamento'),
-                ),
-              const SizedBox(height: 16),
-              if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _cedulaController,
+                      decoration: InputDecoration(
+                        labelText: 'Cédula / Documento',
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        filled: true,
+                        fillColor: AppColors.surfaceSoft,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _telefonoController,
+                      decoration: InputDecoration(
+                        labelText: 'Teléfono',
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        filled: true,
+                        fillColor: AppColors.surfaceSoft,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _direccionController,
+                      decoration: InputDecoration(
+                        labelText: 'Dirección',
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        filled: true,
+                        fillColor: AppColors.surfaceSoft,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    // Departamento selector
+                    if (_isLoadingDepartamentos)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      DepartmentSelectorCard(
+                        departamentos: _departamentos,
+                        departamentoId: _selectedDepartamentoId,
+                        onChanged: (v) =>
+                            setState(() => _selectedDepartamentoId = v),
+                        enabled: true,
+                        label: 'Departamento',
+                      ),
+                    const SizedBox(height: 18),
+                    if (_error != null)
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brandRed,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        )
-                      : const Text('Guardar y continuar'),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Guardar y continuar'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

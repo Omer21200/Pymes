@@ -11,7 +11,8 @@ class AppColors {
   static const brandRedAlt = Color(0xFFD92344);
   static const dangerRed = Color(0xFFD32F2F);
   static const accentBlueAdmin = Color(0xFF3F51B5);
-  static const surfaceSoft = Color(0xFFF5F5F7);
+  // Darker soft surface for better contrast on cards/fields
+  static const surfaceSoft = Color(0xFFE9E9EB);
   static const softBackground = Color(0xFFF5F6FA);
   static const blackSoft = Color(0xFF2D2D2D);
   static const mutedGray = Color(0xFF757575);
@@ -19,7 +20,8 @@ class AppColors {
   static const background = Color(0xFFF7F7F8);
   static const surface = Colors.white;
   static const lightGray = Color(0xFFF5F5F5);
-  static const divider = Color(0xFFEEEEEE);
+  // Slightly darker divider to improve visibility against surfaceSoft
+  static const divider = Color(0xFFE0E0E0);
   static const success = Color(0xFF4CAF50);
   static const warning = Color(0xFFFFA500);
   static const accentBlue = Color(0xFF4A90E2);

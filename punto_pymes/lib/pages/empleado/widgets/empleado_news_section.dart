@@ -20,8 +20,6 @@ class EmpleadoNewsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Noticias y anuncios', style: AppTextStyles.sectionTitle),
-        const SizedBox(height: 12),
         FutureBuilder<List<Map<String, dynamic>>>(
           future: noticiasFuture,
           builder: (context, snapshot) {
@@ -74,31 +72,23 @@ class EmpleadoNewsSection extends StatelessWidget {
                 final esImportante = noticia['es_importante'] ?? false;
 
                 final accentColor = esImportante
-                    ? AppColors.brandRedAlt
-                    : AppColors.accentBlueAdmin;
-                final backgroundColor = esImportante
-                    ? AppColors.notificationBg
-                    : AppColors.subtleBg;
+                    ? AppColors.brandRed
+                    : AppColors.accentBlue;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: backgroundColor,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        // ignore: deprecated_member_use
-                        color: accentColor.withOpacity(0.06),
+                        color: Colors.black.withOpacity(0.03),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
-                    border: Border.all(
-                      // ignore: deprecated_member_use
-                      color: accentColor.withOpacity(0.15),
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppColors.divider, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,8 +99,9 @@ class EmpleadoNewsSection extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              // ignore: deprecated_member_use
-                              color: accentColor.withOpacity(0.1),
+                              color: accentColor.withAlpha(
+                                (0.12 * 255).round(),
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -127,7 +118,7 @@ class EmpleadoNewsSection extends StatelessWidget {
                               titulo,
                               style: AppTextStyles.sectionTitle.copyWith(
                                 fontSize: 14,
-                                color: Colors.black87,
+                                color: AppColors.darkText,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -140,7 +131,10 @@ class EmpleadoNewsSection extends StatelessWidget {
                       // Contenido
                       Text(
                         contenido,
-                        style: AppTextStyles.smallLabel.copyWith(height: 1.4),
+                        style: AppTextStyles.smallLabel.copyWith(
+                          height: 1.4,
+                          color: AppColors.darkText,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

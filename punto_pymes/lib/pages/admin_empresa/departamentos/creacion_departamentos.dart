@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../service/supabase_service.dart';
+import '../../../theme.dart';
 import '../widgets/admin_empresa_header.dart';
 
 class CreacionDepartamentos extends StatefulWidget {
@@ -72,7 +73,8 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
   @override
   Widget build(BuildContext context) {
     const Color brandRed = Color(0xFFD92344);
-    const Color surfaceSoft = Color(0xFFFFF1F3);
+    // use theme surfaceSoft (light gray) for card and fields
+    const Color surfaceSoft = AppColors.surfaceSoft;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
@@ -121,15 +123,16 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
 
                     Container(
                       decoration: BoxDecoration(
-                        color: surfaceSoft,
+                        color: AppColors.surfaceSoft,
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: Colors.black.withOpacity(0.06),
                             blurRadius: 18,
                             offset: const Offset(0, 10),
                           ),
                         ],
+                        border: Border.all(color: AppColors.divider, width: 1),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -264,14 +267,22 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
           fontWeight: FontWeight.w600,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surfaceSoft,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: AppColors.divider, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.divider, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.mutedGray, width: 1),
         ),
       ),
     );

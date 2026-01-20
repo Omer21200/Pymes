@@ -18,6 +18,7 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   final _cedulaController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _direccionController = TextEditingController();
+  final _departamentoController = TextEditingController();
 
   String? _email;
   String? _fotoUrl;
@@ -26,6 +27,8 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
   double? _companyLng;
   double? _companyRadius;
   String? _companyName;
+  List<Map<String, dynamic>>? _departamentos;
+  String? _departamentoId;
   double? _userLat;
   double? _userLng;
   String? _userRole;
@@ -45,6 +48,7 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
     _cedulaController.dispose();
     _telefonoController.dispose();
     _direccionController.dispose();
+    _departamentoController.dispose();
     super.dispose();
   }
 
@@ -70,10 +74,10 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
         }
       }
 
+      final empleadoRaw = data['empleado_raw'] as Map<String, dynamic>?;
       setState(() {
         _nombresController.text = data['nombres'] ?? '';
         _apellidosController.text = data['apellidos'] ?? '';
-        final empleadoRaw = data['empleado_raw'] as Map<String, dynamic>?;
         _cedulaController.text = empleadoRaw?['cedula']?.toString() ?? '';
         _telefonoController.text = empleadoRaw?['telefono']?.toString() ?? '';
         _direccionController.text = empleadoRaw?['direccion']?.toString() ?? '';
@@ -103,15 +107,28 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
             }
           }
         }
-        if (lat is num && lng is num) {
-          _companyLat = lat.toDouble();
-          _companyLng = lng.toDouble();
-        } else {
-          _companyLat = null;
-          _companyLng = null;
+        double? _parseCoord(dynamic v) {
+          if (v == null) return null;
+          if (v is num) return v.toDouble();
+          return double.tryParse(v.toString());
         }
+
+        _companyLat = _parseCoord(lat);
+        _companyLng = _parseCoord(lng);
         _companyRadius = companyRadius;
       });
+
+      // load departamentos for this empresa (if any)
+      try {
+        if (empresaId != null) {
+          final deps = await SupabaseService.instance
+              .getDepartamentosPorEmpresa(empresaId);
+          if (mounted) setState(() => _departamentos = deps);
+        }
+      } catch (_) {
+        // ignore
+      }
+      _departamentoId = empleadoRaw?['departamento_id']?.toString();
 
       // Attempt to geocode the user's own address (if present) so we can show a personal map
       final userAddress = _direccionController.text.trim();
@@ -219,6 +236,9 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
         direccion: _direccionController.text.trim().isEmpty
             ? null
             : _direccionController.text.trim(),
+        departamentoId: _departamentoId?.trim().isEmpty == true
+            ? null
+            : _departamentoId,
       );
 
       if (mounted) {
@@ -254,6 +274,9 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
               cedulaController: _cedulaController,
               telefonoController: _telefonoController,
               direccionController: _direccionController,
+              departamentos: _departamentos,
+              departamentoId: _departamentoId,
+              onDepartamentoChanged: (v) => setState(() => _departamentoId = v),
               email: _email,
               fotoUrl: _fotoUrl,
               selectedImageFile: _selectedImageFile,

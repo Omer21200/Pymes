@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -648,18 +649,48 @@ class SupabaseService {
     int limite = 20,
   }) async {
     try {
-      final response = await client.rpc(
-        'get_noticias_usuario',
-        params: {'p_limite': limite},
-      );
+      // Add a timeout to avoid indefinite hangs that can freeze the UI
+      final response = await client
+          .rpc('get_noticias_usuario', params: {'p_limite': limite})
+          .timeout(const Duration(seconds: 12));
 
       if (response == null) return [];
 
       return (response as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
+    } on TimeoutException catch (e) {
+      throw Exception('Timeout obteniendo noticias: $e');
     } catch (e) {
       throw Exception('Error obteniendo noticias: $e');
+    }
+  }
+
+  /// Obtiene las últimas noticias creadas por el usuario autenticado.
+  Future<List<Map<String, dynamic>>> getMisUltimasNoticias({
+    int limite = 4,
+  }) async {
+    try {
+      final user = currentUser;
+      if (user == null) return [];
+      final response = await client
+          .from('noticias')
+          .select(
+            'id, titulo, contenido, imagen_url, es_importante, fecha_publicacion, tipo_audiencia',
+          )
+          .eq('creador_id', user.id)
+          .order('fecha_publicacion', ascending: false)
+          .limit(limite);
+      if (response == null) return [];
+      return (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      developer.log(
+        'Error obteniendo mis noticias: $e',
+        name: 'SupabaseService',
+      );
+      return [];
     }
   }
 
@@ -1068,6 +1099,7 @@ class SupabaseService {
           })
           .select()
           .maybeSingle();
+      // No crear noticia pública por marcas de asistencia.
       return Map<String, dynamic>.from(inserted as Map);
     }
 
@@ -1094,6 +1126,7 @@ class SupabaseService {
           .eq('id', existing['id'])
           .select()
           .maybeSingle();
+      // No crear noticia por salida a almuerzo.
       return Map<String, dynamic>.from(updated as Map);
     }
 
@@ -1112,6 +1145,7 @@ class SupabaseService {
           .eq('id', existing['id'])
           .select()
           .maybeSingle();
+      // No crear noticia por regreso de almuerzo.
       return Map<String, dynamic>.from(updated as Map);
     }
 
@@ -1131,6 +1165,7 @@ class SupabaseService {
           .eq('id', existing['id'])
           .select()
           .maybeSingle();
+      // No crear noticia por salida final.
       return Map<String, dynamic>.from(updated as Map);
     }
 
@@ -1166,6 +1201,10 @@ class SupabaseService {
       final violationId = inserted == null
           ? null
           : (inserted['id']?.toString());
+
+      // No crear una 'noticia' para violaciones de geofence: esto no debe
+      // aparecer como noticia para el empleado. Mantenemos el registro en
+      // `attendance_violations` y marcamos la asistencia con `violation_reported`.
 
       // Best-effort: update today's asistencias row to point to this violation or set flag
       try {
@@ -1345,6 +1384,42 @@ class SupabaseService {
     } catch (e) {
       developer.log(
         'Error en getHistorialAsistencias: $e',
+        name: 'SupabaseService',
+      );
+      return [];
+    }
+  }
+
+  /// Obtiene las últimas violaciones de asistencia (attendance_violations)
+  /// relacionadas con el empleado autenticado.
+  Future<List<Map<String, dynamic>>> getMisViolaciones({int limite = 5}) async {
+    try {
+      final user = currentUser;
+      if (user == null) return [];
+
+      final empleado = await client
+          .from('empleados')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (empleado == null) return [];
+      final empleadoId = empleado['id']?.toString();
+      if (empleadoId == null) return [];
+
+      final response = await client
+          .from('attendance_violations')
+          .select('id, latitud, longitud, distance_m, created_at')
+          .eq('empleado_id', empleadoId)
+          .order('created_at', ascending: false)
+          .limit(limite);
+
+      if (response == null) return [];
+      return (response as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      developer.log(
+        'Error obteniendo violaciones de asistencia: $e',
         name: 'SupabaseService',
       );
       return [];

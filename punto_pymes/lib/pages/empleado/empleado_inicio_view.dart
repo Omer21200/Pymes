@@ -5,6 +5,7 @@ import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
 import 'widgets/empleado_news_section.dart';
 import 'widgets/news_carousel.dart';
+import '../../widgets/company_map_preview.dart';
 
 class EmpleadoInicioView extends StatefulWidget {
   final ValueChanged<int>? onNavigateTab;
@@ -80,35 +81,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           ),
           const SizedBox(height: 20),
 
-          // Carrusel de noticias (si existen) - moved to appear before estadísticas
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _noticiasFuture,
-            builder: (context, snapNoticias) {
-              if (snapNoticias.connectionState == ConnectionState.waiting) {
-                return const SizedBox(
-                  height: 200,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (snapNoticias.hasError) return const SizedBox.shrink();
-
-              final noticias = snapNoticias.data ?? <Map<String, dynamic>>[];
-              if (noticias.isEmpty) return const SizedBox.shrink();
-
-              return Column(
-                children: [
-                  NewsCarousel(
-                    noticias: noticias,
-                    onNewsPressed: () {
-                      // opción: navegar a la sección de noticias o abrir detalle
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              );
-            },
-          ),
+          // (Carrusel principal mostrado arriba) - duplicado eliminado
 
           // Estadísticas
           Padding(
@@ -182,8 +155,11 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
           const Divider(height: 1, color: AppColors.divider),
           const SizedBox(height: 20),
 
-          // Noticias y anuncios
-          EmpleadoNewsSection(noticiasFuture: _noticiasFuture),
+          // Mapa de la empresa (reemplaza la lista duplicada de noticias en la parte inferior)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: const CompanyMapPreview(showOnlyCompany: true),
+          ),
         ],
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
+import '../../../theme.dart';
+
 class NewsCarousel extends StatefulWidget {
   final List<Map<String, dynamic>> noticias;
   final VoidCallback? onNewsPressed;
@@ -79,13 +81,13 @@ class _NewsCarouselState extends State<NewsCarousel>
               width: 4,
               height: 24,
               decoration: BoxDecoration(
-                color: const Color(0xFFD92344),
+                color: AppColors.brandRed,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(width: 12),
             const Text(
-              'Noticias y Anuncios',
+              'Noticias',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -101,16 +103,15 @@ class _NewsCarouselState extends State<NewsCarousel>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  // ignore: deprecated_member_use
-                  color: const Color(0xFFD92344).withOpacity(0.1),
+                  color: AppColors.brandRed.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${widget.noticias.length} noticia${widget.noticias.length > 1 ? 's' : ''}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFD92344),
+                    color: AppColors.brandRed,
                   ),
                 ),
               ),
@@ -218,8 +219,7 @@ class _NewsCardState extends State<_NewsCard>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                // ignore: deprecated_member_use
-                color: Colors.black.withOpacity(0.06),
+                color: const Color.fromRGBO(0, 0, 0, 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -302,17 +302,13 @@ class _NewsCardState extends State<_NewsCard>
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  // ignore: deprecated_member_use
-                                  color: const Color(
-                                    0xFFD92344,
-                                    // ignore: deprecated_member_use
-                                  ).withOpacity(0.12),
+                                  color: AppColors.accentBlue.withOpacity(0.14),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(
                                   'Importante',
                                   style: TextStyle(
-                                    color: Color(0xFFD92344),
+                                    color: AppColors.accentBlue,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -334,17 +330,17 @@ class _NewsCardState extends State<_NewsCard>
                         ),
                         const SizedBox(height: 12),
                         Row(
-                          children: const [
+                          children: [
                             Icon(
                               Icons.chevron_right,
                               size: 18,
-                              color: Color(0xFFD92344),
+                              color: AppColors.accentBlue,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               'Leer más',
-                              style: TextStyle(
-                                color: Color(0xFFD92344),
+                              style: const TextStyle(
+                                color: Color(0xFF2B7AE4),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),

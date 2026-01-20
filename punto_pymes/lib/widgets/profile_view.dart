@@ -6,6 +6,8 @@ import 'package:flutter/gestures.dart';
 import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import '../theme.dart';
+import 'department_selector_card.dart';
+// map preview removed from profile view per user request
 
 class ProfileView extends StatefulWidget {
   final TextEditingController nombresController;
@@ -28,6 +30,9 @@ class ProfileView extends StatefulWidget {
   final double? userLat;
   final double? userLng;
   final String? userAddress;
+  final List<Map<String, dynamic>>? departamentos;
+  final String? departamentoId;
+  final ValueChanged<String?>? onDepartamentoChanged;
 
   const ProfileView({
     super.key,
@@ -51,6 +56,9 @@ class ProfileView extends StatefulWidget {
     this.userLat,
     this.userLng,
     this.userAddress,
+    this.departamentos,
+    this.departamentoId,
+    this.onDepartamentoChanged,
   });
 
   @override
@@ -216,6 +224,24 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (widget.departamentos != null) ...[
+                  // Use reusable DepartmentSelectorCard for consistent styling
+                  DepartmentSelectorCard(
+                    departamentos: widget.departamentos,
+                    departamentoId: widget.departamentoId,
+                    onChanged: _editing
+                        ? (v) {
+                            if (widget.onDepartamentoChanged != null) {
+                              widget.onDepartamentoChanged!(v);
+                            }
+                            setState(() {});
+                          }
+                        : null,
+                    enabled: _editing,
+                    label: 'Departamento',
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 if (widget.companyName != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -250,118 +276,7 @@ class _ProfileViewState extends State<ProfileView> {
           ),
         const SizedBox(height: 12),
 
-        // Interactive map (OpenStreetMap via flutter_map)
-        if (widget.userLat != null || widget.companyLat != null)
-          SizedBox(
-            height: 220,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                children: [
-                  // Google Map display
-                  gmaps.GoogleMap(
-                    initialCameraPosition: gmaps.CameraPosition(
-                      target:
-                          _normalizeLatLng(
-                            widget.companyLat ?? widget.userLat ?? _deviceLat,
-                            widget.companyLng ?? widget.userLng ?? _deviceLng,
-                          ) ??
-                          const gmaps.LatLng(0, 0),
-                      zoom: _profileMapZoom,
-                    ),
-                    markers: _buildGmapsMarkers(),
-                    circles: _buildGmapsCircles(),
-                    onMapCreated: (ctrl) => _googleMapController = ctrl,
-                    myLocationEnabled:
-                        (widget.userLat != null || _deviceLat != null),
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: false,
-                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                      Factory<OneSequenceGestureRecognizer>(
-                        () => EagerGestureRecognizer(),
-                      ),
-                    },
-                  ),
-
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black12, blurRadius: 6),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.my_location,
-                              color: Colors.black87,
-                            ),
-                            onPressed: () {
-                              final center = _calculateCenter();
-                              if (_googleMapController != null) {
-                                _googleMapController!.animateCamera(
-                                  gmaps.CameraUpdate.newLatLngZoom(
-                                    gmaps.LatLng(
-                                      center.latitude,
-                                      center.longitude,
-                                    ),
-                                    _profileMapZoom,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          const Divider(height: 1),
-                          IconButton(
-                            icon: const Icon(Icons.add, size: 20),
-                            onPressed: () {
-                              _profileMapZoom = (_profileMapZoom + 1).clamp(
-                                1,
-                                20,
-                              );
-                              final c = _calculateCenter();
-                              if (_googleMapController != null) {
-                                _googleMapController!.animateCamera(
-                                  gmaps.CameraUpdate.newLatLngZoom(
-                                    gmaps.LatLng(c.latitude, c.longitude),
-                                    _profileMapZoom,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.remove, size: 20),
-                            onPressed: () {
-                              _profileMapZoom = (_profileMapZoom - 1).clamp(
-                                1,
-                                20,
-                              );
-                              final c = _calculateCenter();
-                              if (_googleMapController != null) {
-                                _googleMapController!.animateCamera(
-                                  gmaps.CameraUpdate.newLatLngZoom(
-                                    gmaps.LatLng(c.latitude, c.longitude),
-                                    _profileMapZoom,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        // map removed from profile view
         const SizedBox(height: 12),
 
         if (_editing)
