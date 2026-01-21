@@ -5,7 +5,7 @@
 
 - Desarrollar una aplicación móvil funcional y escalable que permita la autenticación de usuarios y captura de datos mediante GPS.  
 - Integrar funcionalidades multimedia (como cámara y noticias) para enriquecer la experiencia del usuario.  
-- Incorporar servicios en tiempo real, incluyendo notificaciones push y chats interactivos.  
+- Incorporar servicios en tiempo real, incluyendo notificaciones push.  
 - Optimizar la aplicación en rendimiento, seguridad y compatibilidad multiplataforma.  
 - Garantizar una experiencia de usuario fluida mediante pruebas continuas de usabilidad y retroalimentación de usuarios piloto.  
 - Publicar la aplicación en los stores correspondientes y documentar las lecciones aprendidas tras el despliegue.  
@@ -18,7 +18,7 @@ El proyecto se estructura en **fases y sprints ágiles** para facilitar el contr
 Se inicia con la recopilación de requisitos y el diseño UI/UX, seguido de cuatro sprints centrados en la construcción progresiva de funcionalidades clave:  
 - **Autenticación y GPS**  
 - **Integración de cámara y noticias**  
-- **Notificaciones y chats en tiempo real**  
+- **Notificaciones**  
 - **Escalabilidad y refinamientos finales**  
 
 Posteriormente, se ejecutan pruebas de usabilidad, optimización avanzada y el despliegue final con monitoreo inicial y documentación.  
@@ -37,7 +37,7 @@ La planificación completa del proyecto, incluyendo fases y actividades, está d
 ## 🛠️ Tecnologías Previstas
 
 - **Frontend:** Flutter  
-- **Backend:** Firebase  
+- **Backend:** Supabase  
 - **Control de versiones:** Git + GitHub  
 - **Metodología:** Desarrollo Ágil (Scrum)
 
