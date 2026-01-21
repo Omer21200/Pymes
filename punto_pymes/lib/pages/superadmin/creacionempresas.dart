@@ -38,6 +38,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
   final _correoController = TextEditingController();
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
+  final _radiusController = TextEditingController();
   // Mapa - selección de ubicación
   gmaps.LatLng? _selectedLocation;
   gmaps.GoogleMapController? _modalGoogleMapController;
@@ -51,6 +52,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
     _correoController.dispose();
     _latitudController.dispose();
     _longitudController.dispose();
+    _radiusController.dispose();
     super.dispose();
   }
 
@@ -242,6 +244,17 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
 
       final codigoAcceso = _generateCodigoAcceso(_nombreController.text.trim());
 
+      double? radius;
+      if (_radiusController.text.trim().isNotEmpty) {
+        radius = double.tryParse(_radiusController.text.trim());
+        if (radius == null) {
+          throw Exception('Radio inválido');
+        }
+        if (radius < 0) {
+          throw Exception('Radio debe ser mayor o igual a 0');
+        }
+      }
+
       await SupabaseService.instance.createEmpresa(
         nombre: _nombreController.text.trim(),
         ruc: _rucController.text.trim().isNotEmpty
@@ -260,6 +273,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         latitud: lat,
         longitud: lng,
         codigoAcceso: codigoAcceso,
+        radiusMeters: radius,
       );
 
       _nombreController.clear();
@@ -269,6 +283,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
       _correoController.clear();
       _latitudController.clear();
       _longitudController.clear();
+      _radiusController.clear();
       setState(() {
         _logoImage = null;
         _logoFilePath = null;
@@ -977,6 +992,15 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                     label: 'Email',
                                     enabled: !_isCreating,
                                     keyboardType: TextInputType.emailAddress,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildTextField(
+                                    controller: _radiusController,
+                                    label: 'Radio (m) - geofence',
+                                    enabled: !_isCreating,
+                                    keyboardType: TextInputType.number,
+                                    helperText:
+                                        'Ej: 50 (metros). Dejar vacío si no aplica',
                                   ),
                                   // Lat/Lng inputs hidden — coordinates set via map picker
                                   Row(

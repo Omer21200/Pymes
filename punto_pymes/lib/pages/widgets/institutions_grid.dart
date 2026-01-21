@@ -5,7 +5,15 @@ import '../../service/supabase_service.dart';
 /// Muestra las empresas registradas desde Supabase en forma de grilla.
 class InstitutionsGrid extends StatefulWidget {
   final void Function(Map<String, dynamic> empresa)? onEmpresaSelected;
-  const InstitutionsGrid({super.key, this.onEmpresaSelected});
+  final String? filter;
+  final double? height;
+
+  const InstitutionsGrid({
+    super.key,
+    this.onEmpresaSelected,
+    this.filter,
+    this.height,
+  });
 
   @override
   State<InstitutionsGrid> createState() => _InstitutionsGridState();
@@ -65,18 +73,29 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                 );
               }
 
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+              // Apply simple client-side filter by nombre
+              final lowerFilter = (widget.filter ?? '').trim().toLowerCase();
+              final filtered = lowerFilter.isEmpty
+                  ? empresas
+                  : empresas.where((e) {
+                      final nombre = (e['nombre'] ?? '')
+                          .toString()
+                          .toLowerCase();
+                      return nombre.contains(lowerFilter);
+                    }).toList();
+
+              final grid = GridView.builder(
+                shrinkWrap: false,
+                physics: const AlwaysScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   childAspectRatio: 1.2,
                 ),
-                itemCount: empresas.length,
+                itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final e = empresas[index];
+                  final e = filtered[index];
                   final nombre = (e['nombre'] ?? 'Sin nombre') as String;
                   final foto = e['empresa_foto_url'] as String?;
 
@@ -96,16 +115,17 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                               ? Image.network(
                                   foto,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    color: Colors.grey[200],
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.apartment,
-                                        size: 48,
-                                        color: Color(0xFFD92344),
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        color: Colors.grey[200],
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.apartment,
+                                            size: 48,
+                                            color: Color(0xFFD92344),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
                                 )
                               : Container(
                                   color: Colors.grey[200],
@@ -162,6 +182,13 @@ class _InstitutionsGridState extends State<InstitutionsGrid> {
                   );
                 },
               );
+
+              // If a fixed height is provided, wrap grid in SizedBox so only grid scrolls
+              if (widget.height != null) {
+                return SizedBox(height: widget.height, child: grid);
+              }
+
+              return grid;
             },
           ),
         ),

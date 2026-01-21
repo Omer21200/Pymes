@@ -417,6 +417,7 @@ class _InicioSuperadminState extends State<InicioSuperadmin> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F8),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             // IndexedStack keeps state of each tab

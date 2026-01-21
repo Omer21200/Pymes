@@ -419,6 +419,7 @@ class SupabaseService {
     double? latitud,
     double? longitud,
     required String codigoAcceso,
+    double? radiusMeters,
   }) async {
     final response = await client
         .from('empresas')
@@ -431,6 +432,7 @@ class SupabaseService {
           if (empresaFotoUrl != null) 'empresa_foto_url': empresaFotoUrl,
           if (latitud != null) 'latitud': latitud,
           if (longitud != null) 'longitud': longitud,
+          if (radiusMeters != null) 'radius_m': radiusMeters,
           // La columna en la base es `codigo_acceso_empleado`.
           'codigo_acceso_empleado': codigoAcceso,
         })
@@ -454,6 +456,7 @@ class SupabaseService {
     String? jornadaSalidaAlmuerzo,
     String? jornadaRegresoAlmuerzo,
     String? jornadaSalida,
+    double? radiusMeters,
   }) async {
     final updates = <String, dynamic>{};
     if (nombre != null) updates['nombre'] = nombre;
@@ -472,6 +475,7 @@ class SupabaseService {
       updates['jornada_regreso_almuerzo'] = jornadaRegresoAlmuerzo;
     }
     if (jornadaSalida != null) updates['jornada_salida'] = jornadaSalida;
+    if (radiusMeters != null) updates['radius_m'] = radiusMeters;
 
     final response = await client
         .from('empresas')

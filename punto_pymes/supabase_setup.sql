@@ -51,6 +51,7 @@ CREATE TABLE public.empresas (
   empresa_foto_url text,
   latitud numeric(10,6),
   longitud numeric(10,6),
+  radius_m numeric(10,2),
   created_at timestamp default now()
 );
 

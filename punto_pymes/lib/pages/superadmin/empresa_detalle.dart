@@ -35,314 +35,10 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   TextEditingController? _telefonoCtrl;
   TextEditingController? _correoCtrl;
   TextEditingController? _direccionCtrl;
+  TextEditingController? _radiusCtrl;
+  double? _previewRadius;
   double? _editLat;
   double? _editLng;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialEmpresa != null) {
-      _empresa = widget.initialEmpresa;
-      _lat = _toDouble(_empresa?['latitud']);
-      _lng = _toDouble(_empresa?['longitud']);
-      _loading = false;
-    }
-    _fetch();
-  }
-
-  Future<void> _openEditDialog() async {
-    if (_empresa == null) return;
-
-    final nombreCtrl = TextEditingController(
-      text: _empresa?['nombre']?.toString() ?? '',
-    );
-    final rucCtrl = TextEditingController(
-      text: _empresa?['ruc']?.toString() ?? '',
-    );
-    final telefonoCtrl = TextEditingController(
-      text: _empresa?['telefono']?.toString() ?? '',
-    );
-    final correoCtrl = TextEditingController(
-      text: _empresa?['correo']?.toString() ?? '',
-    );
-    final direccionCtrl = TextEditingController(
-      text: _empresa?['direccion']?.toString() ?? '',
-    );
-
-    double? pickedLat = _lat;
-    double? pickedLng = _lng;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateModal) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Editar Empresa',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: nombreCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: rucCtrl,
-                      decoration: const InputDecoration(labelText: 'RUC'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: telefonoCtrl,
-                      decoration: const InputDecoration(labelText: 'Teléfono'),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: correoCtrl,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: direccionCtrl,
-                      decoration: const InputDecoration(labelText: 'Dirección'),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            pickedLat != null && pickedLng != null
-                                ? 'Ubicación: ${pickedLat!.toStringAsFixed(6)}, ${pickedLng!.toStringAsFixed(6)}'
-                                : 'Ubicación: no seleccionada',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () async {
-                            // open a simple map picker dialog
-                            final res = await showDialog<gmaps.LatLng?>(
-                              context: context,
-                              builder: (ctx) {
-                                gmaps.LatLng temp =
-                                    (pickedLat != null && pickedLng != null)
-                                    ? gmaps.LatLng(pickedLat!, pickedLng!)
-                                    : (_lat != null && _lng != null)
-                                    ? gmaps.LatLng(_lat!, _lng!)
-                                    : const gmaps.LatLng(-2.8895, -79.0086);
-                                return Dialog(
-                                  child: SizedBox(
-                                    height: 420,
-                                    child: StatefulBuilder(
-                                      builder: (ctx2, setStateDialog) {
-                                        return Column(
-                                          children: [
-                                            Expanded(
-                                              child: gmaps.GoogleMap(
-                                                initialCameraPosition:
-                                                    gmaps.CameraPosition(
-                                                      target: temp,
-                                                      zoom: 14,
-                                                    ),
-                                                gestureRecognizers:
-                                                    <
-                                                      Factory<
-                                                        OneSequenceGestureRecognizer
-                                                      >
-                                                    >{
-                                                      Factory<
-                                                        OneSequenceGestureRecognizer
-                                                      >(
-                                                        () =>
-                                                            EagerGestureRecognizer(),
-                                                      ),
-                                                    },
-                                                markers: {
-                                                  gmaps.Marker(
-                                                    markerId:
-                                                        const gmaps.MarkerId(
-                                                          'edit_marker',
-                                                        ),
-                                                    position: temp,
-                                                    draggable: true,
-                                                    onDragEnd: (p) =>
-                                                        setStateDialog(
-                                                          () => temp =
-                                                              gmaps.LatLng(
-                                                                p.latitude,
-                                                                p.longitude,
-                                                              ),
-                                                        ),
-                                                  ),
-                                                },
-                                                onTap: (pos) => setStateDialog(
-                                                  () => temp = gmaps.LatLng(
-                                                    pos.latitude,
-                                                    pos.longitude,
-                                                  ),
-                                                ),
-                                                onMapCreated: (c) {},
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.all(
-                                                8.0,
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          ctx,
-                                                        ).pop(null),
-                                                    child: const Text(
-                                                      'Cancelar',
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  ElevatedButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          ctx,
-                                                        ).pop(temp),
-                                                    child: const Text(
-                                                      'Seleccionar',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                            if (res != null) {
-                              setStateModal(() {
-                                pickedLat = res.latitude;
-                                pickedLng = res.longitude;
-                              });
-                            }
-                          },
-                          child: const Text('Seleccionar ubicación'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancelar'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              // call update
-                              final navigator = Navigator.of(context);
-                              final messenger = ScaffoldMessenger.of(context);
-                              try {
-                                final updated = await SupabaseService.instance
-                                    .updateEmpresa(
-                                      empresaId: widget.empresaId,
-                                      nombre: nombreCtrl.text.trim().isNotEmpty
-                                          ? nombreCtrl.text.trim()
-                                          : null,
-                                      ruc: rucCtrl.text.trim().isNotEmpty
-                                          ? rucCtrl.text.trim()
-                                          : null,
-                                      telefono:
-                                          telefonoCtrl.text.trim().isNotEmpty
-                                          ? telefonoCtrl.text.trim()
-                                          : null,
-                                      correo: correoCtrl.text.trim().isNotEmpty
-                                          ? correoCtrl.text.trim()
-                                          : null,
-                                      direccion:
-                                          direccionCtrl.text.trim().isNotEmpty
-                                          ? direccionCtrl.text.trim()
-                                          : null,
-                                      latitud: pickedLat,
-                                      longitud: pickedLng,
-                                    );
-                                if (!mounted) return;
-                                if (updated != null) {
-                                  setState(() {
-                                    _empresa = updated;
-                                    _lat = _toDouble(updated['latitud']);
-                                    _lng = _toDouble(updated['longitud']);
-                                  });
-                                }
-                                navigator.pop();
-                              } catch (e) {
-                                if (!mounted) return;
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error al actualizar: $e'),
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Text('Guardar'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    // dispose controllers
-    nombreCtrl.dispose();
-    rucCtrl.dispose();
-    telefonoCtrl.dispose();
-    correoCtrl.dispose();
-    direccionCtrl.dispose();
-  }
 
   Future<void> _openEditNameDialog() async {
     if (_empresa == null) return;
@@ -419,6 +115,33 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       );
       _editLat = _lat;
       _editLng = _lng;
+      // radius: try to read stored value (don't default here)
+      double? readRadius() {
+        final radiusCandidates = [
+          'radius_m',
+          'allowed_radius_m',
+          'radio',
+          'geofence_radius',
+          'rango',
+          'radius',
+        ];
+        for (final k in radiusCandidates) {
+          final rv = _empresa?[k];
+          if (rv != null) {
+            if (rv is num) return rv.toDouble();
+            final parsed = double.tryParse(rv.toString());
+            if (parsed != null) return parsed;
+          }
+        }
+        return null;
+      }
+
+      final r = readRadius();
+      _radiusCtrl = TextEditingController(
+        text: r != null ? r.toStringAsFixed(0) : '',
+      );
+      _previewRadius = r;
+      _radiusCtrl!.addListener(_updatePreviewRadiusFromController);
     });
   }
 
@@ -431,6 +154,10 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     _telefonoCtrl?.dispose();
     _correoCtrl?.dispose();
     _direccionCtrl?.dispose();
+    if (_radiusCtrl != null) {
+      _radiusCtrl!.removeListener(_updatePreviewRadiusFromController);
+      _radiusCtrl!.dispose();
+    }
     _nombreCtrl = null;
     _rucCtrl = null;
     _telefonoCtrl = null;
@@ -438,32 +165,36 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     _direccionCtrl = null;
     _editLat = null;
     _editLng = null;
+    _radiusCtrl = null;
+    _previewRadius = null;
   }
 
   Future<void> _saveEditing() async {
     if (!_editing) return;
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       final updated = await SupabaseService.instance.updateEmpresa(
         empresaId: widget.empresaId,
-        nombre: _nombreCtrl?.text.trim().isNotEmpty == true
+        nombre: (_nombreCtrl?.text.trim().isNotEmpty ?? false)
             ? _nombreCtrl!.text.trim()
             : null,
-        ruc: _rucCtrl?.text.trim().isNotEmpty == true
+        ruc: (_rucCtrl?.text.trim().isNotEmpty ?? false)
             ? _rucCtrl!.text.trim()
             : null,
-        telefono: _telefonoCtrl?.text.trim().isNotEmpty == true
+        telefono: (_telefonoCtrl?.text.trim().isNotEmpty ?? false)
             ? _telefonoCtrl!.text.trim()
             : null,
-        correo: _correoCtrl?.text.trim().isNotEmpty == true
+        correo: (_correoCtrl?.text.trim().isNotEmpty ?? false)
             ? _correoCtrl!.text.trim()
             : null,
-        direccion: _direccionCtrl?.text.trim().isNotEmpty == true
+        direccion: (_direccionCtrl?.text.trim().isNotEmpty ?? false)
             ? _direccionCtrl!.text.trim()
             : null,
         latitud: _editLat,
         longitud: _editLng,
+        radiusMeters: (_radiusCtrl?.text.trim().isNotEmpty ?? false)
+            ? double.tryParse(_radiusCtrl!.text.trim())
+            : null,
       );
       if (!mounted) return;
       if (updated != null) {
@@ -485,6 +216,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       _telefonoCtrl?.dispose();
       _correoCtrl?.dispose();
       _direccionCtrl?.dispose();
+      _radiusCtrl?.dispose();
       _nombreCtrl = null;
       _rucCtrl = null;
       _telefonoCtrl = null;
@@ -492,6 +224,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       _direccionCtrl = null;
       _editLat = null;
       _editLng = null;
+      _radiusCtrl = null;
     }
   }
 
@@ -499,6 +232,17 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     if (v == null) return null;
     if (v is num) return v.toDouble();
     return double.tryParse(v.toString());
+  }
+
+  void _updatePreviewRadiusFromController() {
+    if (_radiusCtrl == null) return;
+    final txt = _radiusCtrl!.text.trim();
+    final parsed = txt.isNotEmpty ? double.tryParse(txt) : null;
+    if (parsed != _previewRadius) {
+      setState(() {
+        _previewRadius = parsed;
+      });
+    }
   }
 
   Future<void> _fetch() async {
@@ -541,6 +285,26 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
       }
     }
     return radiusMeters;
+  }
+
+  double? _getStoredRadius() {
+    if (_empresa == null) return null;
+    final radiusCandidates = [
+      'allowed_radius_m',
+      'radius_m',
+      'radio',
+      'geofence_radius',
+      'rango',
+      'radius',
+    ];
+    for (final k in radiusCandidates) {
+      final rv = _empresa?[k];
+      if (rv == null) continue;
+      if (rv is num) return rv.toDouble();
+      final parsed = double.tryParse(rv.toString());
+      if (parsed != null) return parsed;
+    }
+    return null;
   }
 
   void _centerMap() {
@@ -691,6 +455,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     _telefonoCtrl?.dispose();
     _correoCtrl?.dispose();
     _direccionCtrl?.dispose();
+    _radiusCtrl?.dispose();
     super.dispose();
   }
 
@@ -738,7 +503,9 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                       children: [
                         ElevatedButton.icon(
                           onPressed: () async {
-                            final res = await Navigator.of(context).push<bool>(
+                            final navigator = Navigator.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            final res = await navigator.push<bool>(
                               MaterialPageRoute(
                                 builder: (_) => CreacionDepartamentos(
                                   empresaId: widget.empresaId,
@@ -748,7 +515,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                             if (res == true) {
                               await _fetch();
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text('Departamento creado'),
                                 ),
@@ -829,6 +596,12 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                 _direccionCtrl!,
                                 icon: Icons.location_on,
                               ),
+                              _editableRow(
+                                'Radio (m)',
+                                _radiusCtrl!,
+                                icon: Icons.my_location,
+                                hint: 'Ej. 50',
+                              ),
                             ] else ...[
                               _detailRow(
                                 'RUC',
@@ -849,6 +622,13 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                 'Dirección',
                                 _empresa?['direccion'],
                                 icon: Icons.location_on,
+                              ),
+                              _detailRow(
+                                'Radio (m)',
+                                (_getStoredRadius() != null)
+                                    ? '${_getStoredRadius()!.toStringAsFixed(0)} m'
+                                    : '—',
+                                icon: Icons.my_location,
                               ),
                             ],
                             // Lat/Lng hidden here (map shows coordinates)
@@ -928,32 +708,45 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                   ),
                                                 ),
                                               },
-                                              circles: _editing
-                                                  ? {}
-                                                  : {
-                                                      gmaps.Circle(
-                                                        circleId:
-                                                            const gmaps.CircleId(
-                                                              'company_radius',
-                                                            ),
-                                                        center: gmaps.LatLng(
-                                                          _lat ?? 0,
-                                                          _lng ?? 0,
-                                                        ),
-                                                        radius:
-                                                            _determineCompanyRadiusMeters(),
-                                                        fillColor:
-                                                            const Color.fromRGBO(
-                                                              33,
-                                                              150,
-                                                              243,
-                                                              0.12,
-                                                            ),
-                                                        strokeColor:
-                                                            Colors.blue,
-                                                        strokeWidth: 2,
+                                              circles: {
+                                                gmaps.Circle(
+                                                  circleId:
+                                                      const gmaps.CircleId(
+                                                        'company_radius',
                                                       ),
-                                                    },
+                                                  center: gmaps.LatLng(
+                                                    _editing
+                                                        ? (_editLat ??
+                                                              _lat ??
+                                                              0)
+                                                        : (_lat ?? 0),
+                                                    _editing
+                                                        ? (_editLng ??
+                                                              _lng ??
+                                                              0)
+                                                        : (_lng ?? 0),
+                                                  ),
+                                                  radius: _editing
+                                                      ? (_previewRadius ??
+                                                            _determineCompanyRadiusMeters())
+                                                      : _determineCompanyRadiusMeters(),
+                                                  fillColor:
+                                                      const Color.fromRGBO(
+                                                        33,
+                                                        150,
+                                                        243,
+                                                        0.12,
+                                                      ),
+                                                  strokeColor:
+                                                      const Color.fromRGBO(
+                                                        33,
+                                                        150,
+                                                        243,
+                                                        0.8,
+                                                      ),
+                                                  strokeWidth: 1,
+                                                ),
+                                              },
                                               onMapCreated: (c) =>
                                                   _mapController = c,
                                               onTap: (pos) => setState(() {
@@ -1041,20 +834,20 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                 ] else ...[
                                   OutlinedButton(
                                     onPressed: _cancelEditing,
-                                    child: const Text('Cancelar'),
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
                                     ),
+                                    child: const Text('Cancelar'),
                                   ),
                                   const SizedBox(width: 8),
                                   ElevatedButton(
                                     onPressed: _saveEditing,
-                                    child: const Text('Guardar'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
                                     ),
+                                    child: const Text('Guardar'),
                                   ),
                                 ],
                               ],
