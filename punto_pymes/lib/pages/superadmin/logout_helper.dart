@@ -17,7 +17,7 @@ Future<bool> showLogoutConfirmation(
       title: const Text(
         'Cerrar sesión',
         // use brandRed to better match header/background red
-        style: const TextStyle(color: AppColors.brandRed),
+        style: TextStyle(color: AppColors.brandRed),
       ),
       content: const Text('¿Seguro que quieres cerrar sesión?'),
       actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -36,7 +36,7 @@ Future<bool> showLogoutConfirmation(
               borderRadius: BorderRadius.all(Radius.circular(24)),
             ),
             elevation: 8,
-            shadowColor: AppColors.brandRed.withOpacity(0.4),
+            shadowColor: AppColors.brandRed.withAlpha(102),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           child: const Text('Cerrar sesión'),

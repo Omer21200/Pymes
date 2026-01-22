@@ -99,9 +99,10 @@ class _LoginPageState extends State<LoginPage> {
       // Redirección según el rol verificado
       switch (rol) {
         case 'SUPER_ADMIN':
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const InicioSuperadmin()),
+            (route) => false,
           );
           break;
         case 'ADMIN_EMPRESA':
@@ -116,20 +117,23 @@ class _LoginPageState extends State<LoginPage> {
                   as String?;
 
           if (cedula == null || cedula.isEmpty) {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const ProfileCompletionPage()),
+              (route) => false,
             );
           } else {
             if (rol == 'ADMIN_EMPRESA') {
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const AdminEmpresaPage()),
+                (route) => false,
               );
             } else {
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const EmpleadoPage()),
+                (route) => false,
               );
             }
           }

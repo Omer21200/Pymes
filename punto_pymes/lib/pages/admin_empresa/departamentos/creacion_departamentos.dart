@@ -73,8 +73,6 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
   @override
   Widget build(BuildContext context) {
     const Color brandRed = Color(0xFFD92344);
-    // use theme surfaceSoft (light gray) for card and fields
-    const Color surfaceSoft = AppColors.surfaceSoft;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
@@ -127,7 +125,7 @@ class _CreacionDepartamentosState extends State<CreacionDepartamentos> {
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withAlpha(15),
                             blurRadius: 18,
                             offset: const Offset(0, 10),
                           ),

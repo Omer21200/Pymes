@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
-import 'dart:math' as math;
+// removed unused imports: foundation, gestures, math
 import 'package:geolocator/geolocator.dart';
 import '../theme.dart';
 import 'department_selector_card.dart';
@@ -68,10 +66,8 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   bool _editing = false;
   late Map<String, String> _backup;
-  double? _deviceLat;
-  double? _deviceLng;
-  gmaps.GoogleMapController? _googleMapController;
-  double _profileMapZoom = 15.0;
+
+  // map helpers removed; map preview handled elsewhere
 
   late TextEditingController _emailController;
 
@@ -86,7 +82,7 @@ class _ProfileViewState extends State<ProfileView> {
       'cedula': widget.cedulaController.text,
     };
     _emailController = TextEditingController(text: widget.email ?? '');
-    _initDeviceLocation();
+    // device location initialization removed — profile view doesn't use device coords
   }
 
   @override
@@ -94,33 +90,6 @@ class _ProfileViewState extends State<ProfileView> {
     super.didUpdateWidget(oldWidget);
     if (widget.email != oldWidget.email) {
       _emailController.text = widget.email ?? '';
-    }
-  }
-
-  Future<void> _initDeviceLocation() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _deviceLat = pos.latitude;
-          _deviceLng = pos.longitude;
-        });
-      }
-    } catch (e) {
-      // ignore errors silently; device location is optional
     }
   }
 
@@ -437,78 +406,5 @@ class _ProfileViewState extends State<ProfileView> {
 
   // intentionally left blank: map opening handled externally if needed
 
-  gmaps.LatLng _calculateCenter() {
-    final pts = <gmaps.LatLng>[];
-    final c = _normalizeLatLng(widget.companyLat, widget.companyLng);
-    if (c != null) pts.add(c);
-    final u = _normalizeLatLng(widget.userLat, widget.userLng);
-    if (u != null) pts.add(u);
-    final d = _normalizeLatLng(_deviceLat, _deviceLng);
-    if (d != null) pts.add(d);
-    if (pts.isEmpty) return const gmaps.LatLng(0, 0);
-    double latSum = 0, lngSum = 0;
-    for (final p in pts) {
-      latSum += p.latitude;
-      lngSum += p.longitude;
-    }
-    return gmaps.LatLng(latSum / pts.length, lngSum / pts.length);
-  }
-
-  Set<gmaps.Marker> _buildGmapsMarkers() {
-    final Set<gmaps.Marker> markers = {};
-    final company = _normalizeLatLng(widget.companyLat, widget.companyLng);
-    if (company != null) {
-      markers.add(
-        gmaps.Marker(
-          markerId: const gmaps.MarkerId('company'),
-          position: company,
-        ),
-      );
-    }
-    final user = _normalizeLatLng(widget.userLat, widget.userLng);
-    if (user != null) {
-      markers.add(
-        gmaps.Marker(markerId: const gmaps.MarkerId('user'), position: user),
-      );
-    }
-    // Only add a device marker if there's no saved user location to avoid duplicates
-    final device = _normalizeLatLng(_deviceLat, _deviceLng);
-    if (device != null && user == null) {
-      markers.add(
-        gmaps.Marker(
-          markerId: const gmaps.MarkerId('device'),
-          position: device,
-        ),
-      );
-    }
-    return markers;
-  }
-
-  Set<gmaps.Circle> _buildGmapsCircles() {
-    final Set<gmaps.Circle> circles = {};
-    final companyCenter = _normalizeLatLng(
-      widget.companyLat,
-      widget.companyLng,
-    );
-    if (companyCenter != null && widget.companyRadiusMeters != null) {
-      circles.add(
-        gmaps.Circle(
-          circleId: const gmaps.CircleId('company_radius'),
-          center: companyCenter,
-          radius: widget.companyRadiusMeters!,
-          fillColor: const Color.fromRGBO(217, 35, 68, 0.35),
-          strokeColor: const Color.fromRGBO(217, 35, 68, 1.0),
-          strokeWidth: 4,
-        ),
-      );
-    }
-    return circles;
-  }
-
-  gmaps.LatLng? _normalizeLatLng(double? lat, double? lng) {
-    if (lat == null || lng == null) return null;
-    // if lat looks like a longitude (abs>90) and lng looks like a latitude, swap
-    if (lat.abs() > 90 && lng.abs() <= 90) return gmaps.LatLng(lng, lat);
-    return gmaps.LatLng(lat, lng);
-  }
+  // map helper methods removed — profile view no longer renders a map
 }

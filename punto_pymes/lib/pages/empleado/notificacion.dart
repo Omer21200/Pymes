@@ -82,27 +82,29 @@ class _NotificacionViewState extends State<NotificacionView> {
 
         if (horaEntrada != null) {
           final ts = combineDateTime(fecha, horaEntrada);
-          if (ts != null)
+          if (ts != null) {
             events.add({
               'titulo': 'Entrada',
               'contenido': 'Entrada registrada a las $horaEntrada',
               'fecha_publicacion': ts,
               'es_importante': false,
             });
+          }
         }
         if (horaSalidaAlm != null) {
           final ts = combineDateTime(fecha, horaSalidaAlm);
-          if (ts != null)
+          if (ts != null) {
             events.add({
               'titulo': 'Salida a almuerzo',
               'contenido': 'Salida a almuerzo registrada a las $horaSalidaAlm',
               'fecha_publicacion': ts,
               'es_importante': false,
             });
+          }
         }
         if (horaRegresoAlm != null) {
           final ts = combineDateTime(fecha, horaRegresoAlm);
-          if (ts != null)
+          if (ts != null) {
             events.add({
               'titulo': 'Regreso de almuerzo',
               'contenido':
@@ -110,16 +112,18 @@ class _NotificacionViewState extends State<NotificacionView> {
               'fecha_publicacion': ts,
               'es_importante': false,
             });
+          }
         }
         if (horaSalida != null) {
           final ts = combineDateTime(fecha, horaSalida);
-          if (ts != null)
+          if (ts != null) {
             events.add({
               'titulo': 'Salida',
               'contenido': 'Salida registrada a las $horaSalida',
               'fecha_publicacion': ts,
               'es_importante': false,
             });
+          }
         }
       }
 
@@ -192,35 +196,9 @@ class _NotificacionViewState extends State<NotificacionView> {
             .where((n) => n['es_importante'] ?? false)
             .length;
 
-        // Estado: Sin datos
-        if (noticias.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inbox,
-                    // ignore: deprecated_member_use
-                    color: AppColors.mutedGray.withOpacity(0.3),
-                    size: 64,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay noticias disponibles',
-                    style: AppTextStyles.smallLabel.copyWith(
-                      color: AppColors.mutedGray,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Estado: Con datos
+        // Siempre mostrar el layout principal. Si no hay noticias,
+        // mostraremos una sección de 'No hay noticias' más abajo en el listado,
+        // pero mantendremos visibles las secciones útiles como violaciones.
         return SingleChildScrollView(
           child: Padding(
             padding: widget.padding,
@@ -279,7 +257,7 @@ class _NotificacionViewState extends State<NotificacionView> {
 
                 // Sección de violaciones bajo Reportes
                 const SizedBox(height: 8),
-                AttendanceViolationsSection(),
+                const AttendanceViolationsSection(),
 
                 // Título de lista
                 const Text(
@@ -294,25 +272,46 @@ class _NotificacionViewState extends State<NotificacionView> {
                 const SizedBox(height: 12),
 
                 // Lista de notificaciones (eficiente y segura en ScrollViews)
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: noticias.length,
-                  itemBuilder: (context, index) {
-                    final notification = noticias[index];
-                    final titulo = notification['titulo'] ?? '';
-                    final contenido = notification['contenido'] ?? '';
-                    final fechaPublicacion =
-                        notification['fecha_publicacion']?.toString() ?? '';
-                    final esImportante = notification['es_importante'] ?? false;
-                    final imagenUrl = notification['imagen_url']?.toString();
+                Builder(
+                  builder: (ctx) {
+                    if (noticias.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(
+                          child: Text(
+                            'No hay noticias disponibles',
+                            style: AppTextStyles.smallLabel.copyWith(
+                              color: AppColors.mutedGray,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
-                    return NotificationCard(
-                      titulo: titulo,
-                      contenido: contenido,
-                      fechaPublicacion: fechaPublicacion,
-                      esImportante: esImportante,
-                      imagenUrl: imagenUrl,
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: noticias.length,
+                      itemBuilder: (context, index) {
+                        final notification = noticias[index];
+                        final titulo = notification['titulo'] ?? '';
+                        final contenido = notification['contenido'] ?? '';
+                        final fechaPublicacion =
+                            notification['fecha_publicacion']?.toString() ?? '';
+                        final esImportante =
+                            notification['es_importante'] ?? false;
+                        final imagenUrl = notification['imagen_url']
+                            ?.toString();
+
+                        return NotificationCard(
+                          titulo: titulo,
+                          contenido: contenido,
+                          fechaPublicacion: fechaPublicacion,
+                          esImportante: esImportante,
+                          imagenUrl: imagenUrl,
+                        );
+                      },
                     );
                   },
                 ),

@@ -115,6 +115,26 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
     } catch (_) {}
   }
 
+  double? _getStoredRadius() {
+    if (_empresa == null) return null;
+    final radiusCandidates = [
+      'allowed_radius_m',
+      'radius_m',
+      'radio',
+      'geofence_radius',
+      'rango',
+      'radius',
+    ];
+    for (final k in radiusCandidates) {
+      final rv = _empresa?[k];
+      if (rv == null) continue;
+      if (rv is num) return rv.toDouble();
+      final parsed = double.tryParse(rv.toString());
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
   Widget _infoCard(IconData icon, String label, String? value) {
     return Card(
       color: Colors.white,
@@ -178,7 +198,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8),
+          BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 8),
         ],
       ),
       child: ClipRRect(
@@ -198,6 +218,20 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                   position: gmaps.LatLng(_lat!, _lng!),
                 ),
               },
+              circles: (() {
+                final r = _getStoredRadius();
+                if (r == null) return <gmaps.Circle>{};
+                return {
+                  gmaps.Circle(
+                    circleId: const gmaps.CircleId('company_radius'),
+                    center: gmaps.LatLng(_lat!, _lng!),
+                    radius: r,
+                    fillColor: const Color.fromRGBO(33, 150, 243, 0.12),
+                    strokeColor: const Color.fromRGBO(33, 150, 243, 0.8),
+                    strokeWidth: 1,
+                  ),
+                };
+              })(),
               onMapCreated: (ctrl) => _mapController = ctrl,
             ),
             Positioned(
@@ -218,7 +252,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                         borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withAlpha(20),
                             blurRadius: 6,
                           ),
                         ],
@@ -244,7 +278,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                         borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withAlpha(20),
                             blurRadius: 6,
                           ),
                         ],
@@ -267,7 +301,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                         borderRadius: BorderRadius.circular(8.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withAlpha(20),
                             blurRadius: 6,
                           ),
                         ],

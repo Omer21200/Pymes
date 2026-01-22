@@ -103,7 +103,7 @@ class _NewsCarouselState extends State<NewsCarousel>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.brandRed.withOpacity(0.08),
+                  color: AppColors.brandRed.withAlpha(20),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -302,7 +302,7 @@ class _NewsCardState extends State<_NewsCard>
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentBlue.withOpacity(0.14),
+                                  color: AppColors.accentBlue.withAlpha(36),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(

@@ -12,7 +12,7 @@ class ReportesPage extends StatefulWidget {
 
 class _ReportesPageState extends State<ReportesPage> {
   late Future<List<Map<String, dynamic>>> _asistenciasFuture;
-  
+
   @override
   void initState() {
     super.initState();
@@ -20,7 +20,12 @@ class _ReportesPageState extends State<ReportesPage> {
   }
 
   void _loadAsistencias() {
-    _asistenciasFuture = SupabaseService.instance.getHistorialAsistencias();
+    _asistenciasFuture = SupabaseService.instance
+        .getHistorialAsistencias()
+        .timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => <Map<String, dynamic>>[],
+        );
   }
 
   void refreshData() {
@@ -72,7 +77,11 @@ class _ReportesPageState extends State<ReportesPage> {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 48,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Error: ${snapshot.error}',
@@ -90,17 +99,28 @@ class _ReportesPageState extends State<ReportesPage> {
               if (asistencias.isEmpty) {
                 return Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(32.0),
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.inbox, size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
+                        Icon(
+                          Icons.inbox,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 12),
                         Text(
                           'No hay registros de asistencia',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 16,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => refreshData(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
                         ),
                       ],
                     ),
@@ -109,7 +129,9 @@ class _ReportesPageState extends State<ReportesPage> {
               }
 
               return Column(
-                children: asistencias.map((record) => AttendanceCard(record: record)).toList(),
+                children: asistencias
+                    .map((record) => AttendanceCard(record: record))
+                    .toList(),
               );
             },
           ),

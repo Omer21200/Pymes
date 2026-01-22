@@ -22,13 +22,60 @@ class SupabaseService {
 
   SupabaseClient get client => Supabase.instance.client;
 
+  Map<String, dynamic> _toMap(dynamic v) {
+    if (v == null) return {};
+    if (v is Map) return Map<String, dynamic>.from(v);
+    try {
+      return Map<String, dynamic>.from(jsonDecode(jsonEncode(v)));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  List<Map<String, dynamic>> _listFromResponse(dynamic r) {
+    if (r == null) return [];
+    if (r is List) return r.map((e) => Map<String, dynamic>.from(e)).toList();
+    try {
+      final encoded = jsonEncode(r);
+      final decoded = jsonDecode(encoded);
+      if (decoded is List)
+        return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (_) {}
+    return [];
+  }
+
   /// Asegurar que la sesión está activa y refrescar si es necesario
   Future<void> ensureSessionValid() async {
     try {
       final session = client.auth.currentSession;
+      developer.log(
+        'ensureSessionValid: currentSession=${session != null}',
+        name: 'SupabaseService',
+      );
       if (session != null) {
-        // Intentar refrescar la sesión
-        await client.auth.refreshSession();
+        developer.log(
+          'ensureSessionValid: refreshing session...',
+          name: 'SupabaseService',
+        );
+        try {
+          await client.auth.refreshSession().timeout(
+            const Duration(seconds: 8),
+          );
+          developer.log(
+            'ensureSessionValid: refreshSession completed',
+            name: 'SupabaseService',
+          );
+        } on TimeoutException catch (_) {
+          developer.log(
+            'ensureSessionValid: refreshSession timed out',
+            name: 'SupabaseService',
+          );
+        } catch (e) {
+          developer.log(
+            'ensureSessionValid: refreshSession error: $e',
+            name: 'SupabaseService',
+          );
+        }
       }
     } catch (e) {
       developer.log('⚠️ Error refrescando sesión: $e', name: 'SupabaseService');
@@ -129,15 +176,13 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> getEmpresas() async {
     try {
       // Refrescar sesión antes de hacer la consulta
-      await ensureSessionValid();
+      await ensureSessionValid(); // Ensure session is valid before querying
 
       final response = await client
           .from('empresas')
           .select()
           .order('created_at', ascending: false);
-      final list = (response as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      final list = _listFromResponse(response);
       return list;
     } catch (e) {
       developer.log('❌ Error en getEmpresas: $e', name: 'SupabaseService');
@@ -148,8 +193,8 @@ class SupabaseService {
             .from('empresas')
             .select()
             .order('created_at', ascending: false);
-        final list = (response as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
+        final list = (response)
+            .map((e) => Map<String, dynamic>.from(e))
             .toList();
         return list;
       } catch (retryError) {
@@ -217,9 +262,7 @@ class SupabaseService {
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as List<dynamic>;
-        final list = data
-            .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>))
-            .toList();
+        final list = (data).map((e) => Map<String, dynamic>.from(e)).toList();
 
         if (list.isEmpty) return [];
 
@@ -235,8 +278,14 @@ class SupabaseService {
           if (aType == 'country') scoreA += 200;
           if (bType == 'country') scoreB += 200;
 
-          final aAddr = a['address'] as Map<String, dynamic>? ?? {};
-          final bAddr = b['address'] as Map<String, dynamic>? ?? {};
+          final aAddrRaw = a['address'];
+          final bAddrRaw = b['address'];
+          final aAddr = aAddrRaw is Map
+              ? Map<String, dynamic>.from(aAddrRaw)
+              : <String, dynamic>{};
+          final bAddr = bAddrRaw is Map
+              ? Map<String, dynamic>.from(bAddrRaw)
+              : <String, dynamic>{};
           if ((aAddr['country']?.toString().toLowerCase() ?? '') == qLower) {
             scoreA += 100;
           }
@@ -522,7 +571,10 @@ class SupabaseService {
         .select()
         .eq('empresa_id', empresaId)
         .order('nombre', ascending: true);
-    return (response as List).map((e) => e as Map<String, dynamic>).toList();
+    if (response is! List) {
+      return []; // Return empty list if response is not a list
+    }
+    return _listFromResponse(response);
   }
 
   /// Elimina un departamento por su id.
@@ -566,7 +618,7 @@ class SupabaseService {
         .maybeSingle();
 
     if (response == null) return null;
-    return Map<String, dynamic>.from(response as Map);
+    return Map<String, dynamic>.from(response);
   }
 
   /// Obtiene los departamentos asociados a una noticia (ids y nombres).
@@ -580,12 +632,13 @@ class SupabaseService {
 
     // La consulta puede devolver objetos con departamento_id y un campo 'departamentos'
     // que contiene los datos del departamento. Normalizamos a una lista simple.
-    return (response as List).map((e) {
-      final map = e as Map<String, dynamic>;
+    return (response).map((e) {
+      final map = Map<String, dynamic>.from(e);
       final dep = <String, dynamic>{};
       dep['id'] = map['departamento_id']?.toString() ?? map['departamento_id'];
-      if (map['departamentos'] != null && map['departamentos'] is Map) {
-        dep['nombre'] = (map['departamentos'] as Map)['nombre'];
+      final deptos = map['departamentos'];
+      if (deptos is Map) {
+        dep['nombre'] = deptos['nombre'];
       }
       return dep;
     }).toList();
@@ -658,11 +711,7 @@ class SupabaseService {
           .rpc('get_noticias_usuario', params: {'p_limite': limite})
           .timeout(const Duration(seconds: 12));
 
-      if (response == null) return [];
-
-      return (response as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      return _listFromResponse(response);
     } on TimeoutException catch (e) {
       throw Exception('Timeout obteniendo noticias: $e');
     } catch (e) {
@@ -685,10 +734,7 @@ class SupabaseService {
           .eq('creador_id', user.id)
           .order('fecha_publicacion', ascending: false)
           .limit(limite);
-      if (response == null) return [];
-      return (response as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      return _listFromResponse(response);
     } catch (e) {
       developer.log(
         'Error obteniendo mis noticias: $e',
@@ -727,7 +773,8 @@ class SupabaseService {
         )
         .eq('empresa_id', empresaId) // Filtro explícito
         .order('fecha_publicacion', ascending: false);
-    return (response as List).map((e) => e as Map<String, dynamic>).toList();
+    if (response is! List) return [];
+    return _listFromResponse(response);
   }
 
   /// Crea o actualiza una noticia (CORREGIDO: Usa ID seguro)
@@ -978,7 +1025,7 @@ class SupabaseService {
           .select()
           .eq('id', user.id)
           .maybeSingle();
-      return profile == null ? null : Map<String, dynamic>.from(profile as Map);
+      return profile == null ? null : Map<String, dynamic>.from(profile);
     }
 
     try {
@@ -989,7 +1036,7 @@ class SupabaseService {
           .select();
       if (res is List) {
         if (res.isEmpty) return null;
-        return Map<String, dynamic>.from(res.first as Map);
+        return Map<String, dynamic>.from(res.first);
       }
       if (res is Map) return Map<String, dynamic>.from(res);
       return null;
@@ -1021,7 +1068,7 @@ class SupabaseService {
     if (direccion != null) updates['direccion'] = direccion;
     if (departamentoId != null) updates['departamento_id'] = departamentoId;
 
-    if (updates.isEmpty) return Map<String, dynamic>.from(empleado as Map);
+    if (updates.isEmpty) return Map<String, dynamic>.from(empleado);
 
     try {
       final dynamic res = await client
@@ -1032,7 +1079,7 @@ class SupabaseService {
       // Postgrest suele devolver una lista de filas.
       if (res is List) {
         if (res.isEmpty) return null;
-        return Map<String, dynamic>.from(res.first as Map);
+        return Map<String, dynamic>.from(res.first);
       }
       if (res is Map) return Map<String, dynamic>.from(res);
       return null;
@@ -1065,7 +1112,10 @@ class SupabaseService {
         'Empleado no encontrado. Ejecuta el flujo de registro y confirmación primero.',
       );
     }
-    final empleadoId = empleado['id'] as String;
+    final empleadoId = empleado['id']?.toString();
+    if (empleadoId == null) {
+      throw Exception('Empleado sin id');
+    }
 
     // Obtener hora de Ecuador: primero desde EcuadorTimeManager (si está sincronizado)
     // Si no está disponible, hacer request a la API
@@ -1104,7 +1154,7 @@ class SupabaseService {
           .select()
           .maybeSingle();
       // No crear noticia pública por marcas de asistencia.
-      return Map<String, dynamic>.from(inserted as Map);
+      return _toMap(inserted);
     }
 
     // Si existe, manejar la secuencia de 4 marcas:
@@ -1131,7 +1181,7 @@ class SupabaseService {
           .select()
           .maybeSingle();
       // No crear noticia por salida a almuerzo.
-      return Map<String, dynamic>.from(updated as Map);
+      return _toMap(updated);
     }
 
     if (horaEntrada != null &&
@@ -1150,7 +1200,7 @@ class SupabaseService {
           .select()
           .maybeSingle();
       // No crear noticia por regreso de almuerzo.
-      return Map<String, dynamic>.from(updated as Map);
+      return _toMap(updated);
     }
 
     if (horaEntrada != null &&
@@ -1170,7 +1220,7 @@ class SupabaseService {
           .select()
           .maybeSingle();
       // No crear noticia por salida final.
-      return Map<String, dynamic>.from(updated as Map);
+      return _toMap(updated);
     }
 
     // Si no hay hora_entrada aún, eso se maneja arriba en existing == null branch.
@@ -1268,8 +1318,7 @@ class SupabaseService {
       );
 
       // Si RPC retorna null o vacío, manejamos
-      if (response == null ||
-          (response is List && (response as List).isEmpty)) {
+      if (response is! List || (response).isEmpty) {
         // Fallback: consultar directamente la tabla `asistencias` y enriquecer con empleado/departamento
         try {
           final empresaId = await _getEmpresaIdSeguro();
@@ -1281,16 +1330,12 @@ class SupabaseService {
               .eq('fecha', today)
               .order('hora_entrada', ascending: false)
               .limit(5);
-
-          if (asistencias == null) return [];
-          final asistenciasList = asistencias as List<dynamic>;
-          if (asistenciasList.isEmpty) return [];
+          if (asistencias is! List || asistencias.isEmpty) return [];
+          final asistenciasList = asistencias;
 
           final List<Map<String, dynamic>> lista = [];
-          for (final a in asistencias) {
-            final Map<String, dynamic> row = Map<String, dynamic>.from(
-              a as Map,
-            );
+          for (final a in asistenciasList) {
+            final Map<String, dynamic> row = Map<String, dynamic>.from(a);
             final empleadoId = row['empleado_id']?.toString();
             String empleadoNombre = 'N/A';
             String departamentoNombre = 'Sin departamento';
@@ -1301,12 +1346,12 @@ class SupabaseService {
                   .eq('id', empleadoId)
                   .maybeSingle();
               if (empleado != null) {
-                final noms = (empleado['nombres'] ?? '') as String;
-                final apes = (empleado['apellidos'] ?? '') as String;
+                final noms = empleado['nombres']?.toString() ?? '';
+                final apes = empleado['apellidos']?.toString() ?? '';
                 empleadoNombre = [
                   noms,
                   apes,
-                ].where((s) => s.toString().isNotEmpty).join(' ').trim();
+                ].where((s) => s.isNotEmpty).join(' ').trim();
                 final depId = empleado['departamento_id']?.toString();
                 if (depId != null) {
                   final dep = await client
@@ -1314,9 +1359,10 @@ class SupabaseService {
                       .select('nombre')
                       .eq('id', depId)
                       .maybeSingle();
-                  if (dep != null)
+                  if (dep != null) {
                     departamentoNombre =
                         dep['nombre']?.toString() ?? departamentoNombre;
+                  }
                 }
               }
             }
@@ -1339,8 +1385,11 @@ class SupabaseService {
       }
 
       // Ordenamos en Dart si el RPC no lo hizo
-      final lista = (response as List)
-          .map((e) => e as Map<String, dynamic>)
+      if (response is! List) {
+        return [];
+      }
+      final lista = (response)
+          .map((e) => Map<String, dynamic>.from(e))
           .toList();
       // Opcional: ordenar por hora entrada desc
       return lista.take(5).toList();
@@ -1358,8 +1407,16 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> getHistorialAsistencias({
     int limite = 30,
   }) async {
+    developer.log(
+      'getHistorialAsistencias: start (limite=$limite)',
+      name: 'SupabaseService',
+    );
     try {
       final user = currentUser;
+      developer.log(
+        'getHistorialAsistencias: currentUser=${user?.id}',
+        name: 'SupabaseService',
+      );
       if (user == null) throw Exception('Usuario no autenticado');
 
       // Obtener empleado_id del usuario actual
@@ -1370,21 +1427,59 @@ class SupabaseService {
           .maybeSingle();
 
       if (empleado == null) throw Exception('Empleado no encontrado');
-      final empleadoId = empleado['id'] as String;
+      final empleadoId = empleado['id']?.toString();
+      if (empleadoId == null) throw Exception('Empleado sin id');
 
-      // Obtener asistencias del empleado
-      final response = await client
-          .from('asistencias')
-          .select(
-            'id, fecha, hora_entrada, hora_salida, hora_salida_almuerzo, hora_regreso_almuerzo, foto_url, estado, observacion, latitud, longitud, created_at',
-          )
-          .eq('empleado_id', empleadoId)
-          .order('fecha', ascending: false)
-          .limit(limite);
+      // Ensure session valid before querying
+      await ensureSessionValid();
 
-      return (response as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      // Obtener asistencias del empleado con timeout y medición para evitar colgar la UI
+      dynamic response;
+      final sw = Stopwatch()..start();
+      try {
+        final future = client
+            .from('asistencias')
+            .select(
+              'id, fecha, hora_entrada, hora_salida, hora_salida_almuerzo, hora_regreso_almuerzo, foto_url, estado, observacion, latitud, longitud, created_at',
+            )
+            .eq('empleado_id', empleadoId)
+            .order('fecha', ascending: false)
+            .limit(limite);
+
+        // Apply a timeout that throws so we can catch and log it distinctly
+        response = await future.timeout(
+          const Duration(seconds: 12),
+          onTimeout: () =>
+              throw TimeoutException('getHistorialAsistencias query timed out'),
+        );
+
+        sw.stop();
+        developer.log(
+          'getHistorialAsistencias: query completed in ${sw.elapsedMilliseconds} ms',
+          name: 'SupabaseService',
+        );
+      } on TimeoutException catch (te) {
+        sw.stop();
+        developer.log(
+          'getHistorialAsistencias: query timed out after ${sw.elapsedMilliseconds} ms: $te',
+          name: 'SupabaseService',
+        );
+        return [];
+      } catch (qe) {
+        sw.stop();
+        developer.log(
+          'getHistorialAsistencias: query exception after ${sw.elapsedMilliseconds} ms: $qe',
+          name: 'SupabaseService',
+        );
+        return [];
+      }
+
+      final list = _listFromResponse(response);
+      developer.log(
+        'getHistorialAsistencias: fetched ${list.length} rows',
+        name: 'SupabaseService',
+      );
+      return list;
     } catch (e) {
       developer.log(
         'Error en getHistorialAsistencias: $e',
@@ -1416,14 +1511,37 @@ class SupabaseService {
           .eq('empleado_id', empleadoId)
           .order('created_at', ascending: false)
           .limit(limite);
-
-      if (response == null) return [];
-      return (response as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      if (response is! List) {
+        return [];
+      }
+      return _listFromResponse(response);
     } catch (e) {
       developer.log(
         'Error obteniendo violaciones de asistencia: $e',
+        name: 'SupabaseService',
+      );
+      return [];
+    }
+  }
+
+  /// Obtiene violaciones de asistencia para una empresa (uso por admin de empresa)
+  Future<List<Map<String, dynamic>>> getViolationsForCompany(
+    String empresaId, {
+    int limit = 10,
+  }) async {
+    try {
+      final response = await client
+          .from('attendance_violations')
+          .select(
+            'id, empleado_id, latitud, longitud, distance_m, created_at, empleados(nombres,apellidos)',
+          )
+          .eq('empresa_id', empresaId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+      return _listFromResponse(response);
+    } catch (e) {
+      developer.log(
+        'Error obteniendo violaciones por empresa: $e',
         name: 'SupabaseService',
       );
       return [];
@@ -1446,7 +1564,8 @@ class SupabaseService {
           .maybeSingle();
 
       if (empleado == null) throw Exception('Empleado no encontrado');
-      final empleadoId = empleado['id'] as String;
+      final empleadoId = empleado['id']?.toString();
+      if (empleadoId == null) throw Exception('Empleado sin id');
 
       // Obtener asistencias del mes actual
       final ahora = DateTime.now();
@@ -1472,7 +1591,7 @@ class SupabaseService {
           diasAsistidos++;
 
           // Obtener hora de entrada
-          final horaEntrada = asistencia['hora_entrada'] as String;
+          final horaEntrada = asistencia['hora_entrada']?.toString() ?? '';
 
           // Comparar si fue a tiempo (simple: si llegó antes del mediodía)
           // En producción, esto debería compararse contra el horario del departamento

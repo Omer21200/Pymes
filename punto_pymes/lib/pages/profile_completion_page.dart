@@ -117,15 +117,17 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
       switch (rol) {
         case 'ADMIN_EMPRESA':
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const AdminEmpresaPage()),
+            (route) => false,
           );
           break;
         case 'EMPLEADO':
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const EmpleadoPage()),
+            (route) => false,
           );
           break;
         default:

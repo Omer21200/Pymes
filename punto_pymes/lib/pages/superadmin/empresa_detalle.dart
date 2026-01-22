@@ -27,7 +27,7 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   double? _lat;
   double? _lng;
   gmaps.GoogleMapController? _mapController;
-  final double _zoom = 15.0;
+  double _zoom = 15.0;
   // Inline edit state
   bool _editing = false;
   TextEditingController? _nombreCtrl;
@@ -39,6 +39,18 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
   double? _previewRadius;
   double? _editLat;
   double? _editLng;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialEmpresa != null) {
+      _empresa = widget.initialEmpresa;
+      _lat = _toDouble(_empresa?['latitud']);
+      _lng = _toDouble(_empresa?['longitud']);
+      _loading = false;
+    }
+    _fetch();
+  }
 
   Future<void> _openEditNameDialog() async {
     if (_empresa == null) return;
@@ -66,16 +78,17 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
               onPressed: () async {
                 final newName = nombreCtrl.text.trim();
                 try {
+                  final String? nombreParaGuardar = newName.isNotEmpty
+                      ? newName
+                      : null;
                   final updated = await SupabaseService.instance.updateEmpresa(
                     empresaId: widget.empresaId,
-                    nombre: newName.isNotEmpty ? newName : null,
+                    nombre: nombreParaGuardar,
                   );
                   if (!mounted) return;
-                  if (updated != null) {
-                    setState(() {
-                      _empresa = updated;
-                    });
-                  }
+                  setState(() {
+                    _empresa = updated;
+                  });
                   navigator.pop();
                 } catch (e) {
                   if (!mounted) return;
@@ -175,38 +188,37 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
     try {
       final updated = await SupabaseService.instance.updateEmpresa(
         empresaId: widget.empresaId,
-        nombre: (_nombreCtrl?.text.trim().isNotEmpty ?? false)
+        nombre: (_nombreCtrl != null && _nombreCtrl!.text.trim().isNotEmpty)
             ? _nombreCtrl!.text.trim()
             : null,
-        ruc: (_rucCtrl?.text.trim().isNotEmpty ?? false)
+        ruc: (_rucCtrl != null && _rucCtrl!.text.trim().isNotEmpty)
             ? _rucCtrl!.text.trim()
             : null,
-        telefono: (_telefonoCtrl?.text.trim().isNotEmpty ?? false)
+        telefono:
+            (_telefonoCtrl != null && _telefonoCtrl!.text.trim().isNotEmpty)
             ? _telefonoCtrl!.text.trim()
             : null,
-        correo: (_correoCtrl?.text.trim().isNotEmpty ?? false)
+        correo: (_correoCtrl != null && _correoCtrl!.text.trim().isNotEmpty)
             ? _correoCtrl!.text.trim()
             : null,
-        direccion: (_direccionCtrl?.text.trim().isNotEmpty ?? false)
+        direccion:
+            (_direccionCtrl != null && _direccionCtrl!.text.trim().isNotEmpty)
             ? _direccionCtrl!.text.trim()
             : null,
         latitud: _editLat,
         longitud: _editLng,
-        radiusMeters: (_radiusCtrl?.text.trim().isNotEmpty ?? false)
+        radiusMeters:
+            (_radiusCtrl != null && _radiusCtrl!.text.trim().isNotEmpty)
             ? double.tryParse(_radiusCtrl!.text.trim())
             : null,
       );
       if (!mounted) return;
-      if (updated != null) {
-        setState(() {
-          _empresa = updated;
-          _lat = _toDouble(updated['latitud']);
-          _lng = _toDouble(updated['longitud']);
-          _editing = false;
-        });
-      } else {
-        setState(() => _editing = false);
-      }
+      setState(() {
+        _empresa = updated;
+        _lat = _toDouble(updated['latitud']);
+        _lng = _toDouble(updated['longitud']);
+        _editing = false;
+      });
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
@@ -694,18 +706,21 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                         ? (_editLng ?? -79.0086)
                                                         : (_lng ?? -79.0086),
                                                   ),
-                                                  draggable: true,
-                                                  onDragEnd: (p) => setState(
-                                                    () {
-                                                      if (_editing) {
-                                                        _editLat = p.latitude;
-                                                        _editLng = p.longitude;
-                                                      } else {
-                                                        _lat = p.latitude;
-                                                        _lng = p.longitude;
-                                                      }
-                                                    },
-                                                  ),
+                                                  draggable: _editing,
+                                                  icon:
+                                                      gmaps
+                                                          .BitmapDescriptor.defaultMarkerWithHue(
+                                                        gmaps
+                                                            .BitmapDescriptor
+                                                            .hueRed,
+                                                      ),
+                                                  onDragEnd: (p) {
+                                                    if (!_editing) return;
+                                                    setState(() {
+                                                      _editLat = p.latitude;
+                                                      _editLng = p.longitude;
+                                                    });
+                                                  },
                                                 ),
                                               },
                                               circles: {
@@ -749,15 +764,13 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                               },
                                               onMapCreated: (c) =>
                                                   _mapController = c,
-                                              onTap: (pos) => setState(() {
-                                                if (_editing) {
+                                              onTap: (pos) {
+                                                if (!_editing) return;
+                                                setState(() {
                                                   _editLat = pos.latitude;
                                                   _editLng = pos.longitude;
-                                                } else {
-                                                  _lat = pos.latitude;
-                                                  _lng = pos.longitude;
-                                                }
-                                              }),
+                                                });
+                                              },
                                               myLocationButtonEnabled: false,
                                               zoomControlsEnabled: false,
                                             ),
@@ -778,10 +791,29 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                   icon: Icons.add,
                                                   onPressed: () async {
                                                     try {
+                                                      final targetLat = _editing
+                                                          ? _editLat
+                                                          : _lat;
+                                                      final targetLng = _editing
+                                                          ? _editLng
+                                                          : _lng;
+                                                      if (targetLat == null ||
+                                                          targetLng == null)
+                                                        return;
+                                                      _zoom = (_zoom + 1).clamp(
+                                                        2.0,
+                                                        21.0,
+                                                      );
                                                       await _mapController
                                                           ?.animateCamera(
                                                             gmaps
-                                                                .CameraUpdate.zoomIn(),
+                                                                .CameraUpdate.newLatLngZoom(
+                                                              gmaps.LatLng(
+                                                                targetLat,
+                                                                targetLng,
+                                                              ),
+                                                              _zoom,
+                                                            ),
                                                           );
                                                     } catch (_) {}
                                                   },
@@ -792,10 +824,29 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                   icon: Icons.remove,
                                                   onPressed: () async {
                                                     try {
+                                                      final targetLat = _editing
+                                                          ? _editLat
+                                                          : _lat;
+                                                      final targetLng = _editing
+                                                          ? _editLng
+                                                          : _lng;
+                                                      if (targetLat == null ||
+                                                          targetLng == null)
+                                                        return;
+                                                      _zoom = (_zoom - 1).clamp(
+                                                        2.0,
+                                                        21.0,
+                                                      );
                                                       await _mapController
                                                           ?.animateCamera(
                                                             gmaps
-                                                                .CameraUpdate.zoomOut(),
+                                                                .CameraUpdate.newLatLngZoom(
+                                                              gmaps.LatLng(
+                                                                targetLat,
+                                                                targetLng,
+                                                              ),
+                                                              _zoom,
+                                                            ),
                                                           );
                                                     } catch (_) {}
                                                   },

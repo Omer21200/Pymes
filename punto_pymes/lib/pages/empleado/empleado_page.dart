@@ -69,6 +69,16 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
               // Timeout or error obtaining position; continue without blocking
               lat = null;
               lon = null;
+              if (mounted) {
+                NotificationHelper.showWarningNotification(
+                  context,
+                  title: 'Ubicación no disponible',
+                  message:
+                      'No se pudo obtener la ubicación (tiempo de espera). Se continuará sin ella.',
+                );
+              }
+              // Registro de depuración
+              print('Geolocator.getCurrentPosition error: $posErr');
             }
           } else {
             lat = null;
@@ -79,6 +89,14 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
         // No bloquear flujo si falla la ubicación
         lat = null;
         lon = null;
+        if (mounted) {
+          NotificationHelper.showWarningNotification(
+            context,
+            title: 'Error de ubicación',
+            message: 'Error al obtener la ubicación. Se continuará sin ella.',
+          );
+        }
+        print('Error obteniendo ubicación: $locErr');
       }
 
       // 2) Tomar foto con cámara

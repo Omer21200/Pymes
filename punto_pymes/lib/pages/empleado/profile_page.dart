@@ -107,14 +107,14 @@ class _EmpleadoProfilePageState extends State<EmpleadoProfilePage> {
             }
           }
         }
-        double? _parseCoord(dynamic v) {
+        double? parseCoord(dynamic v) {
           if (v == null) return null;
           if (v is num) return v.toDouble();
           return double.tryParse(v.toString());
         }
 
-        _companyLat = _parseCoord(lat);
-        _companyLng = _parseCoord(lng);
+        _companyLat = parseCoord(lat);
+        _companyLng = parseCoord(lng);
         _companyRadius = companyRadius;
       });
 

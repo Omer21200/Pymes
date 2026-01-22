@@ -9,13 +9,13 @@ class DepartmentSelectorCard extends StatelessWidget {
   final String label;
 
   const DepartmentSelectorCard({
-    Key? key,
+    super.key,
     this.departamentos,
     this.departamentoId,
     this.onChanged,
     this.enabled = true,
     this.label = 'Departamento',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class DepartmentSelectorCard extends StatelessWidget {
           Text(label, style: AppTextStyles.smallLabel),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: departamentoId == null ? null : departamentoId,
+            initialValue: departamentoId,
             items: (departamentos ?? []).map((d) {
               final id = d['id']?.toString() ?? '';
               final nombre = d['nombre']?.toString() ?? id;

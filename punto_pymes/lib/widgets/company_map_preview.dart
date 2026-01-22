@@ -47,11 +47,12 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
       }
       if (perm == LocationPermission.deniedForever) return;
       final pos = await Geolocator.getCurrentPosition();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _deviceLat = pos.latitude;
           _deviceLng = pos.longitude;
         });
+      }
     } catch (_) {}
   }
 
@@ -87,14 +88,14 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
         final ln = empresaData['longitud'];
         _rawCompanyLat = la;
         _rawCompanyLng = ln;
-        double? _parseCoord(dynamic v) {
+        double? parseCoord(dynamic v) {
           if (v == null) return null;
           if (v is num) return v.toDouble();
           return double.tryParse(v.toString());
         }
 
-        lat = _parseCoord(la);
-        lng = _parseCoord(ln);
+        lat = parseCoord(la);
+        lng = parseCoord(ln);
         final radiusCandidates = [
           'allowed_radius_m',
           'radius_m',
@@ -136,11 +137,17 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
   gmaps.LatLng _calculateCenter() {
     final pts = <gmaps.LatLng>[];
     final c = _normalize(_companyLat, _companyLng);
-    if (c != null) pts.add(c);
+    if (c != null) {
+      pts.add(c);
+    }
     final u = _normalize(_userLat, _userLng);
-    if (u != null) pts.add(u);
+    if (u != null) {
+      pts.add(u);
+    }
     final d = _normalize(_deviceLat, _deviceLng);
-    if (d != null) pts.add(d);
+    if (d != null) {
+      pts.add(d);
+    }
     if (pts.isEmpty) return const gmaps.LatLng(0, 0);
     double la = 0, ln = 0;
     for (final p in pts) {
@@ -153,21 +160,24 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
   Set<gmaps.Marker> _markers() {
     final Set<gmaps.Marker> m = {};
     final c = _normalize(_companyLat, _companyLng);
-    if (c != null)
+    if (c != null) {
       m.add(
         gmaps.Marker(markerId: const gmaps.MarkerId('company'), position: c),
       );
+    }
     // If configured to show only the company, skip user/device markers
     if (widget.showOnlyCompany) return m;
 
     final u = _normalize(_userLat, _userLng);
-    if (u != null)
+    if (u != null) {
       m.add(gmaps.Marker(markerId: const gmaps.MarkerId('user'), position: u));
+    }
     final d = _normalize(_deviceLat, _deviceLng);
-    if (d != null && u == null)
+    if (d != null && u == null) {
       m.add(
         gmaps.Marker(markerId: const gmaps.MarkerId('device'), position: d),
       );
+    }
     return m;
   }
 
@@ -266,10 +276,11 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
                           onPressed: () {
                             _zoom = (_zoom + 1).clamp(1, 20);
                             final c = _calculateCenter();
-                            if (_mapController != null)
+                            if (_mapController != null) {
                               _mapController!.animateCamera(
                                 gmaps.CameraUpdate.newLatLngZoom(c, _zoom),
                               );
+                            }
                           },
                         ),
                         IconButton(
@@ -277,10 +288,11 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
                           onPressed: () {
                             _zoom = (_zoom - 1).clamp(1, 20);
                             final c = _calculateCenter();
-                            if (_mapController != null)
+                            if (_mapController != null) {
                               _mapController!.animateCamera(
                                 gmaps.CameraUpdate.newLatLngZoom(c, _zoom),
                               );
+                            }
                           },
                         ),
                       ],

@@ -20,7 +20,6 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
   String? _selectedCompanyId;
 
   List<Map<String, dynamic>> _empresas = [];
-  bool _isLoadingEmpresas = true;
   bool _isCreating = false;
 
   @override
@@ -41,12 +40,8 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
   Future<void> _loadEmpresas() async {
     try {
       final empresas = await SupabaseService.instance.getEmpresas();
-      setState(() {
-        _empresas = empresas;
-        _isLoadingEmpresas = false;
-      });
+      if (mounted) setState(() => _empresas = empresas);
     } catch (e) {
-      setState(() => _isLoadingEmpresas = false);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -259,7 +254,7 @@ class _CreacionAdmisState extends State<CreacionAdmis> {
 
                               // Empresa selector
                               DropdownButtonFormField<String>(
-                                value: _selectedCompanyId,
+                                initialValue: _selectedCompanyId,
                                 onChanged: _isCreating
                                     ? null
                                     : (v) async {

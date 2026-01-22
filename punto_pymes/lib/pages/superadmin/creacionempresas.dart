@@ -194,6 +194,8 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
       return;
     }
 
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isCreating = true);
 
     String? finalFilePath;
@@ -290,7 +292,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               'Empresa creada exitosamente\nCódigo de acceso: $codigoAcceso',
@@ -301,7 +303,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         );
       }
 
-      if (mounted && Navigator.canPop(context)) Navigator.of(context).pop(true);
+      if (mounted && navigator.canPop()) navigator.pop(true);
     } catch (e) {
       try {
         if (movedToFinal && finalFilePath != null) {
@@ -312,7 +314,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
         }
       } catch (_) {}
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Error al crear empresa: $e'),
             backgroundColor: Colors.red,
@@ -418,7 +420,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
               markers.add(
                 gmaps.Marker(
                   markerId: gmaps.MarkerId(
-                    '${picked.latitude}_${picked.longitude}',
+                    '\${picked.latitude}_\${picked.longitude}',
                   ),
                   position: gmaps.LatLng(picked.latitude, picked.longitude),
                   draggable: true,
@@ -429,7 +431,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                       markers.add(
                         gmaps.Marker(
                           markerId: gmaps.MarkerId(
-                            '${newPos.latitude}_${newPos.longitude}',
+                            '\${newPos.latitude}_\${newPos.longitude}',
                           ),
                           position: gmaps.LatLng(
                             newPos.latitude,
@@ -557,7 +559,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                         markers.add(
                                           gmaps.Marker(
                                             markerId: gmaps.MarkerId(
-                                              '${lat}_${lon}',
+                                              '\${lat}_\${lon}',
                                             ),
                                             position: gmaps.LatLng(lat, lon),
                                             draggable: true,
@@ -571,7 +573,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                                 markers.add(
                                                   gmaps.Marker(
                                                     markerId: gmaps.MarkerId(
-                                                      '${newPos.latitude}_${newPos.longitude}',
+                                                      '\${newPos.latitude}_\${newPos.longitude}',
                                                     ),
                                                     position: gmaps.LatLng(
                                                       newPos.latitude,
@@ -639,7 +641,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                   markers.add(
                                     gmaps.Marker(
                                       markerId: gmaps.MarkerId(
-                                        '${pos.latitude}_${pos.longitude}',
+                                        '\${pos.latitude}_\${pos.longitude}',
                                       ),
                                       position: gmaps.LatLng(
                                         pos.latitude,
@@ -656,7 +658,7 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
                                           markers.add(
                                             gmaps.Marker(
                                               markerId: gmaps.MarkerId(
-                                                '${newPos.latitude}_${newPos.longitude}',
+                                                '\${newPos.latitude}_\${newPos.longitude}',
                                               ),
                                               position: gmaps.LatLng(
                                                 newPos.latitude,
@@ -823,6 +825,10 @@ class _CreacionEmpresasState extends State<CreacionEmpresas> {
     );
 
     if (result != null) {
+      if (!mounted) {
+        _modalGoogleMapController = null;
+        return;
+      }
       setState(() {
         _selectedLocation = result;
         _latitudController.text = result.latitude.toString();

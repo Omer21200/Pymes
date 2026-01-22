@@ -3,7 +3,6 @@ import '../../service/supabase_service.dart';
 import '../../theme.dart';
 import 'widgets/empleado_stats_card.dart';
 import 'widgets/empleado_quick_access.dart';
-import 'widgets/empleado_news_section.dart';
 import 'widgets/news_carousel.dart';
 import '../../widgets/company_map_preview.dart';
 
