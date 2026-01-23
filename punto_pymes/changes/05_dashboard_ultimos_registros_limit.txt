@@ -1,0 +1,14 @@
+Cambio: Dashboard Admin — 'Últimos Registros' limitado
+
+Qué modifiqué:
+- Limitación visual y de datos de la sección "Últimos Registros" para mostrar hasta 4 (o 5 en fallbacks) registros.
+
+Archivos afectados:
+- `lib/pages/admin_empresa/widgets/admin_dashboard_view.dart`
+
+Detalles técnicos:
+- Aplicado `limit`/`take` en la lista que renderiza, y mensaje alternativo "Sin registros hoy".
+- Mejora para evitar sobrecarga visual y mantener consistencia con diseño móvil.
+
+Notas:
+- Cambios en la UI y en cómo se seleccionan los datos para mostrar.

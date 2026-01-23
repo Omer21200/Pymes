@@ -1,0 +1,15 @@
+Cambio: Dashboard Admin Empresa — 'Últimos Registros' visual y límite
+
+Qué modifiqué:
+- Limitación y comportamiento de la sección "Últimos Registros" para admins de empresa.
+
+Archivos afectados:
+- `lib/pages/admin_empresa/widgets/admin_dashboard_view.dart`
+
+Detalles técnicos:
+- Limité la lista que se muestra a 4 entradas (o 5 en fallbacks internos), y ajusté el mensaje cuando está vacía: "Sin registros hoy".
+- Implementé lógica para mostrar un pequeño resumen (nombre, hora y estado) por entrada.
+- Mejor manejo de overflow y wrapping en la tarjeta de registros.
+
+Notas:
+- Mejora UX y rendimiento visual en el dashboard del admin de empresa.

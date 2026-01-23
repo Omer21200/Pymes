@@ -86,6 +86,7 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
+        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

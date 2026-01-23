@@ -1,0 +1,13 @@
+Cambio: AccessHeader — Restauración
+
+Qué modifiqué:
+- Restauré el comportamiento/estilo de `AccessHeader` según lo solicitaste (revert o ajuste puntual en su widget).
+
+Archivos afectados:
+- `lib/widgets/access_header.dart` (o equivalente en el proyecto)
+
+Detalles técnicos:
+- Reapliqué los estilos previos, devolviendo cualquier cambio visual no deseado.
+
+Notas:
+- A petición del usuario; asegura consistencia con la versión anterior del header.

@@ -1,0 +1,13 @@
+Cambio: Log `currentUser.id` (Admin Empresa)
+
+Qué modifiqué:
+- Añadí un `developer.log` en `getUltimosRegistros()` que imprime `currentUser.id` para ayudar a emparejar la sesión actual del app con la fila `empleado` correspondiente.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Permite detectar mismatches entre el usuario autenticado y el `empleado_id` que contiene asistencias.
+
+Notas:
+- Solo es trazado; no altera comportamiento de negocio.

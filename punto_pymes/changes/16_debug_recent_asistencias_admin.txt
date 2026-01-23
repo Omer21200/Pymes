@@ -1,0 +1,14 @@
+Cambio: Diagnóstico adicional (Admin Empresa) — consulta reciente sin fecha
+
+Qué modifiqué:
+- Añadí en `getUltimosRegistros()` una consulta diagnóstica que, si no hay asistencias para la fecha solicitada, busca asistencias recientes SIN filtro `fecha` para los `empleado_id` encontrados.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Consulta limitada a 10 filas ordenadas por `fecha` y `hora_entrada` descendente.
+- Logs: `Debug recent asistencias count/preview` para facilitar diagnóstico cuando el RPC o la fecha no coincidan con los datos.
+
+Notas:
+- Útil para confirmar si las asistencias existen pero en otra fecha o asociadas a otro `empleado_id`.

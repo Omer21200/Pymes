@@ -1,0 +1,15 @@
+Cambio: UI — `SafeArea(top:false)` y ajustes menores (Admin Empresa)
+
+Qué modifiqué:
+- Aplicación de `SafeArea(top: false)` en headers y ajustes visuales para que la zona de color llegue al top.
+
+Archivos (ejemplos):
+- `lib/pages/admin_empresa/widgets/*_header.dart`
+- `lib/pages/admin_empresa/widgets/admin_dashboard_view.dart`
+
+Detalles técnicos:
+- Asegura que los headers luminosos/coloreados ocupen el área del status bar.
+- Añadido `AnnotatedRegion<SystemUiOverlayStyle>` donde aplicable para mejorar contraste.
+
+Notas:
+- Cambios visuales; revisar en iOS para asegurar consistencia con notch/notch-safe areas.

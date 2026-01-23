@@ -1,0 +1,14 @@
+Cambio: Diagnóstico adicional en `getUltimosRegistros()` — consulta reciente sin fecha
+
+Qué modifiqué:
+- Añadí una consulta diagnóstica que, cuando no hay asistencias para la fecha consultada, realiza otra consulta sin filtro `fecha` para comprobar si existen filas de asistencias para los `empleado_id` encontrados.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Consulta limitada a 10 filas ordenadas por `fecha` y `hora_entrada` descendente.
+- Logueo del conteo y previsualización (`Debug recent asistencias count/preview`).
+
+Notas:
+- Esto ayudó a confirmar que las asistencias sí pueden existir, pero asociadas a distinto `empleado_id` o fecha diferente.

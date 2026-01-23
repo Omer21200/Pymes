@@ -1,0 +1,14 @@
+Cambios: SafeArea, pequeños ajustes UI y notas misc
+
+Qué modifiqué:
+- Aplicación general de `SafeArea(top: false)` en encabezados para que la zona coloreada llegue al top.
+- Ajustes de `AnnotatedRegion<SystemUiOverlayStyle>` para el status bar.
+- Correcciones menores en layout, tamaños de botones y tarjetas para mejor presentación en móvil.
+
+Archivos (ejemplos):
+- `lib/pages/*/widgets/*_header.dart`
+- `lib/pages/admin_empresa/widgets/admin_dashboard_view.dart`
+- Varios widgets en `lib/widgets/`.
+
+Notas:
+- Cambios visuales que no tocan lógica de datos; pueden requerir revisión puntual en iOS/Android si hay diferencias de status bar.

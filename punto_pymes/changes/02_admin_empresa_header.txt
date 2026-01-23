@@ -1,0 +1,14 @@
+Cambio: Admin Empresa — Header visual
+
+Qué modifiqué:
+- Apliqué el patrón visual de `EmpleadoHeader` a la vista de Admin Empresa para mantener consistencia con Superadmin/Empleado.
+
+Archivos afectados (ejemplos):
+- `lib/pages/admin_empresa/...` (widgets de header y vistas donde aparece la cabecera)
+
+Detalles técnicos:
+- Uso de `SafeArea(top: false)` y `AnnotatedRegion<SystemUiOverlayStyle)`
+- Ajustes de gradient/background y altura del header.
+
+Notas:
+- Visual/UX; no cambia la autorización ni la carga de datos.

@@ -1,0 +1,15 @@
+Cambio: Superadmin — Header visual
+
+Qué modifiqué:
+- Hice que la zona roja de la cabecera llegue hasta el borde superior (comportamiento visual igual que `EmpleadoHeader`).
+
+Archivos afectados (ejemplos):
+- `lib/pages/superadmin/widgets/superadmin_header.dart` (ajustes de padding y decoración)
+- Varias vistas donde se usa el header: se aplicó `SafeArea(top: false)` y `AnnotatedRegion<SystemUiOverlayStyle>`.
+
+Detalles técnicos:
+- Se eliminó el padding superior impuesto por `SafeArea` (top) en las cabeceras.
+- Se ajustó la decoración/gradiente para que el color de fondo cubra el status bar.
+
+Notas:
+- Cambios puramente visuales; no altera lógica de negocio.

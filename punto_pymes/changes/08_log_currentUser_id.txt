@@ -1,0 +1,14 @@
+Cambio: Log `currentUser.id` en `getUltimosRegistros()`
+
+Qué modifiqué:
+- Añadí un `developer.log` para imprimir el `currentUser.id` dentro de `getUltimosRegistros()`.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Permite mapear la sesión actual del cliente con la fila `empleado` que debería corresponder.
+- Ayudó a identificar que el usuario autenticado (`b598b290-...`) no coincidía con el `empleado_id` que tenía asistencias (`fb781631-...`).
+
+Notas:
+- Cambios de trazado; no afecta comportamiento del negocio.

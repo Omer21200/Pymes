@@ -1,0 +1,11 @@
+Cambio: Uso de `getEcuadorTime()` para Admin Empresa
+
+Qué modifiqué:
+- La función `getEcuadorTime()` (en `lib/service/supabase_service.dart`) ahora es preferida por `getUltimosRegistros()` para calcular la fecha del día en zona Ecuador.
+
+Detalles técnicos:
+- Intento de RPC `get_ecuador_time` primero; si falla fallback a APIs externas y finalmente a `DateTime.now()`.
+- Convertido a UTC internamente y usado para derivar `fecha` en formato YYYY-MM-DD (UTC-5 para Ecuador).
+
+Notas:
+- Asegura que la fecha usada para filtrar asistencias coincida con la lógica usada en `registrarAsistencia()`.

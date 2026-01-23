@@ -153,19 +153,21 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                   child: Text(
                     label,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
+            SelectableText(
               value ?? 'No registrado',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
+                fontSize: 14,
               ),
-              overflow: TextOverflow.ellipsis,
+              maxLines: 3,
+              showCursor: true,
+              toolbarOptions: ToolbarOptions(copy: true, selectAll: true),
             ),
           ],
         ),
@@ -429,8 +431,12 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final spacing = 8.0;
+                          final cols = constraints.maxWidth > 700
+                              ? 3
+                              : (constraints.maxWidth > 420 ? 2 : 1);
                           final cardWidth =
-                              (constraints.maxWidth - spacing * 2) / 3;
+                              (constraints.maxWidth - spacing * (cols - 1)) /
+                              cols;
                           return Wrap(
                             spacing: spacing,
                             runSpacing: 8.0,

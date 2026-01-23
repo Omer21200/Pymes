@@ -1,0 +1,17 @@
+Cambio: `getEcuadorTime()` — RPC preferida y fallback robusto
+
+Qué modifiqué:
+- Prioricé la RPC `get_ecuador_time` en Supabase para obtener la hora del servidor en zona `America/Guayaquil`.
+- Añadí parsing robusto para distintas formas de retorno (String, Map, List).
+- Si la RPC falla, intento proveedores externos (`worldtimeapi.org`, `timeapi.io`) con reintentos y backoff.
+- Si todo falla, devuelvo `DateTime.now()` y lo registro.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Convierte la hora recibida a UTC internamente.
+- Usada por `registrarAsistencia()` y por la lógica de `getUltimosRegistros()` para calcular la fecha (`today`) en hora de Ecuador.
+
+Notas:
+- Mejor consistencia temporal entre cliente y lógica de negocio en DB.

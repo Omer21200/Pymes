@@ -65,6 +65,7 @@ class _AdminEmpresaPageState extends State<AdminEmpresaPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F8),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             AdminEmpresaHeader(

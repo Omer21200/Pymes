@@ -117,7 +117,45 @@ class SupabaseService {
   // ==================== HORA DE ECUADOR (LOJA) ====================
   /// Obtiene la hora actual de Ecuador desde worldtimeapi.org
   Future<DateTime> getEcuadorTime() async {
-    // Try multiple providers with simple retry/backoff; fallback to local time.
+    // Prefer RPC on Supabase that returns DB server time in America/Guayaquil.
+    try {
+      await ensureSessionValid();
+      final rpcResult = await client
+          .rpc('get_ecuador_time')
+          .timeout(const Duration(seconds: 5));
+
+      DateTime? parsed;
+      if (rpcResult == null) {
+        parsed = null;
+      } else if (rpcResult is String) {
+        parsed = DateTime.tryParse(rpcResult);
+      } else if (rpcResult is Map) {
+        final firstVal = rpcResult.values.first;
+        parsed = DateTime.tryParse(firstVal?.toString() ?? '');
+      } else if (rpcResult is List && rpcResult.isNotEmpty) {
+        final first = rpcResult.first;
+        if (first is Map) {
+          final val = first.values.first;
+          parsed = DateTime.tryParse(val?.toString() ?? '');
+        } else {
+          parsed = DateTime.tryParse(first.toString());
+        }
+      }
+
+      if (parsed != null) {
+        // Assume DB returned local Ecuador time; convert to UTC for internal use.
+        final utc = parsed.toUtc();
+        developer.log(
+          '✓ Hora Ecuador (RPC): ${utc.toIso8601String()}',
+          name: 'SupabaseService',
+        );
+        return utc;
+      }
+    } catch (e) {
+      developer.log('RPC get_ecuador_time failed: $e', name: 'SupabaseService');
+    }
+
+    // If RPC failed or returned nothing, fall back to external providers with retry/backoff.
     final uris = [
       Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'),
       Uri.parse(
@@ -137,7 +175,6 @@ class SupabaseService {
             if (uri.host.contains('worldtimeapi')) {
               datetimeStr = data['datetime'] as String?;
             } else if (uri.host.contains('timeapi.io')) {
-              // timeapi.io returns 'dateTime' in ISO format
               datetimeStr =
                   data['dateTime'] as String? ?? data['date_time'] as String?;
             }
@@ -149,21 +186,16 @@ class SupabaseService {
                   name: 'SupabaseService',
                 );
                 return dt;
-              } catch (_) {
-                // ignore parse errors and try next provider/attempt
-              }
+              } catch (_) {}
             }
           }
         } catch (_) {
-          // ignore individual attempt errors to avoid noisy logs; backoff then retry
-          if (attempt < 2) {
+          if (attempt < 2)
             await Future.delayed(Duration(milliseconds: 300 * (1 << attempt)));
-          }
         }
       }
     }
 
-    // All providers failed — return local time as fallback
     developer.log(
       '⚠️ No se pudo obtener hora remota, usando hora local',
       name: 'SupabaseService',
@@ -1307,30 +1339,169 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> getUltimosRegistros() async {
     try {
       final empresaId = await _getEmpresaIdSeguro(); // Usamos el método seguro
+      developer.log(
+        'getUltimosRegistros: empresaId=$empresaId',
+        name: 'SupabaseService',
+      );
+      try {
+        final uid = client.auth.currentUser?.id;
+        developer.log(
+          'getUltimosRegistros: currentUser.id=$uid',
+          name: 'SupabaseService',
+        );
+      } catch (_) {}
 
+      // Compute 'today' using Ecuador time (consistent with registrarAsistencia)
+      DateTime nowForList =
+          EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+      final ecuadorTimeForList = nowForList.toUtc().subtract(
+        const Duration(hours: 5),
+      );
+      final todayForList = ecuadorTimeForList
+          .toIso8601String()
+          .split('T')
+          .first;
+
+      developer.log(
+        'Using todayForList=$todayForList',
+        name: 'SupabaseService',
+      );
       final response = await client.rpc(
         'get_asistencias_con_estado',
         params: {
           'p_empresa_id': empresaId,
-          'p_fecha_desde': DateTime.now().toIso8601String().split('T').first,
-          'p_fecha_hasta': DateTime.now().toIso8601String().split('T').first,
+          'p_fecha_desde': todayForList,
+          'p_fecha_hasta': todayForList,
         },
+      );
+
+      developer.log(
+        'get_asistencias_con_estado RPC response type=${response.runtimeType}',
+        name: 'SupabaseService',
+      );
+      developer.log(
+        'get_asistencias_con_estado RPC response preview=${response is List ? (response as List).take(3).toList() : response}',
+        name: 'SupabaseService',
       );
 
       // Si RPC retorna null o vacío, manejamos
       if (response is! List || (response).isEmpty) {
         // Fallback: consultar directamente la tabla `asistencias` y enriquecer con empleado/departamento
         try {
+          // The `asistencias` table may not have `empresa_id`. Instead fetch
+          // empleados for the company and query asistencias by empleado_id.
           final empresaId = await _getEmpresaIdSeguro();
-          final today = DateTime.now().toIso8601String().split('T').first;
-          final asistencias = await client
-              .from('asistencias')
-              .select()
-              .eq('empresa_id', empresaId)
-              .eq('fecha', today)
-              .order('hora_entrada', ascending: false)
-              .limit(5);
-          if (asistencias is! List || asistencias.isEmpty) return [];
+          final today = todayForList;
+
+          final empleadosResp = await client
+              .from('empleados')
+              .select('id')
+              .eq('empresa_id', empresaId);
+          final empleadoIds = <String>[];
+          if (empleadosResp is List && empleadosResp.isNotEmpty) {
+            for (final e in empleadosResp) {
+              try {
+                final id = (e is Map && e['id'] != null)
+                    ? e['id'].toString()
+                    : null;
+                if (id != null) empleadoIds.add(id);
+              } catch (_) {}
+            }
+          }
+
+          developer.log(
+            'Fallback: found ${empleadoIds.length} empleados for empresa',
+            name: 'SupabaseService',
+          );
+          if (empleadoIds.isEmpty) return [];
+
+          // If there's only one empleado, query with .eq which is simpler and avoids
+          // PostgREST 'in' string formatting issues. For multiple empleados use
+          // an OR expression supported by PostgREST.
+          dynamic asistencias;
+          if (empleadoIds.length == 1) {
+            developer.log(
+              'Fallback querying asistencias for empleado_id=${empleadoIds.first} and fecha=$today',
+              name: 'SupabaseService',
+            );
+            asistencias = await client
+                .from('asistencias')
+                .select()
+                .eq('empleado_id', empleadoIds.first)
+                .eq('fecha', today)
+                .order('hora_entrada', ascending: false)
+                .limit(5);
+          } else {
+            final orCond = empleadoIds
+                .map((id) => 'empleado_id.eq.$id')
+                .join(',');
+            developer.log(
+              'Fallback will query asistencias using OR: $orCond and fecha=$today',
+              name: 'SupabaseService',
+            );
+            asistencias = await client
+                .from('asistencias')
+                .select()
+                .or(orCond)
+                .eq('fecha', today)
+                .order('hora_entrada', ascending: false)
+                .limit(5);
+          }
+
+          developer.log(
+            'Fallback asistencias count=${asistencias is List ? (asistencias as List).length : 0}',
+            name: 'SupabaseService',
+          );
+          developer.log(
+            'Fallback asistencias preview=${asistencias is List ? (asistencias as List).take(3).toList() : asistencias}',
+            name: 'SupabaseService',
+          );
+
+          // If none found for today, perform a diagnostic query (no fecha filter)
+          // to check whether the empleado(s) have any recent asistencias at all.
+          if (asistencias is List && asistencias.isEmpty) {
+            try {
+              developer.log(
+                'Debug: no asistencias for today, querying recent asistencias without fecha filter',
+                name: 'SupabaseService',
+              );
+              dynamic recent;
+              if (empleadoIds.length == 1) {
+                recent = await client
+                    .from('asistencias')
+                    .select()
+                    .eq('empleado_id', empleadoIds.first)
+                    .order('fecha', ascending: false)
+                    .order('hora_entrada', ascending: false)
+                    .limit(10);
+              } else {
+                final orAll = empleadoIds
+                    .map((id) => 'empleado_id.eq.$id')
+                    .join(',');
+                recent = await client
+                    .from('asistencias')
+                    .select()
+                    .or(orAll)
+                    .order('fecha', ascending: false)
+                    .order('hora_entrada', ascending: false)
+                    .limit(10);
+              }
+              developer.log(
+                'Debug recent asistencias count=${recent is List ? (recent as List).length : 0}',
+                name: 'SupabaseService',
+              );
+              developer.log(
+                'Debug recent asistencias preview=${recent is List ? (recent as List).take(5).toList() : recent}',
+                name: 'SupabaseService',
+              );
+            } catch (dbgErr) {
+              developer.log(
+                'Debug recent asistencias query error: $dbgErr',
+                name: 'SupabaseService',
+              );
+            }
+            return [];
+          }
           final asistenciasList = asistencias;
 
           final List<Map<String, dynamic>> lista = [];
@@ -1370,7 +1541,7 @@ class SupabaseService {
             lista.add({
               'empleado_nombre': empleadoNombre,
               'hora_entrada': row['hora_entrada']?.toString(),
-              'estado_entrada': row['estado_entrada']?.toString(),
+              'estado': row['estado']?.toString(),
               'departamento': departamentoNombre,
             });
           }
@@ -1392,10 +1563,438 @@ class SupabaseService {
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
       // Opcional: ordenar por hora entrada desc
+      developer.log(
+        'getUltimosRegistros: lista length=${lista.length}',
+        name: 'SupabaseService',
+      );
+      developer.log(
+        'getUltimosRegistros preview=${lista.take(3).toList()}',
+        name: 'SupabaseService',
+      );
+
+      if (lista.isEmpty) {
+        // Debug fallback: try to return last 5 asistencias globally (no empresa filter)
+        try {
+          developer.log(
+            'getUltimosRegistros: lista empty, attempting global fallback',
+            name: 'SupabaseService',
+          );
+          final globalAsistencias = await client
+              .from('asistencias')
+              .select()
+              .order('fecha', ascending: false)
+              .order('hora_entrada', ascending: false)
+              .limit(5);
+          developer.log(
+            'Global fallback asistencias count=${globalAsistencias is List ? (globalAsistencias as List).length : 0}',
+            name: 'SupabaseService',
+          );
+          if (globalAsistencias is List && globalAsistencias.isNotEmpty) {
+            final List<Map<String, dynamic>> globalLista = [];
+            for (final a in globalAsistencias) {
+              final Map<String, dynamic> row = Map<String, dynamic>.from(a);
+              final empleadoId = row['empleado_id']?.toString();
+              String empleadoNombre = 'N/A';
+              String departamentoNombre = 'Sin departamento';
+              if (empleadoId != null) {
+                final empleado = await client
+                    .from('empleados')
+                    .select('nombres,apellidos,departamento_id')
+                    .eq('id', empleadoId)
+                    .maybeSingle();
+                if (empleado != null) {
+                  final noms = empleado['nombres']?.toString() ?? '';
+                  final apes = empleado['apellidos']?.toString() ?? '';
+                  empleadoNombre = [
+                    noms,
+                    apes,
+                  ].where((s) => s.isNotEmpty).join(' ').trim();
+                  final depId = empleado['departamento_id']?.toString();
+                  if (depId != null) {
+                    final dep = await client
+                        .from('departamentos')
+                        .select('nombre')
+                        .eq('id', depId)
+                        .maybeSingle();
+                    if (dep != null) {
+                      departamentoNombre =
+                          dep['nombre']?.toString() ?? departamentoNombre;
+                    }
+                  }
+                }
+              }
+              globalLista.add({
+                'empleado_nombre': empleadoNombre,
+                'hora_entrada': row['hora_entrada']?.toString(),
+                'estado': row['estado']?.toString(),
+                'departamento': departamentoNombre,
+              });
+            }
+            developer.log(
+              'Returning global fallback lista length=${globalLista.length}',
+              name: 'SupabaseService',
+            );
+            return globalLista;
+          }
+        } catch (globalErr) {
+          developer.log(
+            'Global fallback error: $globalErr',
+            name: 'SupabaseService',
+          );
+        }
+      }
+
       return lista.take(5).toList();
     } catch (e) {
       developer.log(
         'Error en getUltimosRegistros: $e',
+        name: 'SupabaseService',
+      );
+      return [];
+    }
+  }
+
+  /// Obtiene los últimos registros de asistencia para un empleado específico.
+  /// Devuelve hasta `limite` filas ordenadas por fecha/hora descendente y
+  /// ya normalizadas a `List<Map<String, dynamic>>` con campos:
+  /// `empleado_nombre`, `hora_entrada`, `estado`, `departamento`.
+  Future<List<Map<String, dynamic>>> getUltimosRegistrosPorEmpleado(
+    String empleadoId, {
+    int limite = 4,
+  }) async {
+    try {
+      await ensureSessionValid();
+      final resp = await client
+          .from('asistencias')
+          .select()
+          .eq('empleado_id', empleadoId)
+          .order('fecha', ascending: false)
+          .order('hora_entrada', ascending: false)
+          .limit(limite);
+
+      if (resp is! List || resp.isEmpty) return [];
+      final asistencias = (resp)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      // Fetch empleado name and departamento once
+      String empleadoNombre = 'N/A';
+      String departamentoNombre = 'Sin departamento';
+      try {
+        final empleado = await client
+            .from('empleados')
+            .select('nombres,apellidos,departamento_id')
+            .eq('id', empleadoId)
+            .maybeSingle();
+        if (empleado != null) {
+          final noms = empleado['nombres']?.toString() ?? '';
+          final apes = empleado['apellidos']?.toString() ?? '';
+          empleadoNombre = [
+            noms,
+            apes,
+          ].where((s) => s.isNotEmpty).join(' ').trim();
+          final depId = empleado['departamento_id']?.toString();
+          if (depId != null) {
+            final dep = await client
+                .from('departamentos')
+                .select('nombre')
+                .eq('id', depId)
+                .maybeSingle();
+            if (dep != null)
+              departamentoNombre =
+                  dep['nombre']?.toString() ?? departamentoNombre;
+          }
+        }
+      } catch (_) {}
+
+      final List<Map<String, dynamic>> lista = [];
+      for (final a in asistencias) {
+        final Map<String, dynamic> row = Map<String, dynamic>.from(a);
+        lista.add({
+          'empleado_nombre': empleadoNombre,
+          'hora_entrada': row['hora_entrada']?.toString(),
+          'estado': row['estado']?.toString(),
+          'departamento': departamentoNombre,
+        });
+      }
+
+      return lista;
+    } catch (e) {
+      developer.log(
+        'Error en getUltimosRegistrosPorEmpleado: $e',
+        name: 'SupabaseService',
+      );
+      return [];
+    }
+  }
+
+  /// Obtiene los últimos registros de asistencia para la empresa del usuario
+  /// autenticado. Internamente obtiene el `empresaId` seguro y devuelve hasta
+  /// `limite` filas ordenadas por fecha/hora descendente, normalizadas.
+  Future<List<Map<String, dynamic>>> getUltimosRegistrosEmpresa({
+    int limite = 4,
+  }) async {
+    try {
+      final empresaId = await _getEmpresaIdSeguro();
+      // Obtener empleados de la empresa
+      final empleadosResp = await client
+          .from('empleados')
+          .select('id')
+          .eq('empresa_id', empresaId);
+      final empleadoIds = <String>[];
+      if (empleadosResp is List && empleadosResp.isNotEmpty) {
+        for (final e in empleadosResp) {
+          try {
+            final id = (e is Map && e['id'] != null)
+                ? e['id'].toString()
+                : null;
+            if (id != null) empleadoIds.add(id);
+          } catch (_) {}
+        }
+      }
+
+      developer.log(
+        'getUltimosRegistrosEmpresa: empresaId=$empresaId, empleadoCount=${empleadoIds.length}',
+        name: 'SupabaseService',
+      );
+
+      if (empleadoIds.isEmpty) return [];
+
+      dynamic asistencias;
+      if (empleadoIds.length == 1) {
+        asistencias = await client
+            .from('asistencias')
+            .select()
+            .eq('empleado_id', empleadoIds.first)
+            .order('fecha', ascending: false)
+            .order('hora_entrada', ascending: false)
+            .limit(limite);
+        developer.log(
+          'getUltimosRegistrosEmpresa: querying asistencias for empleado_id=${empleadoIds.first} limit=$limite',
+          name: 'SupabaseService',
+        );
+      } else {
+        final orCond = empleadoIds.map((id) => 'empleado_id.eq.$id').join(',');
+        developer.log(
+          'getUltimosRegistrosEmpresa: querying asistencias with OR: $orCond limit=$limite',
+          name: 'SupabaseService',
+        );
+        asistencias = await client
+            .from('asistencias')
+            .select()
+            .or(orCond)
+            .order('fecha', ascending: false)
+            .order('hora_entrada', ascending: false)
+            .limit(limite);
+      }
+
+      developer.log(
+        'getUltimosRegistrosEmpresa: asistencias response type=${asistencias.runtimeType}',
+        name: 'SupabaseService',
+      );
+      developer.log(
+        'getUltimosRegistrosEmpresa: asistencias preview=${asistencias is List ? (asistencias as List).take(3).toList() : asistencias}',
+        name: 'SupabaseService',
+      );
+
+      if (asistencias is! List || asistencias.isEmpty) return [];
+      final asistenciasList = (asistencias)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      final List<Map<String, dynamic>> lista = [];
+      for (final a in asistenciasList) {
+        final row = Map<String, dynamic>.from(a);
+        final empleadoId = row['empleado_id']?.toString();
+        String empleadoNombre = 'N/A';
+        String departamentoNombre = 'Sin departamento';
+        if (empleadoId != null) {
+          try {
+            final empleado = await client
+                .from('empleados')
+                .select('nombres,apellidos,departamento_id')
+                .eq('id', empleadoId)
+                .maybeSingle();
+            if (empleado != null) {
+              final noms = empleado['nombres']?.toString() ?? '';
+              final apes = empleado['apellidos']?.toString() ?? '';
+              empleadoNombre = [
+                noms,
+                apes,
+              ].where((s) => s.isNotEmpty).join(' ').trim();
+              final depId = empleado['departamento_id']?.toString();
+              if (depId != null) {
+                final dep = await client
+                    .from('departamentos')
+                    .select('nombre')
+                    .eq('id', depId)
+                    .maybeSingle();
+                if (dep != null)
+                  departamentoNombre =
+                      dep['nombre']?.toString() ?? departamentoNombre;
+              }
+            }
+          } catch (_) {}
+        }
+
+        lista.add({
+          'empleado_nombre': empleadoNombre,
+          'hora_entrada': row['hora_entrada']?.toString(),
+          'estado': row['estado']?.toString(),
+          'departamento': departamentoNombre,
+        });
+      }
+
+      return lista;
+    } catch (e) {
+      developer.log(
+        'Error en getUltimosRegistrosEmpresa: $e',
+        name: 'SupabaseService',
+      );
+      return [];
+    }
+  }
+
+  /// Obtiene los registros de asistencias de la empresa del usuario autenticado.
+  /// Permite filtrar por rango de fechas `desde` / `hasta`. Si no se proveen,
+  /// devuelve hasta `limit` filas más recientes.
+  Future<List<Map<String, dynamic>>> getRegistrosEmpresa({
+    DateTime? desde,
+    DateTime? hasta,
+    int limit = 200,
+    int offset = 0,
+  }) async {
+    try {
+      final empresaId = await _getEmpresaIdSeguro();
+      developer.log(
+        'getRegistrosEmpresa: empresaId=$empresaId',
+        name: 'SupabaseService',
+      );
+
+      // Obtener empleados de la empresa
+      final empleadosResp = await client
+          .from('empleados')
+          .select('id')
+          .eq('empresa_id', empresaId);
+      final empleadoIds = <String>[];
+      if (empleadosResp is List && empleadosResp.isNotEmpty) {
+        for (final e in empleadosResp) {
+          try {
+            final id = (e is Map && e['id'] != null)
+                ? e['id'].toString()
+                : null;
+            if (id != null) empleadoIds.add(id);
+          } catch (_) {}
+        }
+      }
+
+      developer.log(
+        'getRegistrosEmpresa: empleadoCount=${empleadoIds.length}',
+        name: 'SupabaseService',
+      );
+
+      if (empleadoIds.isEmpty) return [];
+
+      // Construir consulta base
+      final q = client
+          .from('asistencias')
+          .select(
+            'id, fecha, hora_entrada, hora_salida, estado, observacion, empleado_id, created_at',
+          );
+
+      if (empleadoIds.length == 1) {
+        q.eq('empleado_id', empleadoIds.first);
+      } else {
+        final orCond = empleadoIds.map((id) => 'empleado_id.eq.$id').join(',');
+        developer.log(
+          'getRegistrosEmpresa: orCond=$orCond',
+          name: 'SupabaseService',
+        );
+        q.or(orCond);
+      }
+
+      if (desde != null) {
+        final s = desde.toIso8601String().split('T').first;
+        q.gte('fecha', s);
+      }
+      if (hasta != null) {
+        final h = hasta.toIso8601String().split('T').first;
+        q.lte('fecha', h);
+      }
+
+      q
+          .order('fecha', ascending: false)
+          .order('hora_entrada', ascending: false);
+
+      if (limit > 0) q.limit(limit);
+      if (offset > 0) q.range(offset, offset + limit - 1);
+
+      final resp = await q;
+      developer.log(
+        'getRegistrosEmpresa: raw resp type=${resp.runtimeType}',
+        name: 'SupabaseService',
+      );
+      final rows = _listFromResponse(resp);
+      developer.log(
+        'getRegistrosEmpresa: rowsCount=${rows.length} preview=${rows.take(3).toList()}',
+        name: 'SupabaseService',
+      );
+
+      // Enriquecer con nombre de empleado y departamento
+      final List<Map<String, dynamic>> result = [];
+      for (final r in rows) {
+        final row = Map<String, dynamic>.from(r);
+        final empleadoId = row['empleado_id']?.toString();
+        String empleadoNombre = 'N/A';
+        String departamentoNombre = 'Sin departamento';
+        if (empleadoId != null) {
+          try {
+            final empleado = await client
+                .from('empleados')
+                .select('nombres,apellidos,departamento_id')
+                .eq('id', empleadoId)
+                .maybeSingle();
+            if (empleado != null) {
+              final noms = empleado['nombres']?.toString() ?? '';
+              final apes = empleado['apellidos']?.toString() ?? '';
+              final full = [
+                noms,
+                apes,
+              ].where((s) => s.isNotEmpty).join(' ').trim();
+              if (full.isNotEmpty) empleadoNombre = full;
+              final depId = empleado['departamento_id']?.toString();
+              if (depId != null) {
+                final dep = await client
+                    .from('departamentos')
+                    .select('nombre')
+                    .eq('id', depId)
+                    .maybeSingle();
+                if (dep != null)
+                  departamentoNombre =
+                      dep['nombre']?.toString() ?? departamentoNombre;
+              }
+            }
+          } catch (_) {}
+        }
+
+        result.add({
+          'id': row['id']?.toString(),
+          'fecha': row['fecha']?.toString(),
+          'hora_entrada': row['hora_entrada']?.toString(),
+          'hora_salida': row['hora_salida']?.toString(),
+          'estado': row['estado']?.toString(),
+          'observacion': row['observacion']?.toString(),
+          'empleado_id': empleadoId,
+          'empleado_nombre': empleadoNombre,
+          'departamento': departamentoNombre,
+          'created_at': row['created_at']?.toString(),
+        });
+      }
+
+      return result;
+    } catch (e) {
+      developer.log(
+        'Error en getRegistrosEmpresa: $e',
         name: 'SupabaseService',
       );
       return [];

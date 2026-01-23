@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../theme.dart';
 
 class AdminEmpresaHeader extends StatelessWidget {
   final String? nombreAdmin;
@@ -23,50 +25,119 @@ class AdminEmpresaHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFFD92344),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.white,
-            child: Text(
-              _getInitials(),
-              style: const TextStyle(color: Color(0xFFD92344), fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Admin ${nombreEmpresa ?? "Empresa"}',
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  nombreAdmin ?? 'Administrador',
-                  style: const TextStyle(color: Colors.white70),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 24),
-            onPressed: onLogout,
-          ),
-        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Builder(
+          builder: (context) {
+            final topInset = MediaQuery.of(context).padding.top;
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, topInset + 20, 20, 20),
+              decoration: AppDecorations.headerGradient.copyWith(
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha((0.28 * 255).round()),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Avatar: initials inside avatarContainer
+                  Container(
+                    width: AppSizes.avatar,
+                    height: AppSizes.avatar,
+                    decoration: AppDecorations.avatarContainer.copyWith(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha((0.15 * 255).round()),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Center(
+                        child: Text(
+                          _getInitials(),
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Admin ${nombreEmpresa ?? "Empresa"}',
+                          style: AppTextStyles.headline.copyWith(
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha((0.2 * 255).round()),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            nombreAdmin ?? 'Administrador',
+                            style: AppTextStyles.smallLabel.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onLogout,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha((0.15 * 255).round()),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withAlpha((0.3 * 255).round()),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.logout,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

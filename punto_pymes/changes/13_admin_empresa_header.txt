@@ -1,0 +1,15 @@
+Cambio: Admin Empresa — Header visual
+
+Qué modifiqué:
+- Hice que la cabecera de Admin Empresa use el mismo estilo visual que `EmpleadoHeader`.
+
+Archivos afectados (ejemplos):
+- `lib/pages/admin_empresa/widgets/admin_header.dart` (o archivo equivalente)
+
+Detalles técnicos:
+- Aplicado `SafeArea(top: false)` para permitir que la "zona roja" llegue al status bar.
+- Añadido `AnnotatedRegion<SystemUiOverlayStyle>` para forzar iconos del status bar legibles.
+- Ajustes de padding/altura y gradiente para mantener consistencia con Superadmin y Empleado.
+
+Notas:
+- Cambios visuales; no tocan datos ni permisos.

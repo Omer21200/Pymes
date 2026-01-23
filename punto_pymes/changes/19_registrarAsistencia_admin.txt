@@ -1,0 +1,15 @@
+Cambio: `registrarAsistencia()` — consistencia y validaciones (Admin Empresa)
+
+Qué modifiqué:
+- Aseguré que `registrarAsistencia()` use la hora de Ecuador (desde `EcuadorTimeManager` o `getEcuadorTime`) para calcular `fecha` y `hora_entrada`.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Fecha calculada como `ecuadorTime.toIso8601String().split('T').first`.
+- Inserciones y actualizaciones a `asistencias` usan `fecha` y `hora_*` con formato `HH:mm:ss`.
+- Mantiene secuencia de marcas (entrada, salida almuerzo, regreso, salida final).
+
+Notas:
+- Evita que marcas queden en fecha equivocada por diferencias de reloj; afecta directamente cómo el Admin ve las marcas del día.

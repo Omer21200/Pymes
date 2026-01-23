@@ -1,0 +1,14 @@
+Cambio: `registrarAsistencia()` — Consistencia con hora de Ecuador
+
+Qué modifiqué:
+- `registrarAsistencia()` ahora obtiene la hora desde `EcuadorTimeManager.getCurrentTime() ?? getEcuadorTime()` y calcula `fecha` usando la hora de Ecuador (UTC-5) para formar YYYY-MM-DD.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Usa la hora de Ecuador para establecer `hora_entrada`, `hora_salida`, etc., evitando discrepancias por zona horaria.
+- Mantiene el formato `HH:mm:ss` para las columnas de hora.
+
+Notas:
+- Evita que registros queden en fecha equivocada por diferencias de reloj/local time.

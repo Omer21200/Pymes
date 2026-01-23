@@ -1,0 +1,16 @@
+Cambio: Evitar errores de filtros PostgREST (UUID quoting / .in)
+
+Qué modifiqué:
+- Reemplacé intentos de usar `.in(...)` (o `.in_`) que generaban errores sintácticos/quoting por consultas seguras:
+  - Si un solo id → `.eq('empleado_id', id)`
+  - Si varios ids → `.or('empleado_id.eq.id1,empleado_id.eq.id2')`
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Construcción previa generaba `invalid input syntax for type uuid` por comillas extra en la cláusula IN.
+- `.or(...)` usa la sintaxis soportada por PostgREST para múltiples condiciones y evita problemas de parseo.
+
+Notas:
+- Mejora la estabilidad de las consultas y evita errores en tiempo de ejecución.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../service/supabase_service.dart';
+import 'admin_registros_view.dart';
 
 class AdminDashboardView extends StatefulWidget {
   const AdminDashboardView({super.key});
@@ -28,18 +29,23 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     });
 
     try {
-      // Fetch both pieces of data in parallel for efficiency
-      final results = await Future.wait([
-        SupabaseService.instance.getAdminDashboardSummary(),
-        SupabaseService.instance.getUltimosRegistros(),
-      ]);
+      // Fetch summary first
+      final summary = await SupabaseService.instance.getAdminDashboardSummary();
+
+      // Fetch the last registros for the whole company (up to 4)
+      final ultimos = await SupabaseService.instance.getUltimosRegistrosEmpresa(
+        limite: 4,
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _summary = results[0] as Map<String, dynamic>;
-        _ultimosRegistros = results[1] as List<Map<String, dynamic>>;
+        _summary = summary as Map<String, dynamic>;
+        _ultimosRegistros = ultimos;
       });
+
+      // Debug print to help trace why the card may be empty
+      debugPrint('AdminDashboardView: ultimosRegistros -> $_ultimosRegistros');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -150,7 +156,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        // Tu lógica para ver todos
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AdminRegistrosView(),
+                          ),
+                        );
                       },
                       child: const Text(
                         "Ver todos >",
@@ -197,7 +207,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           Icon(
                             Icons.assignment_outlined,
                             size: 80,
-                            color: Color(0xFFD32F2F).withAlpha((0.8 * 255).round()),
+                            color: Color(
+                              0xFFD32F2F,
+                            ).withAlpha((0.8 * 255).round()),
                           ),
                           Container(
                             padding: const EdgeInsets.all(4),
@@ -241,6 +253,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               else
                 Column(
                   children: _ultimosRegistros
+                      .take(4)
                       .map((registro) => _RecentCheckInTile(registro: registro))
                       .toList(),
                 ),
@@ -311,7 +324,7 @@ class _StatCard extends StatelessWidget {
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.white.withAlpha((0.2 * 255).round()),
                   borderRadius: BorderRadius.circular(9),
                 ),
@@ -361,7 +374,7 @@ class _RecentCheckInTile extends StatelessWidget {
       formattedTime = horaEntrada;
     }
 
-    final estado = registro['estado_entrada'] as String? ?? 'Pendiente';
+    final estado = registro['estado'] as String? ?? 'Pendiente';
 
     Color estadoColor;
     switch (estado) {

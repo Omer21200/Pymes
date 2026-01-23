@@ -210,6 +210,7 @@ class _CreacionNoticiaPageState extends State<CreacionNoticiaPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             AdminEmpresaHeader(

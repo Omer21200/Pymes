@@ -1,0 +1,13 @@
+Cambio: `getUltimosRegistros()` — comportamiento para Admin Empresa
+
+Qué modifiqué:
+- En `lib/service/supabase_service.dart` implementé la llamada RPC y un fallback directo a la tabla `asistencias` pensado para administradores de empresa.
+
+Detalles técnicos:
+- Llamada inicial a RPC: `get_asistencias_con_estado(p_empresa_id, p_fecha_desde, p_fecha_hasta)`.
+- Si RPC devuelve vacío, fallback: obtener `empleados` de la `empresa` y consultar `asistencias` por `empleado_id`.
+- Orden descendente por `hora_entrada` y `limit(5)` para devolver solo los últimos registros.
+- Normalización de la respuesta a `List<Map<String, dynamic>>` para que el dashboard la consuma directamente.
+
+Notas:
+- Esta lógica es la base usada por la vista Admin Empresa para mostrar los últimos registros del día.

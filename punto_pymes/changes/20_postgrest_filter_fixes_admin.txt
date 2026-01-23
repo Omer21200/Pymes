@@ -1,0 +1,15 @@
+Cambio: Fijar filtros PostgREST para Admin Empresa
+
+Qué modifiqué:
+- Reemplacé usos problemáticos de `.in(...)` por consultas compatibles con PostgREST cuando es necesario filtrar por múltiples `empleado_id`.
+
+Archivo:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Si un solo `empleado_id` → `.eq('empleado_id', id)`
+- Si varios → `.or('empleado_id.eq.id1,empleado_id.eq.id2')`
+- Evita errores tipo `invalid input syntax for type uuid` causados por comillas/formatos incorrectos.
+
+Notas:
+- Mejora la robustez de las consultas ejecutadas desde el cliente y evita fallos en tiempo de ejecución.

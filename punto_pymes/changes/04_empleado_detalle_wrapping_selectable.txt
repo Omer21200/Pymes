@@ -1,0 +1,14 @@
+Cambio: Detalle de Empleado — Wrapping y SelectableText
+
+Qué modifiqué:
+- Hice que campos largos en el detalle de empleado soporten wrapping y sean seleccionables (usar `SelectableText`).
+
+Archivos afectados:
+- `lib/pages/.../empleado_detalle.dart` (o `admin_detalle.dart` según la estructura)
+
+Detalles técnicos:
+- Reemplazo de `Text` por `SelectableText` en campos de dirección, observaciones y similares.
+- Ajustes de `Wrap` y `Expanded` para evitar overflow y mejorar lectura.
+
+Notas:
+- Mejora UX para copiar/seleccionar información larga.

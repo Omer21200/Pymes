@@ -159,6 +159,7 @@ class _EmpresasListState extends State<EmpresasList> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 120),
         child: Column(

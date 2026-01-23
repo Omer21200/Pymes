@@ -1,0 +1,18 @@
+Cambio: `getUltimosRegistros()` — Instrumentación y fallback
+
+Qué modifiqué:
+- Implementé trazas (`developer.log`) extensas y una lógica de fallback cuando la RPC `get_asistencias_con_estado` devuelve vacío.
+
+Archivo principal:
+- `lib/service/supabase_service.dart`
+
+Detalles técnicos:
+- Registro de `empresaId`, tipo y preview de respuesta RPC.
+- Fallback: en lugar de filtrar por `asistencias.empresa_id`, obtengo `empleados` de la empresa y consulto `asistencias` por `empleado_id`.
+- Manejo seguro de filtros PostgREST: `.eq` para 1 id o `.or('empleado_id.eq.id1,empleado_id.eq.id2')` para múltiples ids.
+- Orden y `limit(5)` aplicado para obtener los últimos registros.
+- Añadido un fallback global que intenta devolver últimas asistencias si todo falla (solo para debugging).
+
+Notas:
+- Evité construcciones que provocaban errores de UUID/quoting.
+- Esta sección fue central en la depuración de por qué no se mostraban registros.
