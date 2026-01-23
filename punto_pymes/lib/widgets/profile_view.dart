@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 // removed unused imports: foundation, gestures, math
-import 'package:geolocator/geolocator.dart';
 import '../theme.dart';
 import 'department_selector_card.dart';
 // map preview removed from profile view per user request

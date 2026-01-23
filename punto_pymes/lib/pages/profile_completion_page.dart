@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../service/supabase_service.dart';
 import '../theme.dart';
@@ -104,6 +106,20 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         direccion: direccion.isEmpty ? null : direccion,
         departamentoId: _selectedDepartamentoId,
       );
+
+      // Verificamos que quedó guardado el empleado con la cédula
+      final empleadoData = await SupabaseService.instance.getEmpleadoActual();
+      final cedulaGuardada =
+          (empleadoData?['empleado_raw'] as Map<String, dynamic>?)?['cedula']
+              as String?;
+      if (cedulaGuardada == null || cedulaGuardada.isEmpty) {
+        setState(() {
+          _error =
+              'No se pudo guardar tus datos. Intenta de nuevo o revisa conexión.';
+          _isLoading = false;
+        });
+        return;
+      }
 
       // Es crucial verificar si el widget sigue "montado" después de una operación asíncrona.
       if (!mounted) return;

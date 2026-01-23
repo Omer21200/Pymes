@@ -237,6 +237,11 @@ class _DepartamentoDetallePageState extends State<DepartamentoDetallePage> {
                                               departamentoId:
                                                   widget.departamentoId,
                                               horarioInicial: _horario,
+                                              showHeader: false,
+                                              adminNombre:
+                                                  widget.departamentoNombre,
+                                              empresaNombre: null,
+                                              onLogout: null,
                                             ),
                                           ),
                                         );

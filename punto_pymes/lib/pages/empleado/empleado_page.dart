@@ -85,7 +85,6 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
                 );
               }
               // Registro de depuración
-              print('Geolocator.getCurrentPosition error: $posErr');
             }
           } else {
             lat = null;
@@ -103,7 +102,6 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
             message: 'Error al obtener la ubicación. Se continuará sin ella.',
           );
         }
-        print('Error obteniendo ubicación: $locErr');
       }
 
       // 2) Tomar foto con cámara

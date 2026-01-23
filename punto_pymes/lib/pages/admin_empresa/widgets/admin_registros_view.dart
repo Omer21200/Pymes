@@ -43,7 +43,7 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
       );
       if (!mounted) return;
       setState(() {
-        _registros = List<Map<String, dynamic>>.from(data ?? []);
+        _registros = List<Map<String, dynamic>>.from(data);
         _loading = false;
       });
     } catch (e) {
@@ -296,21 +296,28 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, color: color),
                 const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(width: 12),
             Text(
               value.toString(),
               style: TextStyle(
@@ -327,8 +334,10 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
     return Column(
       children: [
         Row(
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Expanded(
+            Flexible(
+              fit: FlexFit.loose,
               child: pill(
                 'Total',
                 total,
@@ -338,7 +347,8 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
+            Flexible(
+              fit: FlexFit.loose,
               child: pill(
                 'A tiempo',
                 aTiempo,
@@ -351,8 +361,10 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
         ),
         const SizedBox(height: 10),
         Row(
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Expanded(
+            Flexible(
+              fit: FlexFit.loose,
               child: pill(
                 'Tarde',
                 tarde,
@@ -362,7 +374,8 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
+            Flexible(
+              fit: FlexFit.loose,
               child: pill(
                 'Otros',
                 otros,
@@ -771,26 +784,39 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.max,
                             children: [
-                              const Text(
-                                'Detalle del registro',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                              const Expanded(
+                                child: Text(
+                                  'Detalle del registro',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
                                 ),
                               ),
-                              const Spacer(),
-                              Chip(
-                                label: Text(
-                                  estado,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                backgroundColor: _estadoColor(
-                                  estado,
-                                ).withValues(alpha: 0.15),
-                                labelStyle: TextStyle(
-                                  color: _estadoColor(estado),
-                                  fontWeight: FontWeight.w700,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Chip(
+                                  label: Text(
+                                    estado,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  backgroundColor: _estadoColor(
+                                    estado,
+                                  ).withValues(alpha: 0.15),
+                                  labelStyle: TextStyle(
+                                    color: _estadoColor(estado),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
                                 ),
                               ),
                             ],
@@ -850,8 +876,12 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
                                                     'Sin observacion')
                                             ? Colors.black45
                                             : Colors.black87,
-                                        height: 1.3,
+                                        height: 1.28,
                                       ),
+                                      textHeightBehavior:
+                                          const TextHeightBehavior(
+                                            applyHeightToFirstAscent: false,
+                                          ),
                                       softWrap: true,
                                       maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
@@ -963,20 +993,6 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
     }
   }
 
-  bool _esHoy() {
-    final today = DateTime.now();
-    final hoy = DateTime(today.year, today.month, today.day);
-    return _desde != null && _hasta != null && _desde == hoy && _hasta == hoy;
-  }
-
-  bool _esRangoDias(int dias) {
-    if (_desde == null || _hasta == null) return false;
-    final end = DateTime.now();
-    final endDay = DateTime(end.year, end.month, end.day);
-    final startDay = endDay.subtract(Duration(days: dias - 1));
-    return _desde == startDay && _hasta == endDay;
-  }
-
   String _formatDate(String? iso) {
     if (iso == null || iso.isEmpty) return '--';
     try {
@@ -1024,52 +1040,6 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
       if (v is num) return v.toDouble();
       if (v is String) return double.tryParse(v.trim().replaceAll(',', '.'));
       return null;
-    }
-
-    Widget debugInfo({
-      gmaps.LatLng? emp,
-      gmaps.LatLng? comp,
-      required List<gmaps.LatLng> poly,
-      Map<String, dynamic>? registro,
-    }) {
-      String fmt(gmaps.LatLng? p) => p == null
-          ? '--'
-          : '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
-      final raw = registro != null ? jsonEncode(registro) : '--';
-      final preview = raw.length > 300 ? '${raw.substring(0, 300)}...' : raw;
-      return Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Empresa: ${fmt(comp)}',
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-            Text(
-              'Empleado: ${fmt(emp)}',
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-            Text(
-              'Polígono puntos: ${poly.length}',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'raw latitud: ${registro?['latitud'] ?? registro?['lat'] ?? '-'}',
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
-            ),
-            Text(
-              'raw longitud: ${registro?['longitud'] ?? registro?['lng'] ?? '-'}',
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
-            ),
-            Text(
-              'Registro (preview): $preview',
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
-            ),
-          ],
-        ),
-      );
     }
 
     List<gmaps.LatLng> circlePoints(
@@ -1465,10 +1435,11 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
                                   color: Theme.of(context).primaryColor,
                                 ),
                                 onPressed: () {
-                                  if (_mapController != null)
+                                  if (_mapController != null) {
                                     _mapController!.animateCamera(
                                       gmaps.CameraUpdate.zoomIn(),
                                     );
+                                  }
                                 },
                               ),
                             ),
@@ -1494,10 +1465,11 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
                                   color: Theme.of(context).primaryColor,
                                 ),
                                 onPressed: () {
-                                  if (_mapController != null)
+                                  if (_mapController != null) {
                                     _mapController!.animateCamera(
                                       gmaps.CameraUpdate.zoomOut(),
                                     );
+                                  }
                                 },
                               ),
                             ),

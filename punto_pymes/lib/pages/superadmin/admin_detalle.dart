@@ -167,6 +167,7 @@ class _AdminDetallePageState extends State<AdminDetallePage> {
               ),
               maxLines: 3,
               showCursor: true,
+              // ignore: deprecated_member_use
               toolbarOptions: ToolbarOptions(copy: true, selectAll: true),
             ),
           ],

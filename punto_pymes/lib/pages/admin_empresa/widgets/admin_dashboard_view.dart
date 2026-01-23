@@ -40,7 +40,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       if (!mounted) return;
 
       setState(() {
-        _summary = summary as Map<String, dynamic>;
+        _summary = summary;
         _ultimosRegistros = ultimos;
       });
 

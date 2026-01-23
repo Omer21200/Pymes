@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../service/supabase_service.dart';
+import '../admin_empresa/widgets/admin_empresa_header.dart';
 import 'widgets/superadmin_header.dart';
 
 class GestionHorarioPage extends StatefulWidget {
   final String departamentoId;
   final Map<String, dynamic>? horarioInicial;
+  final bool showHeader;
+  final String? adminNombre;
+  final String? empresaNombre;
+  final VoidCallback? onLogout;
 
   const GestionHorarioPage({
     super.key,
     required this.departamentoId,
     this.horarioInicial,
+    this.showHeader = true,
+    this.adminNombre,
+    this.empresaNombre,
+    this.onLogout,
   });
 
   @override
@@ -396,21 +405,59 @@ class _GestionHorarioPageState extends State<GestionHorarioPage> {
       body: SafeArea(
         child: Column(
           children: [
-            SuperadminHeader(
-              showBack: true,
-              onBack: () => Navigator.of(context).pop(),
-            ),
+            if (widget.showHeader)
+              SuperadminHeader(
+                showBack: true,
+                onBack: () => Navigator.of(context).pop(),
+              )
+            else
+              AdminEmpresaHeader(
+                nombreAdmin: widget.adminNombre ?? 'Admin Empresa',
+                nombreEmpresa: widget.empresaNombre ?? 'Empresa',
+                onLogout: widget.onLogout,
+                showBack: false,
+                onBack: null,
+              ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Configura el horario de trabajo para este departamento.',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
+                    if (!widget.showHeader)
+                      Row(
+                        children: [
+                          Material(
+                            color: const Color(0xFFE2183D),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                              tooltip: 'Regresar',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Configura el horario de trabajo para este departamento.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      const Text(
+                        'Configura el horario de trabajo para este departamento.',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
                     const SizedBox(height: 20),
 
                     // Card: Días laborables

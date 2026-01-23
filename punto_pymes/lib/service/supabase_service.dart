@@ -38,8 +38,9 @@ class SupabaseService {
     try {
       final encoded = jsonEncode(r);
       final decoded = jsonDecode(encoded);
-      if (decoded is List)
+      if (decoded is List) {
         return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
     } catch (_) {}
     return [];
   }
@@ -223,8 +224,9 @@ class SupabaseService {
             }
           }
         } catch (_) {
-          if (attempt < 2)
+          if (attempt < 2) {
             await Future.delayed(Duration(milliseconds: 300 * (1 << attempt)));
+          }
         }
       }
     }
@@ -637,9 +639,6 @@ class SupabaseService {
         .select()
         .eq('empresa_id', empresaId)
         .order('nombre', ascending: true);
-    if (response is! List) {
-      return []; // Return empty list if response is not a list
-    }
     return _listFromResponse(response);
   }
 
@@ -839,7 +838,6 @@ class SupabaseService {
         )
         .eq('empresa_id', empresaId) // Filtro explícito
         .order('fecha_publicacion', ascending: false);
-    if (response is! List) return [];
     return _listFromResponse(response);
   }
 
@@ -1121,12 +1119,50 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
 
-    final empleado = await client
+    final profile = await client
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+
+    Map<String, dynamic>? empleado = await client
         .from('empleados')
         .select()
         .eq('user_id', user.id)
         .maybeSingle();
-    if (empleado == null) throw Exception('Empleado no encontrado');
+
+    // Si el empleado no existe (caso de cuentas nuevas que no completaron el alta), lo creamos.
+    if (empleado == null) {
+      final empresaId = profile?['empresa_id'];
+      if (empresaId == null) {
+        throw Exception('Empleado no encontrado');
+      }
+
+      final baseRow = <String, dynamic>{
+        'user_id': user.id,
+        'empresa_id': empresaId,
+        'correo': user.email,
+        'nombres': profile?['nombres'],
+        'apellidos': profile?['apellidos'],
+      };
+
+      if (cedula != null) baseRow['cedula'] = cedula;
+      if (telefono != null) baseRow['telefono'] = telefono;
+      if (direccion != null) baseRow['direccion'] = direccion;
+      if (departamentoId != null) baseRow['departamento_id'] = departamentoId;
+
+      final inserted = await client
+          .from('empleados')
+          .insert(baseRow)
+          .select()
+          .maybeSingle();
+
+      if (inserted == null) {
+        throw Exception('No se pudo crear el empleado');
+      }
+
+      empleado = Map<String, dynamic>.from(inserted);
+    }
 
     final updates = <String, dynamic>{};
     if (cedula != null) updates['cedula'] = cedula;
@@ -1137,18 +1173,21 @@ class SupabaseService {
     if (updates.isEmpty) return Map<String, dynamic>.from(empleado);
 
     try {
-      final dynamic res = await client
+      // Hacemos el update sin `select()` para evitar políticas RLS que bloqueen el retorno de filas.
+      await client.from('empleados').update(updates).eq('id', empleado['id']);
+
+      // Releemos la fila para confirmar que se guardó.
+      final refreshed = await client
           .from('empleados')
-          .update(updates)
+          .select()
           .eq('id', empleado['id'])
-          .select();
-      // Postgrest suele devolver una lista de filas.
-      if (res is List) {
-        if (res.isEmpty) return null;
-        return Map<String, dynamic>.from(res.first);
+          .maybeSingle();
+
+      if (refreshed == null) {
+        throw Exception('No se actualizó el empleado');
       }
-      if (res is Map) return Map<String, dynamic>.from(res);
-      return null;
+
+      return Map<String, dynamic>.from(refreshed);
     } catch (e) {
       throw Exception('Error actualizando empleado: $e');
     }
@@ -1240,6 +1279,7 @@ class SupabaseService {
           .from('asistencias')
           .update({
             'hora_salida_almuerzo': horaNow,
+            'estado': 'completado',
             if (latitud != null) 'latitud': latitud,
             if (longitud != null) 'longitud': longitud,
             if (fotoUrl != null) 'foto_url': fotoUrl,
@@ -1259,6 +1299,7 @@ class SupabaseService {
           .from('asistencias')
           .update({
             'hora_regreso_almuerzo': horaNow,
+            'estado': 'completado',
             if (latitud != null) 'latitud': latitud,
             if (longitud != null) 'longitud': longitud,
             if (fotoUrl != null) 'foto_url': fotoUrl,
@@ -1415,7 +1456,7 @@ class SupabaseService {
         name: 'SupabaseService',
       );
       developer.log(
-        'get_asistencias_con_estado RPC response preview=${response is List ? (response as List).take(3).toList() : response}',
+        'get_asistencias_con_estado RPC response preview=${response is List ? (response).take(3).toList() : response}',
         name: 'SupabaseService',
       );
 
@@ -1433,12 +1474,10 @@ class SupabaseService {
               .select('id')
               .eq('empresa_id', empresaId);
           final empleadoIds = <String>[];
-          if (empleadosResp is List && empleadosResp.isNotEmpty) {
+          if (empleadosResp.isNotEmpty) {
             for (final e in empleadosResp) {
               try {
-                final id = (e is Map && e['id'] != null)
-                    ? e['id'].toString()
-                    : null;
+                final id = (e['id'] != null) ? e['id'].toString() : null;
                 if (id != null) empleadoIds.add(id);
               } catch (_) {}
             }
@@ -1484,11 +1523,11 @@ class SupabaseService {
           }
 
           developer.log(
-            'Fallback asistencias count=${asistencias is List ? (asistencias as List).length : 0}',
+            'Fallback asistencias count=${asistencias is List ? (asistencias).length : 0}',
             name: 'SupabaseService',
           );
           developer.log(
-            'Fallback asistencias preview=${asistencias is List ? (asistencias as List).take(3).toList() : asistencias}',
+            'Fallback asistencias preview=${asistencias is List ? (asistencias).take(3).toList() : asistencias}',
             name: 'SupabaseService',
           );
 
@@ -1522,11 +1561,11 @@ class SupabaseService {
                     .limit(10);
               }
               developer.log(
-                'Debug recent asistencias count=${recent is List ? (recent as List).length : 0}',
+                'Debug recent asistencias count=${recent is List ? (recent).length : 0}',
                 name: 'SupabaseService',
               );
               developer.log(
-                'Debug recent asistencias preview=${recent is List ? (recent as List).take(5).toList() : recent}',
+                'Debug recent asistencias preview=${recent is List ? (recent).take(5).toList() : recent}',
                 name: 'SupabaseService',
               );
             } catch (dbgErr) {
@@ -1589,11 +1628,6 @@ class SupabaseService {
           return [];
         }
       }
-
-      // Ordenamos en Dart si el RPC no lo hizo
-      if (response is! List) {
-        return [];
-      }
       final lista = (response)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
@@ -1621,10 +1655,10 @@ class SupabaseService {
               .order('hora_entrada', ascending: false)
               .limit(5);
           developer.log(
-            'Global fallback asistencias count=${globalAsistencias is List ? (globalAsistencias as List).length : 0}',
+            'Global fallback asistencias count=${(globalAsistencias as List).length}',
             name: 'SupabaseService',
           );
-          if (globalAsistencias is List && globalAsistencias.isNotEmpty) {
+          if (globalAsistencias.isNotEmpty) {
             final List<Map<String, dynamic>> globalLista = [];
             for (final a in globalAsistencias) {
               final Map<String, dynamic> row = Map<String, dynamic>.from(a);
@@ -1707,7 +1741,7 @@ class SupabaseService {
           .order('hora_entrada', ascending: false)
           .limit(limite);
 
-      if (resp is! List || resp.isEmpty) return [];
+      if (resp.isEmpty) return [];
       final asistencias = (resp)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
@@ -1735,9 +1769,10 @@ class SupabaseService {
                 .select('nombre')
                 .eq('id', depId)
                 .maybeSingle();
-            if (dep != null)
+            if (dep != null) {
               departamentoNombre =
                   dep['nombre']?.toString() ?? departamentoNombre;
+            }
           }
         }
       } catch (_) {}
@@ -1777,12 +1812,10 @@ class SupabaseService {
           .select('id')
           .eq('empresa_id', empresaId);
       final empleadoIds = <String>[];
-      if (empleadosResp is List && empleadosResp.isNotEmpty) {
+      if (empleadosResp.isNotEmpty) {
         for (final e in empleadosResp) {
           try {
-            final id = (e is Map && e['id'] != null)
-                ? e['id'].toString()
-                : null;
+            final id = (e['id'] != null) ? e['id'].toString() : null;
             if (id != null) empleadoIds.add(id);
           } catch (_) {}
         }
@@ -1828,7 +1861,7 @@ class SupabaseService {
         name: 'SupabaseService',
       );
       developer.log(
-        'getUltimosRegistrosEmpresa: asistencias preview=${asistencias is List ? (asistencias as List).take(3).toList() : asistencias}',
+        'getUltimosRegistrosEmpresa: asistencias preview=${asistencias is List ? (asistencias).take(3).toList() : asistencias}',
         name: 'SupabaseService',
       );
 
@@ -1864,9 +1897,10 @@ class SupabaseService {
                     .select('nombre')
                     .eq('id', depId)
                     .maybeSingle();
-                if (dep != null)
+                if (dep != null) {
                   departamentoNombre =
                       dep['nombre']?.toString() ?? departamentoNombre;
+                }
               }
             }
           } catch (_) {}
@@ -1912,12 +1946,10 @@ class SupabaseService {
           .select('id')
           .eq('empresa_id', empresaId);
       final empleadoIds = <String>[];
-      if (empleadosResp is List && empleadosResp.isNotEmpty) {
+      if (empleadosResp.isNotEmpty) {
         for (final e in empleadosResp) {
           try {
-            final id = (e is Map && e['id'] != null)
-                ? e['id'].toString()
-                : null;
+            final id = (e['id'] != null) ? e['id'].toString() : null;
             if (id != null) empleadoIds.add(id);
           } catch (_) {}
         }
@@ -2009,9 +2041,10 @@ class SupabaseService {
                     .select('nombre')
                     .eq('id', depId)
                     .maybeSingle();
-                if (dep != null)
+                if (dep != null) {
                   departamentoNombre =
                       dep['nombre']?.toString() ?? departamentoNombre;
+                }
               }
             }
           } catch (_) {}
@@ -2071,8 +2104,7 @@ class SupabaseService {
       final response = await q.select('id, observacion, empleado_id').limit(1);
 
       final updated =
-          (response is List && response.isNotEmpty) ||
-          (response is Map && response.isNotEmpty);
+          (response.isNotEmpty) || (response is Map && response.isNotEmpty);
       developer.log(
         'updateObservacionAsistencia: respType=${response.runtimeType} updated=$updated value=$response',
         name: 'SupabaseService',
@@ -2219,9 +2251,6 @@ class SupabaseService {
           .eq('empleado_id', empleadoId)
           .order('created_at', ascending: false)
           .limit(limite);
-      if (response is! List) {
-        return [];
-      }
       return _listFromResponse(response);
     } catch (e) {
       developer.log(

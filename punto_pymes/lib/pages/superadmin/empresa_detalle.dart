@@ -798,8 +798,9 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                           ? _editLng
                                                           : _lng;
                                                       if (targetLat == null ||
-                                                          targetLng == null)
+                                                          targetLng == null) {
                                                         return;
+                                                      }
                                                       _zoom = (_zoom + 1).clamp(
                                                         2.0,
                                                         21.0,
@@ -831,8 +832,9 @@ class _EmpresaDetallePageState extends State<EmpresaDetallePage> {
                                                           ? _editLng
                                                           : _lng;
                                                       if (targetLat == null ||
-                                                          targetLng == null)
+                                                          targetLng == null) {
                                                         return;
+                                                      }
                                                       _zoom = (_zoom - 1).clamp(
                                                         2.0,
                                                         21.0,

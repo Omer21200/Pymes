@@ -6,12 +6,16 @@ class AdminEmpresaHeader extends StatelessWidget {
   final String? nombreAdmin;
   final String? nombreEmpresa;
   final VoidCallback? onLogout;
+  final bool showBack;
+  final VoidCallback? onBack;
 
   const AdminEmpresaHeader({
     super.key,
     this.nombreAdmin,
     this.nombreEmpresa,
     this.onLogout,
+    this.showBack = false,
+    this.onBack,
   });
 
   String _getInitials() {
@@ -46,6 +50,26 @@ class AdminEmpresaHeader extends StatelessWidget {
               ),
               child: Row(
                 children: [
+                  if (showBack)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Material(
+                        color: Colors.white.withAlpha((0.14 * 255).round()),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: onBack,
+                          borderRadius: BorderRadius.circular(12),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   // Avatar: initials inside avatarContainer
                   Container(
                     width: AppSizes.avatar,

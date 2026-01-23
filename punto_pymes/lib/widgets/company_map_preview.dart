@@ -23,7 +23,6 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
   double? _companyRadius;
   double? _userLat;
   double? _userLng;
-  String? _companyName;
   gmaps.GoogleMapController? _mapController;
   double _zoom = 15.0;
   double? _deviceLat;
@@ -114,7 +113,6 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
             }
           }
         }
-        _companyName = empresaData['nombre']?.toString();
       }
 
       if (!mounted) return;
@@ -132,29 +130,6 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
     if (lat == null || lng == null) return null;
     if (lat.abs() > 90 && lng.abs() <= 90) return gmaps.LatLng(lng, lat);
     return gmaps.LatLng(lat, lng);
-  }
-
-  gmaps.LatLng _calculateCenter() {
-    final pts = <gmaps.LatLng>[];
-    final c = _normalize(_companyLat, _companyLng);
-    if (c != null) {
-      pts.add(c);
-    }
-    final u = _normalize(_userLat, _userLng);
-    if (u != null) {
-      pts.add(u);
-    }
-    final d = _normalize(_deviceLat, _deviceLng);
-    if (d != null) {
-      pts.add(d);
-    }
-    if (pts.isEmpty) return const gmaps.LatLng(0, 0);
-    double la = 0, ln = 0;
-    for (final p in pts) {
-      la += p.latitude;
-      ln += p.longitude;
-    }
-    return gmaps.LatLng(la / pts.length, ln / pts.length);
   }
 
   Set<gmaps.Marker> _markers() {

@@ -62,7 +62,6 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
     try {
       // Use Supabase RPC which returns the DB server time in America/Guayaquil
       final dt = await SupabaseService.instance.getEcuadorTime();
-      if (dt == null) throw Exception('RPC retornó null');
 
       setState(() {
         _serverTimeAtFetch = dt;
