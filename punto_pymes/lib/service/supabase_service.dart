@@ -1927,6 +1927,67 @@ class SupabaseService {
   /// Obtiene los registros de asistencias de la empresa del usuario autenticado.
   /// Permite filtrar por rango de fechas `desde` / `hasta`. Si no se proveen,
   /// devuelve hasta `limit` filas más recientes.
+  String _clasificarEstadoLlegada({
+    Map<String, dynamic>? horario,
+    String? fechaStr,
+    String? horaEntradaStr,
+  }) {
+    // Si no hay datos suficientes, no clasificamos.
+    if (fechaStr == null || fechaStr.isEmpty) return 'sin dato';
+    if (horaEntradaStr == null || horaEntradaStr.isEmpty) return 'sin dato';
+
+    final fecha = DateTime.tryParse(fechaStr);
+    if (fecha == null) return 'sin dato';
+
+    if (horario == null) return 'sin horario';
+
+    bool trabajaEseDia = false;
+    switch (fecha.weekday) {
+      case DateTime.monday:
+        trabajaEseDia = (horario['lunes'] ?? false) == true;
+        break;
+      case DateTime.tuesday:
+        trabajaEseDia = (horario['martes'] ?? false) == true;
+        break;
+      case DateTime.wednesday:
+        trabajaEseDia = (horario['miercoles'] ?? false) == true;
+        break;
+      case DateTime.thursday:
+        trabajaEseDia = (horario['jueves'] ?? false) == true;
+        break;
+      case DateTime.friday:
+        trabajaEseDia = (horario['viernes'] ?? false) == true;
+        break;
+      case DateTime.saturday:
+        trabajaEseDia = (horario['sabado'] ?? false) == true;
+        break;
+      case DateTime.sunday:
+        trabajaEseDia = (horario['domingo'] ?? false) == true;
+        break;
+    }
+
+    if (!trabajaEseDia) return 'fuera de horario';
+
+    final horaPlanificada = horario['hora_entrada']?.toString();
+    if (horaPlanificada == null || horaPlanificada.isEmpty) {
+      return 'sin horario';
+    }
+
+    final toleranciaMin =
+        int.tryParse(
+          horario['tolerancia_entrada_minutos']?.toString() ?? '0',
+        ) ??
+        0;
+
+    final entrada = DateTime.tryParse('${fechaStr}T$horaEntradaStr');
+    final programada = DateTime.tryParse('${fechaStr}T$horaPlanificada');
+
+    if (entrada == null || programada == null) return 'sin dato';
+
+    final limite = programada.add(Duration(minutes: toleranciaMin));
+    return entrada.isAfter(limite) ? 'tarde' : 'a tiempo';
+  }
+
   Future<List<Map<String, dynamic>>> getRegistrosEmpresa({
     DateTime? desde,
     DateTime? hasta,
@@ -1939,6 +2000,9 @@ class SupabaseService {
         'getRegistrosEmpresa: empresaId=$empresaId',
         name: 'SupabaseService',
       );
+
+      // Evita consultas repetidas de horarios por departamento
+      final Map<String, Map<String, dynamic>?> horariosCache = {};
 
       // Obtener empleados de la empresa
       final empleadosResp = await client
@@ -2019,6 +2083,8 @@ class SupabaseService {
         final empleadoId = row['empleado_id']?.toString();
         String empleadoNombre = 'N/A';
         String departamentoNombre = 'Sin departamento';
+        String? departamentoId;
+        Map<String, dynamic>? horarioDepartamento;
         if (empleadoId != null) {
           try {
             final empleado = await client
@@ -2036,6 +2102,17 @@ class SupabaseService {
               if (full.isNotEmpty) empleadoNombre = full;
               final depId = empleado['departamento_id']?.toString();
               if (depId != null) {
+                departamentoId = depId;
+                if (!horariosCache.containsKey(depId)) {
+                  try {
+                    horariosCache[depId] = await getHorarioPorDepartamento(
+                      depId,
+                    );
+                  } catch (_) {
+                    horariosCache[depId] = null;
+                  }
+                }
+                horarioDepartamento = horariosCache[depId];
                 final dep = await client
                     .from('departamentos')
                     .select('nombre')
@@ -2050,12 +2127,19 @@ class SupabaseService {
           } catch (_) {}
         }
 
+        final estadoCalculado = _clasificarEstadoLlegada(
+          horario: horarioDepartamento,
+          fechaStr: row['fecha']?.toString(),
+          horaEntradaStr: row['hora_entrada']?.toString(),
+        );
+
         result.add({
           'id': row['id']?.toString(),
           'fecha': row['fecha']?.toString(),
           'hora_entrada': row['hora_entrada']?.toString(),
           'hora_salida': row['hora_salida']?.toString(),
-          'estado': row['estado']?.toString(),
+          'estado_original': row['estado']?.toString(),
+          'estado': estadoCalculado,
           'observacion': row['observacion']?.toString(),
           'empresa_id': row['empresa_id']?.toString(),
           // Pasar coordenadas crudas para el marcador del empleado
@@ -2067,6 +2151,7 @@ class SupabaseService {
           'empleado_id': empleadoId,
           'empleado_nombre': empleadoNombre,
           'departamento': departamentoNombre,
+          'departamento_id': departamentoId,
           'created_at': row['created_at']?.toString(),
         });
       }
@@ -2293,16 +2378,24 @@ class SupabaseService {
       final user = client.auth.currentUser;
       if (user == null) throw Exception('Usuario no autenticado');
 
-      // Obtener empleado_id
+      // Obtener empleado_id y departamento
       final empleado = await client
           .from('empleados')
-          .select('id')
+          .select('id,departamento_id')
           .eq('user_id', user.id)
           .maybeSingle();
 
       if (empleado == null) throw Exception('Empleado no encontrado');
       final empleadoId = empleado['id']?.toString();
+      final departamentoId = empleado['departamento_id']?.toString();
       if (empleadoId == null) throw Exception('Empleado sin id');
+
+      Map<String, dynamic>? horarioDepartamento;
+      if (departamentoId != null) {
+        try {
+          horarioDepartamento = await getHorarioPorDepartamento(departamentoId);
+        } catch (_) {}
+      }
 
       // Obtener asistencias del mes actual
       final ahora = DateTime.now();
@@ -2326,17 +2419,18 @@ class SupabaseService {
       for (final asistencia in asistencias) {
         if (asistencia['hora_entrada'] != null) {
           diasAsistidos++;
+        }
 
-          // Obtener hora de entrada
-          final horaEntrada = asistencia['hora_entrada']?.toString() ?? '';
+        final estado = _clasificarEstadoLlegada(
+          horario: horarioDepartamento,
+          fechaStr: asistencia['fecha']?.toString(),
+          horaEntradaStr: asistencia['hora_entrada']?.toString(),
+        );
 
-          // Comparar si fue a tiempo (simple: si llegó antes del mediodía)
-          // En producción, esto debería compararse contra el horario del departamento
-          if (horaEntrada.compareTo('12:00:00') < 0) {
-            aTiempo++;
-          } else {
-            tardanzas++;
-          }
+        if (estado == 'a tiempo') {
+          aTiempo++;
+        } else if (estado == 'tarde') {
+          tardanzas++;
         }
       }
 

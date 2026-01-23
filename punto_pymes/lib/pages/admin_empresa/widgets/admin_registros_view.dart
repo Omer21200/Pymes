@@ -41,9 +41,23 @@ class _AdminRegistrosViewState extends State<AdminRegistrosView> {
         desde: _desde,
         hasta: _hasta,
       );
+
+      // Aplica el filtro por día de la semana de forma local, ya que la API
+      // solo filtra por rango de fechas.
+      var filtered = List<Map<String, dynamic>>.from(data);
+      if (_weekdayFilter != null) {
+        filtered = filtered.where((r) {
+          final fechaStr = r['fecha']?.toString();
+          if (fechaStr == null || fechaStr.isEmpty) return false;
+          final fecha = DateTime.tryParse(fechaStr);
+          if (fecha == null) return false;
+          return fecha.weekday == _weekdayFilter;
+        }).toList();
+      }
+
       if (!mounted) return;
       setState(() {
-        _registros = List<Map<String, dynamic>>.from(data);
+        _registros = filtered;
         _loading = false;
       });
     } catch (e) {

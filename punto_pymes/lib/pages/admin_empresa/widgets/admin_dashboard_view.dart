@@ -3,7 +3,9 @@ import '../../../service/supabase_service.dart';
 import 'admin_registros_view.dart';
 
 class AdminDashboardView extends StatefulWidget {
-  const AdminDashboardView({super.key});
+  const AdminDashboardView({super.key, this.onGoToRegistros});
+
+  final VoidCallback? onGoToRegistros;
 
   @override
   State<AdminDashboardView> createState() => _AdminDashboardViewState();
@@ -156,6 +158,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     ),
                     GestureDetector(
                       onTap: () {
+                        if (widget.onGoToRegistros != null) {
+                          widget.onGoToRegistros!();
+                          return;
+                        }
+
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const AdminRegistrosView(),

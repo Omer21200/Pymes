@@ -6,7 +6,13 @@ import 'admin_registros_view.dart';
 
 class AdminEmpresaSections extends StatelessWidget {
   final int tabIndex;
-  const AdminEmpresaSections({super.key, required this.tabIndex});
+  final ValueChanged<int> onTabChange;
+
+  const AdminEmpresaSections({
+    super.key,
+    required this.tabIndex,
+    required this.onTabChange,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +20,7 @@ class AdminEmpresaSections extends StatelessWidget {
 
     switch (tabIndex) {
       case 0: // Inicio (Dashboard)
-        content = const AdminDashboardView();
+        content = AdminDashboardView(onGoToRegistros: () => onTabChange(3));
         break;
       case 1: // Noticias
         content = const NoticiasAdminListPage();

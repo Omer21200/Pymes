@@ -78,11 +78,11 @@ class _AdminEmpresaPageState extends State<AdminEmpresaPage> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: IndexedStack(
                   index: _currentIndex,
-                  children: const [
-                    AdminEmpresaSections(tabIndex: 0),
-                    AdminEmpresaSections(tabIndex: 1),
-                    AdminEmpresaSections(tabIndex: 2),
-                    AdminEmpresaSections(tabIndex: 3),
+                  children: [
+                    AdminEmpresaSections(tabIndex: 0, onTabChange: _onNavTap),
+                    AdminEmpresaSections(tabIndex: 1, onTabChange: _onNavTap),
+                    AdminEmpresaSections(tabIndex: 2, onTabChange: _onNavTap),
+                    AdminEmpresaSections(tabIndex: 3, onTabChange: _onNavTap),
                   ],
                 ),
               ),
