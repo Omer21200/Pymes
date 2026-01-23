@@ -118,15 +118,7 @@ class _EmpleadoInicioViewState extends State<EmpleadoInicioView> {
                         color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: EmpleadoStatsCard(
-                        label: 'A tiempo',
-                        value: '${stats['a_tiempo'] ?? 0}',
-                        icon: Icons.thumb_up,
-                        color: AppColors.success,
-                      ),
-                    ),
+
                     const SizedBox(width: 8),
                     Expanded(
                       child: EmpleadoStatsCard(

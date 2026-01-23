@@ -114,22 +114,43 @@ class SupabaseService {
 
   User? get currentUser => client.auth.currentUser;
 
+  // Caché breve para la hora de Ecuador para evitar múltiples llamadas seguidas
+  DateTime? _cachedEcuadorTime;
+  DateTime? _cachedEcuadorTimeFetchedAt;
+  static const Duration _ecuadorTimeCacheDuration = Duration(seconds: 10);
+
   // ==================== HORA DE ECUADOR (LOJA) ====================
   /// Obtiene la hora actual de Ecuador desde worldtimeapi.org
-  Future<DateTime> getEcuadorTime() async {
-    // Prefer RPC on Supabase that returns DB server time in America/Guayaquil.
+  Future<DateTime> getEcuadorTime({bool throwOnFailure = false}) async {
+    // Return cached value when still fresh
+    try {
+      if (_cachedEcuadorTime != null && _cachedEcuadorTimeFetchedAt != null) {
+        final age = DateTime.now().difference(_cachedEcuadorTimeFetchedAt!);
+        if (age < _ecuadorTimeCacheDuration) {
+          developer.log(
+            'Usando hora de cache (age: ${age.inSeconds}s)',
+            name: 'SupabaseService',
+          );
+          return _cachedEcuadorTime!.toUtc();
+        }
+      }
+    } catch (_) {}
+
+    // Prefer RPC on Supabase which returns the DB server time in 'America/Guayaquil'.
     try {
       await ensureSessionValid();
       final rpcResult = await client
           .rpc('get_ecuador_time')
           .timeout(const Duration(seconds: 5));
 
+      // RPC may return different shapes depending on driver; normalize.
       DateTime? parsed;
       if (rpcResult == null) {
         parsed = null;
       } else if (rpcResult is String) {
         parsed = DateTime.tryParse(rpcResult);
       } else if (rpcResult is Map) {
+        // Example: {get_ecuador_time: "2026-01-22 21:00:00"}
         final firstVal = rpcResult.values.first;
         parsed = DateTime.tryParse(firstVal?.toString() ?? '');
       } else if (rpcResult is List && rpcResult.isNotEmpty) {
@@ -145,17 +166,26 @@ class SupabaseService {
       if (parsed != null) {
         // Assume DB returned local Ecuador time; convert to UTC for internal use.
         final utc = parsed.toUtc();
+        // Update cache
+        _cachedEcuadorTime = utc;
+        _cachedEcuadorTimeFetchedAt = DateTime.now();
         developer.log(
           '✓ Hora Ecuador (RPC): ${utc.toIso8601String()}',
           name: 'SupabaseService',
         );
         return utc;
+      } else {
+        developer.log(
+          'RPC get_ecuador_time returned unexpected payload: $rpcResult',
+          name: 'SupabaseService',
+        );
       }
-    } catch (e) {
+    } catch (e, st) {
       developer.log('RPC get_ecuador_time failed: $e', name: 'SupabaseService');
+      developer.log('Stack: $st', name: 'SupabaseService');
     }
 
-    // If RPC failed or returned nothing, fall back to external providers with retry/backoff.
+    // RPC failed — fallback to trusted external providers (retry with backoff).
     final uris = [
       Uri.parse('https://worldtimeapi.org/api/timezone/America/Guayaquil'),
       Uri.parse(
@@ -179,14 +209,17 @@ class SupabaseService {
                   data['dateTime'] as String? ?? data['date_time'] as String?;
             }
             if (datetimeStr != null && datetimeStr.isNotEmpty) {
-              try {
-                final dt = DateTime.parse(datetimeStr).toUtc();
+              final dt = DateTime.tryParse(datetimeStr);
+              if (dt != null) {
+                final utc = dt.toUtc();
+                _cachedEcuadorTime = utc;
+                _cachedEcuadorTimeFetchedAt = DateTime.now();
                 developer.log(
-                  '✓ Hora de Ecuador (internet): ${dt.toIso8601String()}',
+                  '✓ Hora de Ecuador (fallback): ${utc.toIso8601String()}',
                   name: 'SupabaseService',
                 );
-                return dt;
-              } catch (_) {}
+                return utc;
+              }
             }
           }
         } catch (_) {
@@ -197,10 +230,11 @@ class SupabaseService {
     }
 
     developer.log(
-      '⚠️ No se pudo obtener hora remota, usando hora local',
+      '⚠️ No se pudo obtener hora remota (RPC + fallbacks)',
       name: 'SupabaseService',
     );
-    return DateTime.now();
+    if (throwOnFailure) throw Exception('No se pudo obtener hora remota');
+    return DateTime.now().toUtc();
   }
 
   // ==================== QUERIES EJEMPLO ====================
@@ -1152,7 +1186,8 @@ class SupabaseService {
     // Obtener hora de Ecuador: primero desde EcuadorTimeManager (si está sincronizado)
     // Si no está disponible, hacer request a la API
     DateTime now =
-        EcuadorTimeManager.getCurrentTime() ?? await getEcuadorTime();
+        EcuadorTimeManager.getCurrentTime() ??
+        await getEcuadorTime(throwOnFailure: true);
 
     // Convertir de UTC a hora de Ecuador (UTC-5, es decir, restar 5 horas)
     final ecuadorTime = now.toUtc().subtract(const Duration(hours: 5));
@@ -1896,11 +1931,8 @@ class SupabaseService {
       if (empleadoIds.isEmpty) return [];
 
       // Construir consulta base
-      final q = client
-          .from('asistencias')
-          .select(
-            'id, fecha, hora_entrada, hora_salida, estado, observacion, empleado_id, created_at',
-          );
+      // Traer todas las columnas para no perder latitud/longitud ni futuros campos
+      final q = client.from('asistencias').select('*');
 
       if (empleadoIds.length == 1) {
         q.eq('empleado_id', empleadoIds.first);
@@ -1935,6 +1967,14 @@ class SupabaseService {
         name: 'SupabaseService',
       );
       final rows = _listFromResponse(resp);
+      try {
+        if (rows.isNotEmpty) {
+          developer.log(
+            'getRegistrosEmpresa first row keys=${rows.first.keys}',
+            name: 'SupabaseService',
+          );
+        }
+      } catch (_) {}
       developer.log(
         'getRegistrosEmpresa: rowsCount=${rows.length} preview=${rows.take(3).toList()}',
         name: 'SupabaseService',
@@ -1984,6 +2024,13 @@ class SupabaseService {
           'hora_salida': row['hora_salida']?.toString(),
           'estado': row['estado']?.toString(),
           'observacion': row['observacion']?.toString(),
+          'empresa_id': row['empresa_id']?.toString(),
+          // Pasar coordenadas crudas para el marcador del empleado
+          'latitud': row['latitud']?.toString(),
+          'longitud': row['longitud']?.toString(),
+          // Por si vienen variantes
+          'lat': row['lat']?.toString(),
+          'lng': row['lng']?.toString(),
           'empleado_id': empleadoId,
           'empleado_nombre': empleadoNombre,
           'departamento': departamentoNombre,
@@ -1998,6 +2045,68 @@ class SupabaseService {
         name: 'SupabaseService',
       );
       return [];
+    }
+  }
+
+  /// Actualiza solo el campo `observacion` de una asistencia por id.
+  Future<bool> updateObservacionAsistencia({
+    required String id,
+    required String observacion,
+    String? empleadoId,
+  }) async {
+    try {
+      await ensureSessionValid();
+      final parsedId = int.tryParse(id);
+      final filterValue = parsedId ?? id;
+
+      final q = client
+          .from('asistencias')
+          .update({'observacion': observacion})
+          .eq('id', filterValue);
+
+      if (empleadoId != null && empleadoId.isNotEmpty) {
+        q.eq('empleado_id', empleadoId);
+      }
+
+      final response = await q.select('id, observacion, empleado_id').limit(1);
+
+      final updated =
+          (response is List && response.isNotEmpty) ||
+          (response is Map && response.isNotEmpty);
+      developer.log(
+        'updateObservacionAsistencia: respType=${response.runtimeType} updated=$updated value=$response',
+        name: 'SupabaseService',
+      );
+
+      if (!updated) {
+        try {
+          final precheck = await client
+              .from('asistencias')
+              .select('id, empleado_id')
+              .eq('id', filterValue)
+              .maybeSingle();
+          developer.log(
+            'updateObservacionAsistencia: precheck row visible=${precheck != null} value=$precheck',
+            name: 'SupabaseService',
+          );
+        } catch (e) {
+          developer.log(
+            'updateObservacionAsistencia: precheck failed: $e',
+            name: 'SupabaseService',
+          );
+        }
+        developer.log(
+          'updateObservacionAsistencia: no rows updated for id=$id empleadoId=$empleadoId (posible RLS sin permisos, id inexistente o empleado no coincide)',
+          name: 'SupabaseService',
+        );
+      }
+      return updated;
+    } catch (e) {
+      developer.log(
+        'Error updateObservacionAsistencia: $e',
+        name: 'SupabaseService',
+      );
+      return false;
     }
   }
 

@@ -23,6 +23,9 @@ class _NewsCarouselState extends State<NewsCarousel>
   @override
   void initState() {
     super.initState();
+    // viewportFraction reducido para dejar espacio lateral y que las tarjetas
+    // se vean más compactas y centradas.
+    // Aumentar viewportFraction para que las tarjetas ocupen más ancho
     _pageController = PageController(viewportFraction: 0.92, initialPage: 0);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -119,9 +122,9 @@ class _NewsCarouselState extends State<NewsCarousel>
         ),
         const SizedBox(height: 16),
 
-        // Carrusel de noticias (tarjetas rectangulares con imagen a la izquierda)
+        // Carrusel de noticias compacto
         SizedBox(
-          height: 200,
+          height: 160,
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) {
@@ -213,10 +216,10 @@ class _NewsCardState extends State<_NewsCard>
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
                 color: const Color.fromRGBO(0, 0, 0, 0.06),
@@ -227,39 +230,55 @@ class _NewsCardState extends State<_NewsCard>
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             child: Row(
               children: [
-                // Imagen a la izquierda
+                // Imagen a la izquierda (más estrecha)
                 SizedBox(
-                  width: 150,
+                  width: 120,
                   height: double.infinity,
                   child:
                       (widget.noticia['imagen_url'] != null &&
                           widget.noticia['imagen_url'].toString().isNotEmpty)
-                      ? Image.network(
-                          widget.noticia['imagen_url'],
-                          fit: BoxFit.contain,
-                          alignment: Alignment.center,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.grey.shade400,
-                                size: 40,
-                              ),
-                            );
-                          },
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return Container(
-                              color: Colors.grey.shade100,
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            );
-                          },
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: Image.network(
+                            widget.noticia['imagen_url'].toString(),
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            errorBuilder:
+                                (
+                                  BuildContext context,
+                                  Object error,
+                                  StackTrace? stackTrace,
+                                ) {
+                                  return Container(
+                                    color: Colors.grey.shade200,
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey.shade400,
+                                      size: 40,
+                                    ),
+                                  );
+                                },
+                            loadingBuilder:
+                                (
+                                  BuildContext context,
+                                  Widget child,
+                                  ImageChunkEvent? progress,
+                                ) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    color: Colors.grey.shade100,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                },
+                          ),
                         )
                       : Container(
                           color: const Color(0xFFF3F3F4),
@@ -274,49 +293,80 @@ class _NewsCardState extends State<_NewsCard>
                 // Contenido a la derecha
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                (widget.noticia['titulo'] ?? 'Sin título')
-                                    .toString(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                            if (widget.noticia['es_importante'] == true)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentBlue.withAlpha(36),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  'Importante',
-                                  style: TextStyle(
-                                    color: AppColors.accentBlue,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                        // Mostrar la etiqueta de prioridad encima del título.
+                        // Preferir la etiqueta enviada por la base (badge_text / etiqueta / label),
+                        // si no existe, caer a 'Importante' cuando `es_importante` sea true.
+                        Builder(
+                          builder: (context) {
+                            final mapa = widget.noticia;
+                            final badgeText =
+                                (mapa['badge_text'] ??
+                                        mapa['etiqueta'] ??
+                                        mapa['label'])
+                                    ?.toString() ??
+                                ((mapa['es_importante'] == true)
+                                    ? 'Importante'
+                                    : null);
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (badgeText != null)
+                                  Align(
+                                    alignment: Alignment.topRight,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accentBlue.withAlpha(
+                                          36,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        badgeText,
+                                        style: const TextStyle(
+                                          color: AppColors.accentBlue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
                                   ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        (widget.noticia['titulo'] ??
+                                                'Sin título')
+                                            .toString(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                          ],
+                              ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 8),
                         Text(
                           (widget.noticia['contenido'] ?? 'Sin descripción')
                               .toString(),
@@ -325,10 +375,10 @@ class _NewsCardState extends State<_NewsCard>
                           style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 13,
-                            height: 1.35,
+                            height: 1.3,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Row(
                           children: [
                             Icon(

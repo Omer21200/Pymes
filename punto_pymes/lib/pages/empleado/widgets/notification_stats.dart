@@ -24,29 +24,27 @@ class NotificationStats extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
-        // Grid de estadísticas
+        // Row compacto de estadísticas
         Row(
           children: [
-            // Estadística de Nuevas
+            // Estadística de Nuevas (compacta)
             Expanded(
-              child: _StatCard(
+              child: _CompactStatCard(
                 icon: Icons.priority_high,
                 iconColor: AppColors.brandRedAlt,
-                backgroundColor: AppColors.notificationBg,
                 label: 'Nuevas',
                 value: noticiasNuevas,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
-            // Estadística de Total
+            // Estadística de Total (compacta)
             Expanded(
-              child: _StatCard(
+              child: _CompactStatCard(
                 icon: Icons.inbox,
                 iconColor: AppColors.mutedGray,
-                backgroundColor: AppColors.subtleBg,
                 label: 'Total',
                 value: totalNoticias,
               ),
@@ -58,17 +56,15 @@ class NotificationStats extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _CompactStatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final Color backgroundColor;
   final String label;
   final int value;
 
-  const _StatCard({
+  const _CompactStatCard({
     required this.icon,
     required this.iconColor,
-    required this.backgroundColor,
     required this.label,
     required this.value,
   });
@@ -76,39 +72,60 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: AppDecorations.statCardDecoration(iconColor),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      height: 88,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [iconColor.withOpacity(0.9), iconColor.withOpacity(0.8)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icono top-right
-          Align(
-            alignment: Alignment.topRight,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                // ignore: deprecated_member_use
-                color: Colors.white.withOpacity(0.16),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: Colors.white, size: 18),
+          // Icono a la izquierda
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, color: Colors.white, size: 18),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(width: 12),
 
-          // Label
-          Text(
-            label,
-            style: AppTextStyles.smallLabel.copyWith(color: Colors.white70),
-          ),
-          const SizedBox(height: 6),
-
-          // Valor
-          Text(
-            value.toString(),
-            style: AppTextStyles.statsValue.copyWith(
-              fontSize: 32,
-              color: Colors.white,
+          // Texto
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.smallLabel.copyWith(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.toString(),
+                  style: AppTextStyles.statsValue.copyWith(
+                    fontSize: 22,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

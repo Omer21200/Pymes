@@ -26,8 +26,11 @@ class EmpleadoHeader extends StatelessWidget {
         .join()
         .toUpperCase();
 
+    final double topPad = MediaQuery.of(context).padding.top;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      // background extends into the notch area but content is pushed down
+      padding: EdgeInsets.fromLTRB(20, topPad + 12, 20, 20),
       decoration: AppDecorations.headerGradient.copyWith(
         boxShadow: [
           BoxShadow(

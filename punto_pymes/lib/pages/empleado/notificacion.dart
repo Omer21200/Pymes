@@ -38,14 +38,11 @@ class NotificacionView extends StatefulWidget {
 
 class _NotificacionViewState extends State<NotificacionView> {
   late Future<List<Map<String, dynamic>>> _noticiasFuture;
-  late Future<List<Map<String, dynamic>>> _misAsistenciasFuture;
 
   @override
   void initState() {
     super.initState();
     _noticiasFuture = _safelyLoadNoticias();
-    // Cargar también las últimas acciones de asistencia del usuario (últimas 4)
-    _misAsistenciasFuture = _loadMisAsistencias();
   }
 
   Future<List<Map<String, dynamic>>> _loadMisAsistencias() async {
@@ -211,49 +208,7 @@ class _NotificacionViewState extends State<NotificacionView> {
                   totalNoticias: totalNoticias,
                 ),
                 const SizedBox(height: 28),
-                // Últimas acciones del usuario (si existen)
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _misAsistenciasFuture,
-                  builder: (context, mSnap) {
-                    if (mSnap.connectionState == ConnectionState.waiting) {
-                      return const SizedBox.shrink();
-                    }
-                    if (mSnap.hasError) return const SizedBox.shrink();
-                    final mis = mSnap.data ?? [];
-                    if (mis.isEmpty) return const SizedBox.shrink();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tus últimas acciones',
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: mis.length,
-                          itemBuilder: (context, idx) {
-                            final n = mis[idx];
-                            return NotificationCard(
-                              titulo: n['titulo'] ?? '',
-                              contenido: n['contenido'] ?? '',
-                              fechaPublicacion:
-                                  n['fecha_publicacion']?.toString() ?? '',
-                              esImportante: n['es_importante'] ?? false,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    );
-                  },
-                ),
+                // (Se eliminó la sección "Tus últimas acciones" por solicitud)
 
                 // Sección de violaciones bajo Reportes
                 const SizedBox(height: 8),

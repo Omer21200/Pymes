@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:image_picker/image_picker.dart';
@@ -22,12 +23,18 @@ class EmpleadoPage extends StatefulWidget {
 class _EmpleadoPageState extends State<EmpleadoPage> {
   int _selectedTab = 0;
   final GlobalKey _sectionsKey = GlobalKey();
+  bool _isRegistering = false;
 
   void _handleRegister() {
     _registerAttendance();
   }
 
   Future<void> _registerAttendance() async {
+    if (_isRegistering) return; // evitar reentradas
+    setState(() => _isRegistering = true);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Iniciando registro...')));
     try {
       // 1) Capturar ubicación
       double? lat;
@@ -116,6 +123,7 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
               message: 'No se tomó la foto. Registro cancelado.',
             );
           }
+          setState(() => _isRegistering = false);
           return;
         }
 
@@ -124,11 +132,23 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
         final filename =
             'empleados/asistencias/${user?.id ?? 'anon'}/${DateTime.now().millisecondsSinceEpoch}.jpg';
         try {
-          uploadedUrl = await SupabaseService.instance.uploadFile(
-            filePath: photo.path,
-            bucketName: 'fotos',
-            destinationPath: filename,
-          );
+          // Aplicar timeout al upload para no bloquear indefinidamente
+          uploadedUrl = await SupabaseService.instance
+              .uploadFile(
+                filePath: photo.path,
+                bucketName: 'fotos',
+                destinationPath: filename,
+              )
+              .timeout(const Duration(seconds: 12));
+        } on TimeoutException catch (_) {
+          uploadedUrl = null;
+          if (mounted) {
+            NotificationHelper.showWarningNotification(
+              context,
+              title: 'Foto no subida',
+              message: 'La subida tardó demasiado. Se continuará sin foto.',
+            );
+          }
         } catch (upErr) {
           uploadedUrl = null;
           if (mounted) {
@@ -223,11 +243,13 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
         // If geofence check fails for any reason, continue with normal flow
       }
 
-      final resp = await SupabaseService.instance.registrarAsistencia(
-        latitud: lat,
-        longitud: lon,
-        fotoUrl: uploadedUrl,
-      );
+      final resp = await SupabaseService.instance
+          .registrarAsistencia(
+            latitud: lat,
+            longitud: lon,
+            fotoUrl: uploadedUrl,
+          )
+          .timeout(const Duration(seconds: 12));
       if (mounted) {
         final horaEntrada = resp['hora_entrada'] ?? '';
         final horaSalida = resp['hora_salida'];
@@ -250,30 +272,42 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
         (_sectionsKey.currentState as dynamic)?.refreshReportes();
       }
     } catch (e) {
-      if (mounted) {
-        final errorMessage = e.toString();
-
-        // Determinar si es un error de duplicado
-        if (errorMessage.contains('registraste entrada y salida')) {
-          NotificationHelper.showWarningNotification(
-            context,
-            title: 'Registro completo',
-            message: 'Ya registraste entrada y salida para hoy.',
-          );
-        } else if (errorMessage.contains('Empleado no encontrado')) {
+      if (e is TimeoutException) {
+        if (mounted) {
           NotificationHelper.showErrorNotification(
             context,
-            title: 'Error de configuración',
-            message: 'Completa tu perfil primero.',
-          );
-        } else {
-          NotificationHelper.showErrorNotification(
-            context,
-            title: 'Error al registrar',
-            message: 'Intenta de nuevo.',
+            title: 'Tiempo de espera',
+            message: 'El registro tardó demasiado. Reintenta.',
           );
         }
+      } else {
+        if (mounted) {
+          final errorMessage = e.toString();
+
+          // Determinar si es un error de duplicado
+          if (errorMessage.contains('registraste entrada y salida')) {
+            NotificationHelper.showWarningNotification(
+              context,
+              title: 'Registro completo',
+              message: 'Ya registraste entrada y salida para hoy.',
+            );
+          } else if (errorMessage.contains('Empleado no encontrado')) {
+            NotificationHelper.showErrorNotification(
+              context,
+              title: 'Error de configuración',
+              message: 'Completa tu perfil primero.',
+            );
+          } else {
+            NotificationHelper.showErrorNotification(
+              context,
+              title: 'Error al registrar',
+              message: 'Intenta de nuevo.',
+            );
+          }
+        }
       }
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
     }
   }
 
@@ -380,9 +414,18 @@ class _EmpleadoPageState extends State<EmpleadoPage> {
               right: 16,
               bottom: 96, // Levanta el botón para que quede arriba del nav
               child: FloatingActionButton(
-                onPressed: _handleRegister,
+                onPressed: _isRegistering ? null : _handleRegister,
                 backgroundColor: const Color(0xFFD92344),
-                child: const Icon(Icons.add, color: Colors.white, size: 28),
+                child: _isRegistering
+                    ? const SizedBox(
+                        height: 28,
+                        width: 28,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Icon(Icons.add, color: Colors.white, size: 28),
               ),
             ),
           ],

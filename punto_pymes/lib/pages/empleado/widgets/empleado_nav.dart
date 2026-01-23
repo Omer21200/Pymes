@@ -5,7 +5,11 @@ class EmpleadoNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
 
-  const EmpleadoNav({super.key, required this.currentIndex, required this.onTabSelected});
+  const EmpleadoNav({
+    super.key,
+    required this.currentIndex,
+    required this.onTabSelected,
+  });
 
   static const _tabs = [
     {'icon': Icons.home, 'label': 'Inicio'},
@@ -58,7 +62,12 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
     if (index < 0 || index >= _keys.length) return;
     final ctx = _keys[index].currentContext;
     if (ctx == null) return;
-    Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.5);
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      alignment: 0.5,
+    );
   }
 
   double _computeWidthForLabel(String label, bool selected) {
@@ -80,25 +89,34 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       width: width,
-      height: 52,
+      height: 55,
       padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 0),
       decoration: BoxDecoration(
         color: selected ? primary : AppColors.surface,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
-          if (!selected) const BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+          if (!selected)
+            const BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: selected ? Colors.white : Colors.black54, size: 20),
+          Icon(icon, color: selected ? Colors.white : Colors.black54, size: 22),
           if (selected) ...[
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: AppTextStyles.smallLabel.copyWith(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                style: AppTextStyles.smallLabel.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
                 overflow: TextOverflow.visible,
                 maxLines: 1,
                 softWrap: false,
@@ -130,7 +148,13 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 6))],
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 12,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -139,15 +163,24 @@ class _EmpleadoNavState extends State<EmpleadoNav> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (int index = 0; index < EmpleadoNav._tabs.length; index++) ...[
+              for (
+                int index = 0;
+                index < EmpleadoNav._tabs.length;
+                index++
+              ) ...[
                 KeyedSubtree(
                   key: _keys[index],
                   child: GestureDetector(
                     onTap: () => _onTap(index),
-                    child: _buildItem(EmpleadoNav._tabs[index]['icon'] as IconData, EmpleadoNav._tabs[index]['label'] as String, index),
+                    child: _buildItem(
+                      EmpleadoNav._tabs[index]['icon'] as IconData,
+                      EmpleadoNav._tabs[index]['label'] as String,
+                      index,
+                    ),
                   ),
                 ),
-                if (index != EmpleadoNav._tabs.length - 1) const SizedBox(width: 8),
+                if (index != EmpleadoNav._tabs.length - 1)
+                  const SizedBox(width: 8),
               ],
             ],
           ),

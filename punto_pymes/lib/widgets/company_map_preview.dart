@@ -232,6 +232,9 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
                   initialCameraPosition: initial,
                   markers: _markers(),
                   circles: _circles(),
+                  onCameraMove: (pos) {
+                    _zoom = pos.zoom;
+                  },
                   onMapCreated: (c) => _mapController = c,
                   myLocationEnabled: (_userLat != null || _deviceLat != null),
                   myLocationButtonEnabled: false,
@@ -243,59 +246,106 @@ class _CompanyMapPreviewState extends State<CompanyMapPreview> {
                     ),
                   },
                 ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 6),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.my_location,
-                            color: Colors.black87,
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Localizar (círculo blanco con icono rojo)
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black12, blurRadius: 6),
+                              ],
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                Icons.my_location,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () {
+                                // Prefer device position, then user address, then company
+                                final target =
+                                    _normalize(_deviceLat, _deviceLng) ??
+                                    _normalize(_userLat, _userLng) ??
+                                    _normalize(_companyLat, _companyLng);
+                                if (target != null && _mapController != null) {
+                                  _mapController!.animateCamera(
+                                    gmaps.CameraUpdate.newLatLngZoom(
+                                      target,
+                                      _zoom,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
                           ),
-                          onPressed: () {
-                            final center = _calculateCenter();
-                            if (_mapController != null) {
-                              _mapController!.animateCamera(
-                                gmaps.CameraUpdate.newLatLngZoom(center, _zoom),
-                              );
-                            }
-                          },
-                        ),
-                        const Divider(height: 1),
-                        IconButton(
-                          icon: const Icon(Icons.add, size: 20),
-                          onPressed: () {
-                            _zoom = (_zoom + 1).clamp(1, 20);
-                            final c = _calculateCenter();
-                            if (_mapController != null) {
-                              _mapController!.animateCamera(
-                                gmaps.CameraUpdate.newLatLngZoom(c, _zoom),
-                              );
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.remove, size: 20),
-                          onPressed: () {
-                            _zoom = (_zoom - 1).clamp(1, 20);
-                            final c = _calculateCenter();
-                            if (_mapController != null) {
-                              _mapController!.animateCamera(
-                                gmaps.CameraUpdate.newLatLngZoom(c, _zoom),
-                              );
-                            }
-                          },
-                        ),
-                      ],
+                          const SizedBox(height: 10),
+                          // Zoom +
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black12, blurRadius: 6),
+                              ],
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                Icons.add,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () {
+                                if (_mapController != null) {
+                                  _mapController!.animateCamera(
+                                    gmaps.CameraUpdate.zoomIn(),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Zoom -
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black12, blurRadius: 6),
+                              ],
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                Icons.remove,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () {
+                                if (_mapController != null) {
+                                  _mapController!.animateCamera(
+                                    gmaps.CameraUpdate.zoomOut(),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

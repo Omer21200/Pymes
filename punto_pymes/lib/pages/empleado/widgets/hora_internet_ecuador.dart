@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import '../../../service/supabase_service.dart';
 
 /// Clase estática para acceder a la hora de Ecuador desde cualquier lugar
 class EcuadorTimeManager {
@@ -61,37 +59,17 @@ class _HoraInternetEcuadorState extends State<HoraInternetEcuador>
       _loading = true;
       _error = null;
     });
-
     try {
-      final uri = Uri.parse(
-        'https://worldtimeapi.org/api/timezone/America/Guayaquil',
-      );
-      final httpClient = HttpClient();
-      final request = await httpClient.getUrl(uri);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final response = await request.close().timeout(
-        const Duration(seconds: 10),
-      );
-
-      if (response.statusCode != 200) {
-        throw HttpException('HTTP ${response.statusCode}');
-      }
-
-      final body = await response.transform(utf8.decoder).join();
-      final Map<String, dynamic> data =
-          jsonDecode(body) as Map<String, dynamic>;
-      final String datetimeStr = data['datetime'] as String;
-      final String timezone =
-          (data['timezone'] as String?) ?? 'America/Guayaquil';
-      final DateTime serverTime = DateTime.parse(datetimeStr).toUtc();
+      // Use Supabase RPC which returns the DB server time in America/Guayaquil
+      final dt = await SupabaseService.instance.getEcuadorTime();
+      if (dt == null) throw Exception('RPC retornó null');
 
       setState(() {
-        _serverTimeAtFetch = serverTime;
+        _serverTimeAtFetch = dt;
         _deviceTimeAtFetch = DateTime.now();
-        _timezone = timezone;
+        _timezone = 'America/Guayaquil';
         _loading = false;
-        // Actualizar la hora global para que esté disponible en toda la app
-        EcuadorTimeManager._setCurrentTime(serverTime);
+        EcuadorTimeManager._setCurrentTime(dt);
       });
 
       _startTicker();
