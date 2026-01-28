@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 import '../admin_empresa/admin_empresa_page.dart';
 import '../superadmin/iniciosuperadmin.dart';
 import '../empleado/empleado_page.dart';
@@ -16,16 +19,197 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _localAuth = LocalAuthentication();
+  final _secureStorage = const FlutterSecureStorage();
+
+  AndroidOptions get _androidOptions => const AndroidOptions(
+    encryptedSharedPreferences: true,
+    sharedPreferencesName: 'pymes_secure',
+  );
+
+  IOSOptions get _iosOptions =>
+      const IOSOptions(accessibility: KeychainAccessibility.first_unlock);
 
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   String? _errorMessage;
+  bool _canUseBiometrics = false;
+  bool _hasSavedBiometricLogin = false;
+  String? _savedBioEmail;
+  String? _savedBioPassword;
+  String? _savedBioEmpresaId;
+
+  String get _currentEmpresaId =>
+      widget.empresa?['id']?.toString() ?? 'SUPER_ADMIN';
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initBiometricState();
+  }
+
+  Future<void> _initBiometricState() async {
+    try {
+      final supported = await _localAuth.isDeviceSupported();
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final available = await _localAuth.getAvailableBiometrics();
+      final savedEmail = await _secureStorage.read(
+        key: 'bio_email',
+        aOptions: _androidOptions,
+        iOptions: _iosOptions,
+      );
+      final savedPassword = await _secureStorage.read(
+        key: 'bio_password',
+        aOptions: _androidOptions,
+        iOptions: _iosOptions,
+      );
+      final savedEmpresaId = await _secureStorage.read(
+        key: 'bio_empresa_id',
+        aOptions: _androidOptions,
+        iOptions: _iosOptions,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _canUseBiometrics = supported && canCheck && available.isNotEmpty;
+        _savedBioEmail = savedEmail;
+        _savedBioPassword = savedPassword;
+        _savedBioEmpresaId = savedEmpresaId;
+        _hasSavedBiometricLogin =
+            savedEmail != null &&
+            savedPassword != null &&
+            savedEmpresaId != null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _canUseBiometrics = false;
+      });
+    }
+  }
+
+  bool get _biometricMatchesCurrentLogin =>
+      _hasSavedBiometricLogin && _savedBioEmpresaId == _currentEmpresaId;
+
+  String _mapBiometricError(Object e) {
+    if (e is PlatformException) {
+      switch (e.code) {
+        case 'notAvailable':
+          return 'La biometría no está disponible en este dispositivo.';
+        case 'notEnrolled':
+          return 'Configura tu huella en Ajustes del teléfono y vuelve a intentar.';
+        case 'lockedOut':
+        case 'permanentlyLockedOut':
+          return 'La biometría está bloqueada. Desbloquéala con tu PIN/contraseña y reintenta.';
+        default:
+          return 'No se pudo usar la biometría (${e.code}). Intenta con tu contraseña.';
+      }
+    }
+    return 'No se pudo usar la biometría. Intenta con tu contraseña.';
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    if (!_biometricMatchesCurrentLogin) return;
+    try {
+      final didAuth = await _localAuth.authenticate(
+        localizedReason: 'Usa tu huella para ingresar rápido',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+
+      if (!didAuth) return;
+      _emailController.text = _savedBioEmail ?? '';
+      _passwordController.text = _savedBioPassword ?? '';
+      await _handleLogin();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = _mapBiometricError(e);
+        if (e is PlatformException &&
+            (e.code == 'notAvailable' || e.code == 'permanentlyLockedOut')) {
+          _canUseBiometrics = false;
+        }
+      });
+    }
+  }
+
+  Future<void> _offerBiometricSaveIfAvailable({
+    required String email,
+    required String password,
+    required String empresaId,
+  }) async {
+    if (!_canUseBiometrics) return;
+    if (_savedBioEmpresaId == empresaId &&
+        _savedBioEmail == email &&
+        (_savedBioPassword?.isNotEmpty ?? false)) {
+      return;
+    }
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Guardar huella digital'),
+        content: const Text(
+          '¿Quieres usar tu huella para iniciar sesión más rápido la próxima vez?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Ahora no'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSave != true) return;
+
+    await _secureStorage.write(
+      key: 'bio_email',
+      value: email,
+      aOptions: _androidOptions,
+      iOptions: _iosOptions,
+    );
+    await _secureStorage.write(
+      key: 'bio_password',
+      value: password,
+      aOptions: _androidOptions,
+      iOptions: _iosOptions,
+    );
+    await _secureStorage.write(
+      key: 'bio_empresa_id',
+      value: empresaId,
+      aOptions: _androidOptions,
+      iOptions: _iosOptions,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _savedBioEmail = email;
+      _savedBioPassword = password;
+      _savedBioEmpresaId = empresaId;
+      _hasSavedBiometricLogin = true;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Huella guardada para próximos ingresos.'),
+        ),
+      );
+    }
   }
 
   /// Lógica de inicio de sesión mejorada con validación de rol y empresa.
@@ -93,6 +277,12 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
       // --- FIN DE VALIDACIÓN ---
+
+      await _offerBiometricSaveIfAvailable(
+        email: email,
+        password: password,
+        empresaId: _currentEmpresaId,
+      );
 
       if (!mounted) return;
 
@@ -375,6 +565,25 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 const SizedBox(height: 20),
+
+                if (_canUseBiometrics && _biometricMatchesCurrentLogin)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading
+                          ? null
+                          : _authenticateWithBiometrics,
+                      icon: const Icon(Icons.fingerprint, size: 20),
+                      label: const Text(
+                        'Ingresar con huella',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+
+                if (_canUseBiometrics && _biometricMatchesCurrentLogin)
+                  const SizedBox(height: 12),
 
                 // 5. BOTÓN DE LOGIN
                 SizedBox(
